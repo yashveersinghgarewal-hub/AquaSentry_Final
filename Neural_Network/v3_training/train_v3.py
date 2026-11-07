@@ -1,7 +1,7 @@
 """AquaNet-V3 trainer.
 
 Two changes from V2:
-  1. Arsenic enters the network as log10(As_mg_L + 0.001), so the 10 / 50 / 150 ug/L limits are
+  1. Arsenic enters the network as log10(As_mg_L + 0.001), so the 10 / 20 / 150 ug/L edges are
      evenly spread instead of squeezed together near zero.
   2. Optional noise-aware mode: the network sees *measured* (noisy) readings but learns the class of the
      *true* water, using the sensor uncertainties stated in app/standards.py. It therefore learns how
@@ -22,7 +22,11 @@ SCANS = int(os.environ.get('SCANS', 1))   # scans averaged per reading (noise / 
 # ADAPT_Z standard errors of a limit (10 / 50 / 150 ug/L). Overrides SCANS for arsenic.
 ADAPTIVE = os.environ.get('ADAPTIVE', '0') == '1'
 ADAPT_Z = float(os.environ.get('ADAPT_Z', 2.0))
-LIMITS_UG = np.array([10.0, 50.0, 150.0])
+# Arsenic verdict edges in ug/L: Caution above the 10 ug/L WHO / IS 10500 limit, Unsafe once the sensor can
+# detect it (20 ug/L LOD, already above the limit since IS 10500 Amendment 1 (2015) removed the old 50 ug/L
+# relaxation), Hazardous above 150. AS_EDGES="10,50,150" reproduces the pre-v5.2 models.
+AS_EDGES = [float(x) for x in os.environ.get('AS_EDGES', '10,20,150').split(',')]
+LIMITS_UG = np.array(AS_EDGES)
 
 
 def sd1(a_ug):
@@ -46,9 +50,9 @@ def adaptive_arsenic(a_true_ug, rng):
 def label(X):
     a, ph, ec, tu = X[:, 0], X[:, 1], X[:, 2], X[:, 3]
     y = np.zeros(len(X), dtype=np.int64)
-    y = np.maximum(y, np.where(a > 0.010, 1, 0))
-    y = np.maximum(y, np.where(a >= 0.050, 2, 0))
-    y = np.maximum(y, np.where(a > 0.150, 3, 0))
+    y = np.maximum(y, np.where(a > AS_EDGES[0] / 1000, 1, 0))
+    y = np.maximum(y, np.where(a >= AS_EDGES[1] / 1000, 2, 0))
+    y = np.maximum(y, np.where(a > AS_EDGES[2] / 1000, 3, 0))
     y = np.maximum(y, np.where((ph < 6.5) | (ph > 8.5), 1, 0))
     y = np.maximum(y, np.where((ph < 6.0) | (ph > 9.0), 2, 0))
     y = np.maximum(y, np.where(tu > 5.0, 1, 0))
@@ -68,7 +72,7 @@ def sample(n, rng, boundary_frac=0.5):
     X = np.column_stack([a, ph, ec, tu, te])
     idx = np.arange(nb, n)
     which = rng.integers(0, 4, len(idx))
-    th = {0: [0.010, 0.050, 0.150], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500.0, 2000.0], 3: [5.0, 10.0]}
+    th = {0: [e / 1000 for e in AS_EDGES], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500.0, 2000.0], 3: [5.0, 10.0]}
     width = {0: 0.25, 1: 0.15, 2: 150.0, 3: 1.0}
     for f in range(4):
         sel = idx[which == f]

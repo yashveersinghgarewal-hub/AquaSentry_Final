@@ -1,0 +1,112 @@
+{
+ "A_exact_network_only": {
+  "v1": {
+   "field_like": {
+    "accuracy_pct": 62.769,
+    "dangerous_missed": 23710,
+    "dangerous_called_safe": 8410,
+    "false_alarms": 0,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 51.991,
+    "dangerous_missed": 30635,
+    "dangerous_called_safe": 12333,
+    "false_alarms": 0,
+    "n": 100000
+   }
+  },
+  "v2": {
+   "field_like": {
+    "accuracy_pct": 89.115,
+    "dangerous_missed": 10596,
+    "dangerous_called_safe": 0,
+    "false_alarms": 243,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 89.683,
+    "dangerous_missed": 9716,
+    "dangerous_called_safe": 0,
+    "false_alarms": 532,
+    "n": 100000
+   }
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.593,
+    "dangerous_missed": 10,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1356,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.143,
+    "dangerous_missed": 34,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2744,
+    "n": 100000
+   }
+  }
+ },
+ "B_noisy_end_to_end_realistic_water_scans3": {
+  "rules only": {
+   "accuracy_pct": 93.312,
+   "dangerous_missed": 2445,
+   "dangerous_called_safe": 0,
+   "false_alarms": 7227,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 93.279,
+   "dangerous_missed": 2445,
+   "dangerous_called_safe": 0,
+   "false_alarms": 7416,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 93.289,
+   "dangerous_missed": 2371,
+   "dangerous_called_safe": 0,
+   "false_alarms": 7502,
+   "n": 200000
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "accuracy_pct": 93.125,
+   "dangerous_missed": 2039,
+   "dangerous_called_safe": 0,
+   "false_alarms": 8794,
+   "n": 200000
+  }
+ },
+ "B_noisy_end_to_end_near_limits_scans3": {
+  "rules only": {
+   "accuracy_pct": 88.573,
+   "dangerous_missed": 6421,
+   "dangerous_called_safe": 1,
+   "false_alarms": 11437,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 88.575,
+   "dangerous_missed": 6421,
+   "dangerous_called_safe": 1,
+   "false_alarms": 11597,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 88.585,
+   "dangerous_missed": 6155,
+   "dangerous_called_safe": 1,
+   "false_alarms": 11931,
+   "n": 200000
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "accuracy_pct": 88.397,
+   "dangerous_missed": 5230,
+   "dangerous_called_safe": 1,
+   "false_alarms": 14194,
+   "n": 200000
+  }
+ }
+}

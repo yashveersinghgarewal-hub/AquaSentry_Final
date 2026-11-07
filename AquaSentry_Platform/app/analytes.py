@@ -101,9 +101,9 @@ ANALYTE_REGISTRY: Dict[str, AnalyteCapability] = {
                 standard_name="IS 10500:2012 Drinking Water Specification",
                 jurisdiction="India",
                 acceptable_limit=10.0,
-                permissible_limit=50.0,
+                permissible_limit=10.0,  # Amendment No. 1 (2015): "no relaxation" (was 50)
                 unit="µg/L",
-                citation="Bureau of Indian Standards IS 10500:2012 (Second Revision)",
+                citation="Bureau of Indian Standards IS 10500:2012 (Second Revision), Amendment No. 1 (2015)",
                 effective_edition="IS 10500:2012 reaffirmed 2018",
             ),
             "us_epa": RegulatoryLimit(
@@ -376,11 +376,13 @@ def evaluate_analyte_concentration(
             "message": f"Concentration ({concentration_ug_l:.1f} µg/L) exceeds ideal guideline ({limit_acceptable} µg/L) but is within permissible limits ({limit_permissible} µg/L) if no alternative source exists.",
         }
     else:
+        # Arsenic uses the same 150 µg/L acute-hazard level as the rest of the system; others keep 3x the limit.
+        hazard_at = 150.0 if analyte.identifier == "arsenic" else limit_permissible * 3.0
         return {
             "analyte": analyte.name,
             "status": "above_calibrated_range" if is_above_cal else "within_calibrated_range",
-            "tier": "Hazardous" if concentration_ug_l > (limit_permissible * 3.0) else "Unsafe (Exceeds Limit)",
-            "severity": 3 if concentration_ug_l > (limit_permissible * 3.0) else 2,
+            "tier": "Hazardous" if concentration_ug_l > hazard_at else "Unsafe (Exceeds Limit)",
+            "severity": 3 if concentration_ug_l > hazard_at else 2,
             "is_safe": False,
             "is_below_lod": False,
             "lod_ug_l": analyte.lod_ug_l,

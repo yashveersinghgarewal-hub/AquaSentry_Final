@@ -75,13 +75,14 @@ class TestAnalyticalStatusAndStandards:
         assert assessment.regulatory_tier == RegulatoryTier.ABOVE_WHO_GUIDELINE
         assert assessment.is_safe_to_drink is False
 
-    def test_within_calibrated_range_caution(self):
-        """Readings between 30 and 50 µg/L exceed WHO but are within BIS permissible limit."""
+    def test_within_calibrated_range_is_unsafe(self):
+        """30-50 µg/L used to be 'within BIS permissible'. IS 10500 Amendment 1 (2015) removed that relaxation."""
         assessment = assess_water_quality(0.040)  # 40 µg/L
         assert assessment.analytical_status == AnalyticalStatus.WITHIN_CALIBRATED_RANGE
-        assert assessment.regulatory_tier == RegulatoryTier.ABOVE_WHO_GUIDELINE
+        assert assessment.regulatory_tier == RegulatoryTier.UNSAFE
         assert assessment.is_safe_to_drink is False
-        assert "caution" in assessment.status_label.lower()
+        assert "unsafe" in assessment.status_label.lower()
+        assert "permissible" not in assessment.message.lower()
 
     def test_above_bis_permissible_action_required(self):
         """Readings exceeding 50 µg/L exceed national drinking standard."""
@@ -89,7 +90,7 @@ class TestAnalyticalStatusAndStandards:
         assert assessment.analytical_status == AnalyticalStatus.WITHIN_CALIBRATED_RANGE
         assert assessment.regulatory_tier == RegulatoryTier.ABOVE_BIS_PERMISSIBLE
         assert assessment.is_safe_to_drink is False
-        assert "prohibited" in assessment.action_plan.lower()
+        assert "do not use for drinking" in assessment.action_plan.lower()
 
     def test_above_calibrated_range(self):
         """Readings exceeding 500 µg/L exceed sensor upper calibration."""
@@ -142,4 +143,6 @@ class TestStandardsRegistry:
         assert "bis_10500_2012_acceptable" in STANDARD_REGISTRY
         assert "bis_10500_2012_permissible" in STANDARD_REGISTRY
         assert STANDARD_REGISTRY["bis_10500_2012_acceptable"].numeric_threshold == 10.0
-        assert STANDARD_REGISTRY["bis_10500_2012_permissible"].numeric_threshold == 50.0
+        # Amendment No. 1 (2015): arsenic permissible limit = acceptable limit = 10 µg/L ("no relaxation").
+        assert STANDARD_REGISTRY["bis_10500_2012_permissible"].numeric_threshold == 10.0
+        assert "relaxation" in STANDARD_REGISTRY["bis_10500_2012_permissible"].notes.lower()

@@ -50,9 +50,13 @@ CALIBRATION_ID = "CAL-AS-2026-M1"
 # Source: WHO Guidelines for Drinking-water Quality, 4th edition (2017)
 WHO_GUIDELINE_UG_L = 10.0  # 0.010 mg/L (Provisional)
 
-# Source: Bureau of Indian Standards BIS 10500:2012 (Drinking Water Specification)
+# Source: Bureau of Indian Standards IS 10500:2012 (Drinking Water Specification), as amended.
+# The 2012 text allowed 0.05 mg/L "in the absence of an alternate source". Amendment No. 1 (2015)
+# removed that relaxation: arsenic is now 0.01 mg/L acceptable AND permissible ("no relaxation").
+# (CGWA reply to the NGT, OA 538/2024: "revised from 0.05 mg/L (50 ppb) to 0.01 mg/L (10 ppb) in 2015".)
 BIS_ACCEPTABLE_LIMIT_UG_L = 10.0   # 0.010 mg/L
-BIS_PERMISSIBLE_LIMIT_UG_L = 50.0  # 0.050 mg/L (only in absence of alternate source)
+BIS_PERMISSIBLE_LIMIT_UG_L = 10.0  # 0.010 mg/L, no relaxation since Amendment No. 1 (2015)
+BIS_2012_SUPERSEDED_PERMISSIBLE_UG_L = 50.0  # historical value only; never used for a verdict
 
 # Emergency Action Level / Acute Toxic Hazard Zone
 HAZARD_THRESHOLD_UG_L = 150.0      # 0.150 mg/L
@@ -96,10 +100,10 @@ class AnalyticalStatus(str, Enum):
 class RegulatoryTier(str, Enum):
     UNVERIFIED_BELOW_LOD = "Unverified (Below LOD)"
     BELOW_LOD = "Unverified (Below LOD)"
-    CAUTION = "Caution (BIS Permissible)"
-    ABOVE_WHO_GUIDELINE = "Caution (BIS Permissible)"
-    UNSAFE = "Unsafe (Exceeds BIS)"
-    ABOVE_BIS_PERMISSIBLE = "Unsafe (Exceeds BIS)"
+    CAUTION = "Caution (Advisory)"
+    UNSAFE = "Unsafe (Exceeds BIS & WHO)"
+    ABOVE_WHO_GUIDELINE = "Unsafe (Exceeds BIS & WHO)"
+    ABOVE_BIS_PERMISSIBLE = "Unsafe (Exceeds BIS & WHO)"
     HAZARDOUS = "Hazardous (Acute Risk)"
 
 
@@ -140,7 +144,7 @@ STANDARD_REGISTRY = {
         analyte="Arsenic (as As)",
         unit="µg/L",
         numeric_threshold=10.0,
-        citation="Bureau of Indian Standards (2012). IS 10500:2012, Second Revision.",
+        citation="Bureau of Indian Standards (2012). IS 10500:2012, Second Revision, with Amendment No. 1 (2015).",
         notes="Acceptable limit for drinking water.",
     ),
     "bis_10500_2012_permissible": StandardEntry(
@@ -149,9 +153,9 @@ STANDARD_REGISTRY = {
         title="Indian Standard Drinking Water — Specification",
         analyte="Arsenic (as As)",
         unit="µg/L",
-        numeric_threshold=50.0,
-        citation="Bureau of Indian Standards (2012). IS 10500:2012, Second Revision.",
-        notes="Permissible limit in the absence of an alternative water source.",
+        numeric_threshold=10.0,
+        citation="Bureau of Indian Standards (2012). IS 10500:2012, Second Revision, with Amendment No. 1 (2015).",
+        notes="No relaxation: Amendment No. 1 (2015) withdrew the old 50 µg/L permissible limit.",
     ),
 }
 
@@ -224,52 +228,26 @@ def evaluate_measurement(
         )
         action = "Routine screening. Laboratory ICP-MS testing required to certify potability below 10 µg/L."
 
-    # 2. Detected but Not Quantifiable (20 to 30 µg/L)
-    elif arsenic_ppb < LOQ_UG_L:
-        status = AnalyticalStatus.NOT_QUANTIFIABLE
-        tier = RegulatoryTier.CAUTION
-        severity = 1
-        tone = "warning"
-        is_safe = False
-        uncertainty = 8.0
-        label = "Estimated Only (Between LOD & LOQ)"
-        message = (
-            f"Arsenic detected ({arsenic_ppb:.1f} µg/L) above the LOD ({LOD_UG_L:.0f} µg/L), "
-            f"but below the Limit of Quantification (LOQ = {LOQ_UG_L:.0f} µg/L). "
-            f"Exceeds WHO 10 µg/L guideline. Concentration is semi-quantitative."
-        )
-        action = "Flag source for re-testing. Provide advisory filtration prior to domestic use."
-
-    # 3. Within Calibrated Range: Caution (30 to 50 µg/L)
-    elif arsenic_ppb <= BIS_PERMISSIBLE_LIMIT_UG_L:
-        status = AnalyticalStatus.WITHIN_CALIBRATED_RANGE
-        tier = RegulatoryTier.CAUTION
-        severity = 1
-        tone = "warning"
-        is_safe = False
-        uncertainty = 5.0
-        label = "Caution (Exceeds WHO, Within BIS Permissible)"
-        message = (
-            f"Arsenic level ({arsenic_ppb:.1f} µg/L) exceeds WHO provisional guideline ({WHO_GUIDELINE_UG_L:.0f} µg/L), "
-            f"but is within India's BIS 10500 permissible limit ({BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L) "
-            f"where no alternative source exists."
-        )
-        action = "Provide household arsenic-removal filtration. Monitor source bi-weekly."
-
-    # 4. Within Calibrated Range: Unsafe (50 to 150 µg/L)
+    # 2. Detected (>= LOD). The LOD (20 µg/L) is already twice the WHO and BIS limit (10 µg/L),
+    #    so ANY detected arsenic means the water fails both standards.
     elif arsenic_ppb <= HAZARD_THRESHOLD_UG_L:
-        status = AnalyticalStatus.WITHIN_CALIBRATED_RANGE
+        quantifiable = arsenic_ppb >= LOQ_UG_L
+        status = AnalyticalStatus.WITHIN_CALIBRATED_RANGE if quantifiable else AnalyticalStatus.NOT_QUANTIFIABLE
         tier = RegulatoryTier.UNSAFE
         severity = 2
         tone = "danger"
         is_safe = False
-        uncertainty = 7.5
-        label = "Unsafe (Exceeds BIS Standard)"
+        uncertainty = (7.5 if arsenic_ppb > 50.0 else 5.0) if quantifiable else 8.0
+        label = "Unsafe (Exceeds BIS & WHO)"
+        semi = "" if quantifiable else (
+            f" The value is between the LOD and LOQ ({LOQ_UG_L:.0f} µg/L), so the number itself is approximate, "
+            f"but arsenic is clearly present.")
         message = (
-            f"Arsenic level ({arsenic_ppb:.1f} µg/L) exceeds Indian BIS permissible drinking water limits "
-            f"(50 µg/L). Significant bioaccumulation and health risk upon chronic exposure."
+            f"Arsenic detected at {arsenic_ppb:.1f} µg/L. This exceeds both the WHO guideline and India's "
+            f"IS 10500 limit ({BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L, no relaxation since 2015).{semi}"
         )
-        action = "Ingestion prohibited. Switch to validated alternative water source. Dispatch lab confirmation."
+        action = ("Do not use for drinking or cooking. Switch to a tested safe source and send a sample to an "
+                  "accredited lab (ICP-MS or HG-AAS).")
 
     # 5. Acute Toxic Hazard (> 150 µg/L)
     else:

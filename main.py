@@ -2,14 +2,13 @@
 """
 AquaSentry Universal Master Entry Point
 ======================================
-Unified operational runner for both AquaSentry Fullstack Platform
-and AquaNet-V1 Neural Network Toolkit.
+Unified operational runner for the AquaSentry platform (AquaNet-V3) and the neural-network toolkit.
 
 Usage:
   python3 main.py --serve          # Launch fullstack web app & REST API (FastAPI)
-  python3 main.py --test           # Run all 110 test cases (22 Neural Parity + 88 Platform)
+  python3 main.py --test           # Run every test (neural toolkit + platform)
   python3 main.py --csv <path>     # Process ASV voltammetry scan + AquaNet classification
-  python3 main.py --neural         # Run standalone AquaNet-V1 neural network evaluation
+  python3 main.py --neural         # Run the standalone neural-network toolkit demo
   python3 main.py --version        # Display system topology and versions
 """
 
@@ -33,8 +32,8 @@ def print_banner():
 ======================================================================
        AQUASENTRY UNIVERSAL WATER SAFETY & NEURAL NETWORK PLATFORM
 ======================================================================
-  Architecture : AquaNet-V1 Multilayer Perceptron (23 Nodes, 112 Synapses)
-  Standards    : WHO Guideline (0.010 mg/L) | BIS 10500 Permissible (0.050 mg/L)
+  Model        : AquaNet-V3 5-16-12-4 MLP (352 parameters, runs on the ESP32 too)
+  Standards    : WHO 0.010 mg/L | IS 10500:2012 + Amd. 1 (2015): 0.010 mg/L, no relaxation
   Hardware     : Anodic Stripping Voltammetry (ASV) & ESP32 / C99 Edge Engine
 ======================================================================
 """)
@@ -56,7 +55,7 @@ def run_serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
 
 
 def run_tests():
-    """Run both platform tests (79) and neural network parity tests (18)."""
+    """Run the neural-network toolkit tests, then the platform test suite."""
     print_banner()
 
     # Determine best python interpreter with pytest
@@ -83,7 +82,7 @@ def run_tests():
 
     if res1.returncode == 0 and res2.returncode == 0:
         print("\n======================================================================")
-        print("  ALL 110 TESTS PASSED SUCCESSFULLY! (22 Neural Parity + 88 Platform)")
+        print("  ALL TESTS PASSED (neural toolkit + platform; counts are printed above)")
         print("======================================================================")
         sys.exit(0)
     else:
@@ -91,7 +90,7 @@ def run_tests():
         sys.exit(1)
 
 
-def run_csv_analysis(csv_path: str, ph: float, ec: float, turb: float, temp: float):
+def run_csv_analysis(csv_path: str, ph: float, ec: float, turb: float, temp: float, cal_path=None):
     """Run end-to-end ASV extraction and neural network inference."""
     try:
         from asv_extractor import analyze_water_sample
@@ -102,8 +101,12 @@ def run_csv_analysis(csv_path: str, ph: float, ec: float, turb: float, temp: flo
             print(f"[ERROR] Could not import asv_extractor: {err}")
             sys.exit(1)
 
+    if cal_path is None:
+        default_cal = os.path.join(UNIVERSAL_ROOT, "Data", "calibration.json")
+        cal_path = default_cal if os.path.exists(default_cal) else None
     result = analyze_water_sample(
         csv_path=csv_path,
+        calibration_path=cal_path,
         ph=ph,
         conductivity_us_cm=ec,
         turbidity_ntu=turb,
@@ -126,9 +129,10 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind (default: 8000)")
     parser.add_argument("--reload", action="store_true", help="Enable hot reload for development")
-    parser.add_argument("--test", action="store_true", help="Run comprehensive test suites (110 tests)")
-    parser.add_argument("--neural", action="store_true", help="Run standalone AquaNet-V1 neural evaluations")
+    parser.add_argument("--test", action="store_true", help="Run every test suite")
+    parser.add_argument("--neural", action="store_true", help="Run the standalone neural-network toolkit demo")
     parser.add_argument("--csv", type=str, default=None, help="Process raw ASV CSV scan file")
+    parser.add_argument("--cal", type=str, default=None, help="Calibration JSON for --csv (default: Data/calibration.json)")
     parser.add_argument("--ph", type=float, default=7.2, help="Water pH (default: 7.2)")
     parser.add_argument("--ec", type=float, default=400.0, help="Electrical conductivity in uS/cm (default: 400.0)")
     parser.add_argument("--turb", type=float, default=2.0, help="Turbidity in NTU (default: 2.0)")
@@ -139,10 +143,10 @@ def main():
 
     if args.version:
         print_banner()
-        print("  System Version: AquaSentry Universal v1.0.0")
+        print("  System Version: AquaSentry v5.2 (API 1.4.0)")
         print("  Components Included:")
         print("    - AquaSentry_Platform (FastAPI backend, HTML5 dashboard, SQLite database)")
-        print("    - Neural_Network (AquaNet-V1 C99 engine, Python forward pass, parity suite)")
+        print("    - Neural_Network (AquaNet-V3 trained model + V1 original, C99 engines, parity suite)")
         print("    - AI_Agent (Toxicology and water quality research agent)")
         print("    - Data (Raw ASV voltammetry scans, calibration matrices)")
         print("    - Analysis (Savitzky-Golay filtering, synthetic trace generators)")
@@ -154,7 +158,7 @@ def main():
     elif args.test:
         run_tests()
     elif args.csv:
-        run_csv_analysis(args.csv, args.ph, args.ec, args.turb, args.temp)
+        run_csv_analysis(args.csv, args.ph, args.ec, args.turb, args.temp, args.cal)
     elif args.neural:
         run_neural_cli()
     else:

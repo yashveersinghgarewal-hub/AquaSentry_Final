@@ -14,15 +14,20 @@ Provides:
 
 import os
 import io
+import hmac
+import json
 import uuid
 import asyncio
+import ipaddress
+import threading
+import urllib.request
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, Response
+from fastapi import FastAPI, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -33,6 +38,7 @@ from .classification import classify_arsenic_neural
 from .standards import (
     WHO_GUIDELINE_UG_L,
     BIS_PERMISSIBLE_LIMIT_UG_L,
+    HAZARD_THRESHOLD_UG_L,
     LOD_UG_L,
     LOQ_UG_L,
     METHOD_NAME,
@@ -65,8 +71,81 @@ ensure_sqlite_columns()
 app = FastAPI(
     title="AquaSentry Water Safety & Surveillance API",
     description="Scientific backend and edge neural classifier for autonomous water quality monitoring.",
-    version="1.3.0",
+    version="1.4.0",
 )
+
+APP_VERSION = "1.4.0"
+
+
+def active_model_name() -> str:
+    """The model that classifies stored readings (AQUANET_MODEL=v1 switches back to the hand-built V1)."""
+    return "AquaNet-V1" if os.getenv("AQUANET_MODEL", "v3").lower() == "v1" else "AquaNet-V3"
+
+
+def _v3_topology():
+    try:
+        from .aquanet_v3 import load, _resolve
+        sizes = load(_resolve(None))["topology"]
+        weights = sum(sizes[i] * sizes[i + 1] for i in range(len(sizes) - 1))
+        params = weights + sum(sizes[1:])
+        return sizes, sum(sizes), weights, params
+    except Exception:
+        return [5, 16, 12, 4], 37, 320, 352
+
+
+V3_SIZES, V3_NODES, V3_WEIGHTS, V3_PARAMS = _v3_topology()
+
+
+def _val(x, default):
+    """`x or default` treats a real 0 (0 NTU, 0 °C, 0 µS/cm) as missing. This does not."""
+    return default if x is None else x
+
+
+# ---------------------------------------------------------------------------
+# Write protection
+# ---------------------------------------------------------------------------
+# Set AQUASENTRY_API_KEY in .env to require an X-API-Key header on every request that changes data
+# (ESP32 uploads, imports, demo loading, admin). Requests from this computer itself (the dashboard
+# opened at http://localhost:8000) are always allowed, so the UI keeps working without the key.
+# Without a key, writes stay open as before (handy on a home network), and /api/health says so.
+
+def _api_key() -> Optional[str]:
+    key = (os.getenv("AQUASENTRY_API_KEY") or "").strip()
+    return key or None
+
+
+def _is_loopback(request: Request) -> bool:
+    host = request.client.host if request.client else ""
+    if host in ("testclient", "localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _key_ok(request: Request) -> bool:
+    key = _api_key()
+    given = request.headers.get("x-api-key") or ""
+    return bool(key) and hmac.compare_digest(given.encode(), key.encode())
+
+
+def require_writer(request: Request):
+    if _api_key() is None or _is_loopback(request) or _key_ok(request):
+        return
+    raise HTTPException(status_code=401, detail="Missing or wrong X-API-Key header (see AQUASENTRY_API_KEY in .env).")
+
+
+def require_admin(request: Request):
+    """Admin actions never run for an anonymous network client, even with writes open."""
+    if _is_loopback(request) or _key_ok(request):
+        return
+    raise HTTPException(status_code=403, detail="Admin endpoints are only available from this computer or with X-API-Key.")
+
+
+if _api_key() is None:
+    print("[AquaSentry] Note: AQUASENTRY_API_KEY is not set, so any device on the network can add readings. "
+          "Set it in .env (and DEVICE_API_KEY in the firmware) before deploying.")
 
 cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
@@ -99,11 +178,14 @@ def health_check(db: Session = Depends(get_db)):
     subsystems = {
         "database": "connected" if db_ok else "disconnected",
         "model_engine": "loaded",
-        "model_version": "AquaNet-V1",
-        "neural_model": f"AquaNet-V1 ({SYNAPSES_COUNT} synapses)",
-        "neural_nodes": NODES_COUNT,
-        "neural_synapses": SYNAPSES_COUNT,
-        "standards_version": "WHO-2017 / BIS-10500:2012 / EPA-2021",
+        "model_version": active_model_name(),
+        "neural_model": (f"AquaNet-V3 {'-'.join(map(str, V3_SIZES))} ({V3_PARAMS} parameters)"
+                         if active_model_name() == "AquaNet-V3" else f"AquaNet-V1 ({SYNAPSES_COUNT} synapses)"),
+        "neural_nodes": V3_NODES if active_model_name() == "AquaNet-V3" else NODES_COUNT,
+        "neural_synapses": V3_WEIGHTS if active_model_name() == "AquaNet-V3" else SYNAPSES_COUNT,
+        "standards_version": "WHO GDWQ 4th ed. / IS 10500:2012 + Amd. 1 (2015, As 10 µg/L no relaxation)",
+        "write_auth": "api_key" if _api_key() else "open",
+        "app_version": APP_VERSION,
         "ai_chatbot_configured": client is not None,
         "analytes_cataloged": len(ANALYTE_REGISTRY),
         "voltammetry_pipeline": "Savitzky-Golay 5pt + Linear Baseline",
@@ -129,39 +211,58 @@ def health_check(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 RECENT_EMERGENCY_ALERTS: List[Dict[str, Any]] = []
+_ALERT_LOCK = threading.Lock()
+
+
+def _post_webhook(url: str, alert: Dict[str, Any]):
+    try:
+        req = urllib.request.Request(url, data=json.dumps(alert).encode("utf-8"),
+                                     headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=5.0).close()
+    except Exception as e:
+        print(f"Warning: Webhook dispatch error: {e}")
+
+
+def build_alert(classification: str, as_ppb: float, **extra) -> Optional[Dict[str, Any]]:
+    """An alert for any reading classified Unsafe or Hazardous (arsenic or otherwise), else None."""
+    if classification not in ("Unsafe", "Hazardous"):
+        return None
+    arsenic_driven = as_ppb >= BIS_PERMISSIBLE_LIMIT_UG_L
+    if arsenic_driven:
+        msg = (f"ARSENIC EXCEEDANCE: {as_ppb:.1f} µg/L detected "
+               f"(India IS 10500 and WHO limit: {BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L, no relaxation).")
+    else:
+        msg = f"WATER QUALITY ALERT: reading classified {classification} (arsenic {as_ppb:.1f} µg/L; another reading is out of limits)."
+    return {
+        "id": str(uuid.uuid4()),
+        "timestamp": now_utc().isoformat(),
+        "level": "CRITICAL" if classification == "Hazardous" else "WARNING",
+        "classification": classification,
+        "contaminant": "Total Arsenic (As)" if arsenic_driven else "Water quality",
+        "arsenic_ppb": round(as_ppb, 1),
+        "arsenic_mg_l": round(as_ppb / 1000.0, 4),
+        "message": msg,
+        "action_required": "Do NOT drink. Switch to a tested safe source and send a sample to an accredited lab.",
+        **extra,
+    }
+
 
 def dispatch_emergency_alert(data: Dict[str, Any]):
-    as_ppb = data.get("arsenic_ppb", 0.0)
-    as_ppm = data.get("arsenic_ppm", as_ppb / 1000.0)
-    if as_ppb >= 50.0:  # Exceeds BIS 10500 limit (50 ug/L)
-        alert = {
-            "id": str(uuid.uuid4()),
-            "timestamp": now_utc().isoformat(),
-            "level": "CRITICAL" if as_ppb >= 150.0 else "WARNING",
-            "contaminant": "Total Arsenic (As)",
-            "arsenic_ppb": round(as_ppb, 1),
-            "arsenic_mg_l": round(as_ppm, 4),
-            "source_type": data.get("source_type", "tank_sentry"),
-            "message": f"CRITICAL ARSENIC EXCEEDANCE: {as_ppb:.1f} µg/L detected (BIS limit: 50.0 µg/L, WHO: 10.0 µg/L)",
-            "action_required": "Do NOT drink. Switch to alternative potable source immediately.",
-        }
+    as_ppb = float(data.get("arsenic_ppb", 0.0) or 0.0)
+    alert = build_alert(data.get("classification", ""), as_ppb,
+                        source_type=data.get("source_type", "tank_sentry"),
+                        source_label=data.get("source_label"), reading_id=data.get("reading_id"),
+                        device_code=data.get("device_code"))
+    if alert is None:
+        return None
+    with _ALERT_LOCK:
         RECENT_EMERGENCY_ALERTS.append(alert)
-        if len(RECENT_EMERGENCY_ALERTS) > 50:
-            RECENT_EMERGENCY_ALERTS.pop(0)
-
-        webhook_url = os.getenv("ALERT_WEBHOOK_URL")
-        if webhook_url:
-            try:
-                import urllib.request
-                import json
-                req = urllib.request.Request(
-                    webhook_url,
-                    data=json.dumps(alert).encode("utf-8"),
-                    headers={"Content-Type": "application/json"}
-                )
-                urllib.request.urlopen(req, timeout=2.0)
-            except Exception as e:
-                print(f"Warning: Webhook dispatch error: {e}")
+        del RECENT_EMERGENCY_ALERTS[:-50]
+    webhook_url = os.getenv("ALERT_WEBHOOK_URL")
+    if webhook_url:
+        # Never block the ESP32's upload on a slow webhook.
+        threading.Thread(target=_post_webhook, args=(webhook_url, alert), daemon=True).start()
+    return alert
 
 
 # ---------------------------------------------------------------------------
@@ -234,9 +335,9 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
         [Paragraph(f"<b>Report ID:</b> {report_id}", body_style),
          Paragraph(f"<b>Sample recorded:</b> {reading_dict.get('recorded_at', 'Unknown')}", body_style)],
         [Paragraph(f"<b>Data source:</b> {reading_dict.get('source_type', 'Unknown')}", body_style),
-         Paragraph("<b>Method:</b> Anodic stripping voltammetry (MAS-G1) + AquaNet-V1 screening model", body_style)],
+         Paragraph(f"<b>Method:</b> Anodic stripping voltammetry (MAS-G1) + {reading_dict.get('model_version') or active_model_name()} screening model", body_style)],
         [Paragraph(f"<b>Device:</b> {reading_dict.get('device_code', 'Unknown')}", body_style),
-         Paragraph("<b>Reference limits:</b> WHO GDWQ 4th ed. / BIS IS 10500:2012", body_style)],
+         Paragraph("<b>Reference limits:</b> WHO GDWQ 4th ed. / IS 10500:2012 with Amendment 1 (2015)", body_style)],
     ]
     meta_table = Table(meta_data, colWidths=[270, 270])
     meta_table.setStyle(TableStyle([
@@ -254,7 +355,7 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
     badge_bg, badge_color = colors.HexColor(tone[0]), colors.HexColor(tone[1])
     model_line = ""
     if reading_dict.get("model_confidence_pct") is not None:
-        model_line = (f"<br/><font size=8 color='#4B5D58'>AquaNet-V1 model confidence: {reading_dict['model_confidence_pct']:.1f}% | "
+        model_line = (f"<br/><font size=8 color='#4B5D58'>{reading_dict.get('model_version') or active_model_name()} model confidence: {reading_dict['model_confidence_pct']:.1f}% | "
                       f"uncertainty (normalised entropy): {reading_dict.get('model_entropy', 0.0):.3f}</font>")
     lod_line = ""
     if as_ug_l < LOD_UG_L:
@@ -277,11 +378,9 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
     temp_val = reading_dict.get("temperature_c")
 
     if as_ug_l < LOD_UG_L:
-        as_status = "Below sensor LOD: lab test needed"
-    elif as_ug_l <= BIS_PERMISSIBLE_LIMIT_UG_L:
-        as_status = "Above WHO, within BIS permissible"
-    elif as_ug_l <= 150.0:
-        as_status = "Exceeds BIS: unsafe"
+        as_status = "Not detected (below sensor LOD): lab test needed to confirm < 10 µg/L"
+    elif as_ug_l <= HAZARD_THRESHOLD_UG_L:
+        as_status = "Detected: exceeds WHO and IS 10500 (10 µg/L). Unsafe"
     else:
         as_status = "Hazardous (above 150 µg/L)"
 
@@ -290,7 +389,7 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
 
     chem_data = [
         ["Parameter", "Measured value", "Limit used", "Status"],
-        ["Total arsenic (As)", f"{as_ug_l:.1f} µg/L ({as_mg_l:.4f} mg/L)", "WHO 10 µg/L; BIS 50 µg/L", as_status],
+        ["Total arsenic (As)", f"{as_ug_l:.1f} µg/L ({as_mg_l:.4f} mg/L)", "WHO 10 µg/L; IS 10500 10 µg/L (no relaxation)", as_status],
         ["pH", _fmt_or_missing(ph_val, ".2f"), "6.5 - 8.5 (BIS)", status(ph_val, lambda v: 6.5 <= v <= 8.5)],
         ["Turbidity", _fmt_or_missing(turb_val, ".2f", "NTU"), "5 NTU (BIS permissible)", status(turb_val, lambda v: v <= 5.0)],
         ["Conductivity", _fmt_or_missing(ec_val, ".0f", "µS/cm"), "1500 µS/cm (AquaSentry screening)", status(ec_val, lambda v: v <= 1500)],
@@ -312,8 +411,8 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
     fingerprint = reading_fingerprint(reading_dict)
     sign_data = [[
         Paragraph("<b>How this result was produced:</b><br/>Stripping-voltammetry peak converted with the stored calibration "
-                  f"(slope {CALIBRATION_SLOPE} µA per mg/L, intercept {CALIBRATION_INTERCEPT} µA), then classified by AquaNet-V1 "
-                  "with fixed WHO/BIS safety rules applied after the model.", body_style),
+                  f"(slope {CALIBRATION_SLOPE} µA per mg/L, intercept {CALIBRATION_INTERCEPT} µA), then classified by {reading_dict.get('model_version') or active_model_name()} "
+                  "with fixed WHO / IS 10500 safety rules applied after the model.", body_style),
         Paragraph(f"<b>Data fingerprint (SHA-256):</b><br/><font size=6.5>{fingerprint[:32]}<br/>{fingerprint[32:]}</font><br/>"
                   "Recomputed from the values on this page; any change to them changes this code.", body_style),
     ]]
@@ -360,7 +459,35 @@ def _get_or_create_device(db: Session, device_code: str) -> models.Device:
 # Readings: Ingest (Called by Arduino / LoRa / Bluetooth Bridge)
 # ---------------------------------------------------------------------------
 
-@app.post("/api/readings", response_model=schemas.ReadingResponse, tags=["Readings"])
+def _reading_response(reading: "models.Reading", eval_res, prefix: str = "") -> schemas.ReadingResponse:
+    return schemas.ReadingResponse(
+        reading=schemas.ReadingOut.model_validate(reading),
+        label=eval_res.label,
+        severity=eval_res.severity,
+        message=f"{prefix}{eval_res.message}",
+        action=eval_res.action,
+        analytical_status=eval_res.analytical_status,
+        regulatory_tier=eval_res.regulatory_tier,
+        is_safe_to_drink=eval_res.is_safe_to_drink,
+        uncertainty_ppb=eval_res.uncertainty_ppb,
+        is_simulated=bool(reading.is_simulated),
+        disclaimer=eval_res.disclaimer,
+    )
+
+
+def _classify_stored(rec: "models.Reading"):
+    return classify_arsenic_neural(
+        arsenic_ppb=rec.arsenic_ppb,
+        ph=_val(rec.ph, 7.2),
+        conductivity_us_cm=_val(rec.conductivity_us_cm, 400.0),
+        turbidity_ntu=_val(rec.turbidity_ntu, 2.0),
+        temperature_c=_val(rec.temperature_c, 24.0),
+        source_type=rec.source_type or "simulated",
+    )
+
+
+@app.post("/api/readings", response_model=schemas.ReadingResponse, tags=["Readings"],
+          dependencies=[Depends(require_writer)])
 def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)):
     """
     Ingest a new arsenic reading from the autonomous vessel or simulator.
@@ -370,35 +497,16 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
     if payload.idempotency_key:
         existing = db.query(models.Reading).filter_by(idempotency_key=payload.idempotency_key).first()
         if existing:
-            eval_res = classify_arsenic_neural(
-                arsenic_ppb=existing.arsenic_ppb,
-                ph=existing.ph or 7.2,
-                conductivity_us_cm=existing.conductivity_us_cm or 400.0,
-                turbidity_ntu=existing.turbidity_ntu or 2.0,
-                temperature_c=existing.temperature_c or 24.0,
-                source_type=existing.source_type or "simulated",
-            )
-            return schemas.ReadingResponse(
-                reading=schemas.ReadingOut.model_validate(existing),
-                label=eval_res.label,
-                severity=eval_res.severity,
-                message=f"[Idempotent Cache Hit] {eval_res.message}",
-                action=eval_res.action,
-                analytical_status=eval_res.analytical_status,
-                regulatory_tier=eval_res.regulatory_tier,
-                is_safe_to_drink=eval_res.is_safe_to_drink,
-                uncertainty_ppb=eval_res.uncertainty_ppb,
-                is_simulated=existing.is_simulated,
-                disclaimer=eval_res.disclaimer,
-            )
+            # Same reading re-sent (e.g. the ESP32 retrying after a timeout): return what was stored.
+            return _reading_response(existing, _classify_stored(existing), prefix="[Idempotent Cache Hit] ")
 
     try:
         eval_res = classify_arsenic_neural(
             arsenic_ppb=payload.arsenic_ppb,
-            ph=payload.ph or 7.2,
-            conductivity_us_cm=payload.conductivity_us_cm or 400.0,
-            turbidity_ntu=payload.turbidity_ntu or 2.0,
-            temperature_c=payload.temperature_c or 24.0,
+            ph=_val(payload.ph, 7.2),
+            conductivity_us_cm=_val(payload.conductivity_us_cm, 400.0),
+            turbidity_ntu=_val(payload.turbidity_ntu, 2.0),
+            temperature_c=_val(payload.temperature_c, 24.0),
             source_type=payload.source_type or "simulated",
         )
     except ValueError as e:
@@ -416,11 +524,11 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
         regulatory_tier=eval_res.regulatory_tier,
         is_safe_to_drink=eval_res.is_safe_to_drink,
         uncertainty_ppb=eval_res.uncertainty_ppb,
-        confidence=payload.confidence or 0.95,
+        confidence=_val(payload.confidence, 0.95),
         source_type=payload.source_type or "simulated",
         is_simulated=is_sim,
         method_version=METHOD_NAME,
-        model_version="AquaNet-V1" if os.getenv("AQUANET_MODEL", "v3").lower() == "v1" else "AquaNet-V3",
+        model_version=active_model_name(),
         idempotency_key=payload.idempotency_key,
         ph=payload.ph,
         temperature_c=payload.temperature_c,
@@ -439,28 +547,17 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(reading)
 
-    # Imp 21: Dispatch emergency exceedance alerts if arsenic exceeds safe standards
+    # Imp 21: alert on every Unsafe / Hazardous verdict (not only arsenic, and at the current 10 µg/L limit)
     dispatch_emergency_alert({
         "arsenic_ppb": reading.arsenic_ppb,
-        "arsenic_ppm": reading.arsenic_ppb / 1000.0,
         "source_type": reading.source_type,
         "source_label": reading.source_label,
         "classification": eval_res.label,
+        "reading_id": reading.id,
+        "device_code": payload.device_code,
     })
 
-    return schemas.ReadingResponse(
-        reading=schemas.ReadingOut.model_validate(reading),
-        label=eval_res.label,
-        severity=eval_res.severity,
-        message=eval_res.message,
-        action=eval_res.action,
-        analytical_status=eval_res.analytical_status,
-        regulatory_tier=eval_res.regulatory_tier,
-        is_safe_to_drink=eval_res.is_safe_to_drink,
-        uncertainty_ppb=eval_res.uncertainty_ppb,
-        is_simulated=is_sim,
-        disclaimer=eval_res.disclaimer,
-    )
+    return _reading_response(reading, eval_res)
 
 
 # ---------------------------------------------------------------------------
@@ -554,16 +651,13 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
 
     confirmed_count = 0
     if reading.classification in ("Unsafe", "Hazardous"):
-        cutoff = now_utc() - timedelta(hours=24)
-        # Note: reading.recorded_at may be naive datetime in SQLite; convert or compare safely
-        rec_time = reading.recorded_at
-        if rec_time.tzinfo is None:
-            rec_time = rec_time.replace(tzinfo=timezone.utc)
+        # SQLite stores naive UTC datetimes, so compare against a naive UTC cutoff.
+        cutoff = (now_utc() - timedelta(hours=24)).replace(tzinfo=None)
         confirmed_count = (
             db.query(models.Reading.device_id)
             .filter(
                 models.Reading.classification.in_(["Unsafe", "Hazardous"]),
-                models.Reading.recorded_at >= (now_utc() - timedelta(hours=24)),
+                models.Reading.recorded_at >= cutoff,
                 models.Reading.device_id != reading.device_id,
             )
             .distinct()
@@ -596,7 +690,8 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
         confidencePct=round(reading.confidence * 100, 1) if reading.confidence is not None else 95.0,
         confirmedByHomes=confirmed_count,
         source=reading.source_label or "Water Body Survey",
-        detectedAt=reading.recorded_at.strftime("%H:%M"),
+        detectedAt=rec_time.strftime("%H:%M UTC"),
+        detectedAtIso=rec_time.isoformat(),
         batteryPct=reading.battery_pct,
         lastPatrolMin=patrol_minutes,
         nextPatrolMin=None,
@@ -615,7 +710,7 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
         is_simulated=reading.is_simulated if reading.is_simulated is not None else True,
         is_stale=is_stale,
         uncertainty_ppb=reading.uncertainty_ppb or 5.0,
-        synapses_count=112,
+        synapses_count=V3_WEIGHTS if active_model_name() == "AquaNet-V3" else SYNAPSES_COUNT,
         method_lod_ug_l=LOD_UG_L,
     )
 
@@ -777,108 +872,187 @@ def get_sample_voltammetry_trace(
 # Data Import & Export Endpoints
 # ---------------------------------------------------------------------------
 
+# Column detection shared by preview and commit. Columns are split into words, so "class", "basin" or
+# "measured_at" are no longer mistaken for arsenic and "recorded_at" is no longer read as conductivity.
+_COLUMN_SYNONYMS = {
+    "arsenic_ppb": [("arsenic", "ppb"), ("arsenic", "ug", "l"), ("as", "ppb"), ("as", "ug", "l"), ("arsenic", "ugl"), ("as", "ugl")],
+    "arsenic_mg_l": [("arsenic", "mg", "l"), ("as", "mg", "l"), ("arsenic", "mgl"), ("as", "mgl"), ("arsenic", "ppm")],
+    "arsenic": [("arsenic",), ("as",)],
+    "ph": [("ph",)],
+    "conductivity_us_cm": [("conductivity",), ("ec",), ("cond",), ("conductance",)],
+    "turbidity_ntu": [("turbidity",), ("turb",), ("ntu",)],
+    "temperature_c": [("temperature",), ("temp",), ("water", "temp")],
+    "latitude": [("latitude",), ("lat",)],
+    "longitude": [("longitude",), ("lon",), ("lng",), ("long",)],
+    "recorded_at": [("recorded", "at"), ("sampled", "at"), ("timestamp",), ("date",), ("datetime",), ("sample", "date"), ("time",)],
+    "sample_id": [("sample", "id"), ("sample",), ("id",), ("idempotency", "key")],
+    "source_label": [("source", "label"), ("location",), ("site",), ("station",), ("well",)],
+}
+
+
+def _tokens(name: str):
+    import re as _re
+    return [t for t in _re.split(r"[^a-z0-9]+", name.lower().replace("µ", "u").replace("μ", "u")) if t]
+
+
+def detect_columns(cols: List[str]) -> Dict[str, str]:
+    """Map our field names to the user's column names. Most specific synonym wins; each column used once."""
+    mapping: Dict[str, str] = {}
+    used = set()
+    for field, patterns in _COLUMN_SYNONYMS.items():
+        for pat in patterns:
+            for c in cols:
+                if c in used:
+                    continue
+                toks = _tokens(c)
+                if toks[:len(pat)] == list(pat) or (len(pat) > 1 and all(p in toks for p in pat)) or toks == list(pat):
+                    mapping[field] = c
+                    used.add(c)
+                    break
+            if field in mapping:
+                break
+    return mapping
+
+
+def _num(v) -> Optional[float]:
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    x = float(v)
+    if x != x or x in (float("inf"), float("-inf")):
+        raise ValueError("not a finite number")
+    return x
+
+
+def _arsenic_ppb_from_row(r: Dict[str, Any], mapping: Dict[str, str], bare_is_mg_l: bool) -> Optional[float]:
+    if "arsenic_ppb" in mapping and _num(r.get(mapping["arsenic_ppb"])) is not None:
+        return _num(r.get(mapping["arsenic_ppb"]))
+    if "arsenic_mg_l" in mapping and _num(r.get(mapping["arsenic_mg_l"])) is not None:
+        return _num(r.get(mapping["arsenic_mg_l"])) * 1000.0
+    if "arsenic" in mapping and _num(r.get(mapping["arsenic"])) is not None:
+        x = _num(r.get(mapping["arsenic"]))
+        return x * 1000.0 if bare_is_mg_l else x
+    return None
+
+
+def _bare_arsenic_is_mg_l(records: List[Dict[str, Any]], mapping: Dict[str, str]) -> bool:
+    if "arsenic" not in mapping:
+        return False
+    vals = []
+    for r in records[:200]:
+        try:
+            x = _num(r.get(mapping["arsenic"]))
+        except (TypeError, ValueError):
+            continue
+        if x is not None:
+            vals.append(x)
+    return bool(vals) and max(vals) < 2.0 and any(0 < v < 1.0 for v in vals)
+
+
+def _parse_time(v) -> Optional[datetime]:
+    if v in (None, ""):
+        return None
+    try:
+        d = datetime.fromisoformat(str(v).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d.astimezone(timezone.utc)
+
+
 @app.post("/api/data/import/preview", response_model=schemas.DataImportPreviewResponse, tags=["Data Management"])
 def preview_data_import(records: List[Dict[str, Any]]):
     """
     Preview and validate user-supplied CSV/JSON water sample records before committing.
-    Infers columns, checks units, flags invalid ranges, and prevents silent bad data.
+    Detects columns by whole words, works out mg/L vs µg/L, and flags invalid values.
     """
     if not records:
         raise HTTPException(status_code=400, detail="Empty records payload submitted.")
+    if len(records) > 20000:
+        raise HTTPException(status_code=413, detail="Too many rows in one import (limit 20,000).")
 
-    first_row = records[0]
-    cols = list(first_row.keys())
-
-    mapping = {}
+    cols = list(dict.fromkeys(k for r in records[:200] for k in r.keys()))
+    mapping = detect_columns(cols)
     errors = []
-    # Column mapping detection
-    for c in cols:
-        cl = c.lower().strip()
-        if "as" in cl or "arsenic" in cl or "ppb" in cl or "ug_l" in cl:
-            mapping["arsenic"] = c
-        elif "ph" in cl:
-            mapping["ph"] = c
-        elif "temp" in cl:
-            mapping["temperature"] = c
-        elif "cond" in cl or "ec" in cl:
-            mapping["conductivity"] = c
-        elif "turb" in cl:
-            mapping["turbidity"] = c
-        elif "lat" in cl:
-            mapping["latitude"] = c
-        elif "lon" in cl or "lng" in cl:
-            mapping["longitude"] = c
-
-    if "arsenic" not in mapping:
+    if not any(k in mapping for k in ("arsenic_ppb", "arsenic_mg_l", "arsenic")):
         errors.append("Missing required arsenic column (e.g. 'arsenic_ppb', 'arsenic_ug_l', or 'arsenic_mg_l').")
 
-    valid_count = 0
-    preview_slice = records[:5]
-    for idx, r in enumerate(records[:50]):
-        if "arsenic" in mapping:
-            val = r.get(mapping["arsenic"])
-            try:
-                num = float(val)
-                if num < 0:
-                    errors.append(f"Row {idx+1}: Negative arsenic concentration ({num}) is physically invalid.")
-                else:
-                    valid_count += 1
-            except (ValueError, TypeError):
-                errors.append(f"Row {idx+1}: Non-numeric arsenic concentration value '{val}'.")
+    bare_mg = _bare_arsenic_is_mg_l(records, mapping)
+    shown = dict(mapping)
+    for k in ("arsenic_ppb", "arsenic_mg_l"):
+        if k in mapping:
+            shown.setdefault("arsenic", mapping[k])   # older clients read column_mapping["arsenic"]
+    shown["arsenic_unit"] = ("mg/L" if "arsenic_mg_l" in mapping or bare_mg else "µg/L") if "arsenic" in shown else None
+    for idx, r in enumerate(records[:500]):
+        if errors and idx == 0 and "Missing required" in errors[0]:
+            break
+        try:
+            as_ppb = _arsenic_ppb_from_row(r, mapping, bare_mg)
+        except (ValueError, TypeError):
+            errors.append(f"Row {idx+1}: arsenic value is not a number.")
+            continue
+        if as_ppb is None:
+            errors.append(f"Row {idx+1}: arsenic value is empty.")
+        elif as_ppb < 0:
+            errors.append(f"Row {idx+1}: Negative arsenic concentration ({as_ppb}) is physically invalid.")
+        for field, (lo, hi) in {"ph": (0, 14), "turbidity_ntu": (0, 1000), "conductivity_us_cm": (0, 50000),
+                                "temperature_c": (-10, 60)}.items():
+            if field in mapping:
+                try:
+                    x = _num(r.get(mapping[field]))
+                except (ValueError, TypeError):
+                    errors.append(f"Row {idx+1}: {mapping[field]} is not a number.")
+                    continue
+                if x is not None and not (lo <= x <= hi):
+                    errors.append(f"Row {idx+1}: {mapping[field]} = {x} is outside {lo}-{hi}.")
 
     return schemas.DataImportPreviewResponse(
         detected_rows=len(records),
         detected_columns=cols,
-        column_mapping=mapping,
-        preview_records=preview_slice,
+        column_mapping={k: v for k, v in shown.items() if v is not None},
+        preview_records=records[:5],
         validation_errors=errors[:10],
         is_valid=len(errors) == 0,
         source_type_inferred="manual_import",
     )
 
 
-@app.post("/api/data/import/commit", response_model=schemas.DataImportCommitResponse, tags=["Data Management"])
+@app.post("/api/data/import/commit", response_model=schemas.DataImportCommitResponse, tags=["Data Management"],
+          dependencies=[Depends(require_writer)])
 def commit_data_import(payload: schemas.DataImportCommitRequest, db: Session = Depends(get_db)):
-    """Commit validated external records to database with strict provenance and idempotency."""
-    inserted = 0
-    duplicates = 0
-    errors = 0
-
+    """Commit validated external records with provenance and idempotency. Uses the same column detection as preview."""
+    inserted = duplicates = errors = 0
+    if len(payload.records) > 20000:
+        raise HTTPException(status_code=413, detail="Too many rows in one import (limit 20,000).")
     device = _get_or_create_device(db, payload.device_code or "IMPORT-01")
+    cols = list(dict.fromkeys(k for r in payload.records[:200] for k in r.keys()))
+    mapping = detect_columns(cols)
+    bare_mg = _bare_arsenic_is_mg_l(payload.records, mapping)
+    source_type = payload.source_type or "manual_import"
+    seen_keys = set()
+
+    def get(r, field):
+        return _num(r.get(mapping[field])) if field in mapping else None
 
     for r in payload.records:
         try:
-            # Extract values with flexible column names
-            as_val = (
-                r.get("arsenic_ppb")
-                or r.get("arsenic_ug_l")
-                or r.get("arsenic")
-                or (float(r.get("arsenic_mg_l", 0)) * 1000.0 if "arsenic_mg_l" in r else None)
-            )
-            if as_val is None:
+            as_ppb = _arsenic_ppb_from_row(r, mapping, bare_mg)
+            if as_ppb is None or as_ppb < 0:
                 errors += 1
                 continue
-
-            as_ppb = float(as_val)
-            ph = float(r.get("ph", 7.2)) if r.get("ph") is not None else 7.2
-            cond = float(r.get("conductivity_us_cm", 400.0)) if r.get("conductivity_us_cm") is not None else 400.0
-            turb = float(r.get("turbidity_ntu", 2.0)) if r.get("turbidity_ntu") is not None else 2.0
-            temp = float(r.get("temperature_c", 24.0)) if r.get("temperature_c") is not None else 24.0
-
-            idemp = r.get("idempotency_key") or r.get("sample_id") or str(uuid.uuid4())
-            if db.query(models.Reading).filter_by(idempotency_key=idemp).first():
+            ph, cond, turb, temp = get(r, "ph"), get(r, "conductivity_us_cm"), get(r, "turbidity_ntu"), get(r, "temperature_c")
+            idemp = str(r.get(mapping["sample_id"]) if "sample_id" in mapping and r.get(mapping["sample_id"]) not in (None, "")
+                        else uuid.uuid4())[:64]
+            if idemp in seen_keys or db.query(models.Reading).filter_by(idempotency_key=idemp).first():
                 duplicates += 1
                 continue
 
             eval_res = classify_arsenic_neural(
-                arsenic_ppb=as_ppb,
-                ph=ph,
-                conductivity_us_cm=cond,
-                turbidity_ntu=turb,
-                temperature_c=temp,
-                source_type=payload.source_type or "manual_import",
+                arsenic_ppb=as_ppb, ph=_val(ph, 7.2), conductivity_us_cm=_val(cond, 400.0),
+                turbidity_ntu=_val(turb, 2.0), temperature_c=_val(temp, 24.0), source_type=source_type,
             )
-
+            recorded = _parse_time(r.get(mapping["recorded_at"])) if "recorded_at" in mapping else None
+            lat, lon = get(r, "latitude"), get(r, "longitude")
             rec = models.Reading(
                 device_id=device.id,
                 arsenic_ppb=as_ppb,
@@ -888,22 +1062,23 @@ def commit_data_import(payload: schemas.DataImportCommitRequest, db: Session = D
                 is_safe_to_drink=eval_res.is_safe_to_drink,
                 uncertainty_ppb=eval_res.uncertainty_ppb,
                 confidence=0.90,
-                source_type=payload.source_type or "manual_import",
-                is_simulated=payload.source_type != "hardware",
+                source_type=source_type,
+                is_simulated=source_type != "hardware",
                 method_version=METHOD_NAME,
-                model_version="AquaNet-V1" if os.getenv("AQUANET_MODEL", "v3").lower() == "v1" else "AquaNet-V3",
+                model_version=active_model_name(),
                 idempotency_key=idemp,
                 ph=ph,
                 temperature_c=temp,
                 conductivity_us_cm=cond,
                 turbidity_ntu=turb,
-                latitude=float(r.get("latitude", 18.5204)) if r.get("latitude") is not None else None,
-                longitude=float(r.get("longitude", 73.8567)) if r.get("longitude") is not None else None,
-                source_label=r.get("source_label", "Imported Dataset"),
-                recorded_at=now_utc(),
+                latitude=lat if lat is not None and -90 <= lat <= 90 else None,
+                longitude=lon if lon is not None and -180 <= lon <= 180 else None,
+                source_label=str(r.get(mapping["source_label"]))[:64] if "source_label" in mapping and r.get(mapping["source_label"]) else "Imported Dataset",
+                recorded_at=recorded or now_utc(),
                 received_at=now_utc(),
             )
             db.add(rec)
+            seen_keys.add(idemp)
             inserted += 1
         except Exception:
             errors += 1
@@ -977,7 +1152,7 @@ def export_data(
 # Demo Data Management (Opt-In Synthetic Data)
 # ---------------------------------------------------------------------------
 
-@app.post("/api/demo/load", tags=["Demo Management"])
+@app.post("/api/demo/load", tags=["Demo Management"], dependencies=[Depends(require_writer)])
 def load_demo_data(db: Session = Depends(get_db)):
     """
     Opt-in demo dataset loader: inserts 5 realistic benchmark profiles
@@ -1014,7 +1189,7 @@ def load_demo_data(db: Session = Depends(get_db)):
             source_type="synthetic_demo",
             is_simulated=True,
             method_version=METHOD_NAME,
-            model_version="AquaNet-V1" if os.getenv("AQUANET_MODEL", "v3").lower() == "v1" else "AquaNet-V3",
+            model_version=active_model_name(),
             idempotency_key=f"DEMO-{p['as_ppb']}-{uuid.uuid4().hex[:6]}",
             ph=p["ph"],
             temperature_c=p["temp"],
@@ -1054,7 +1229,7 @@ class NeuralInferencePayload(schemas.BaseModel):
 @app.post("/api/neural/inference", response_model=schemas.NeuralInferenceResponse, tags=["Neural Network"])
 def run_neural_inference_post(payload: NeuralInferencePayload):
     """Run forward-pass inference on the AquaNet-V1 multimodal deep neural network via POST."""
-    as_mg = payload.arsenic_mg_l or payload.arsenic_concentration_mg_l
+    as_mg = payload.arsenic_mg_l if payload.arsenic_mg_l is not None else payload.arsenic_concentration_mg_l
     if as_mg is None and payload.arsenic_ppb is not None:
         as_mg = payload.arsenic_ppb / 1000.0
     if as_mg is None:
@@ -1131,20 +1306,22 @@ Analytical Chemistry & Detection Limits:
 - Validated Calibration Range: 30.0 to 500.0 µg/L (0.030 to 0.500 mg/L).
 - Regulatory Standards:
   * WHO Provisional Drinking Water Guideline: 10.0 µg/L (0.010 mg/L).
-  * India BIS 10500 Acceptable: 10.0 µg/L; Permissible: 50.0 µg/L.
-- CRITICAL SCIENTIFIC FACT: Because the sensor's LOD (20 µg/L) is higher than the WHO guideline (10 µg/L), readings below 20 µg/L CANNOT confirm compliance with the 10 µg/L WHO guideline. Always explain this transparently.
+  * India IS 10500:2012: 10.0 µg/L acceptable AND permissible. Amendment No. 1 (2015) removed the old 50 µg/L
+    "absence of alternate source" relaxation, so 10 µg/L is the only limit. Never describe 10-50 µg/L as permissible.
+- CRITICAL SCIENTIFIC FACT: Because the sensor's LOD (20 µg/L) is higher than the 10 µg/L limit, readings below 20 µg/L CANNOT confirm the water is safe, and ANY arsenic the sensor detects (>= 20 µg/L) already exceeds both the WHO and Indian limits. Always explain this transparently.
 
 Multi-Contaminant Sensing Policy:
 - The current AquaSentry physical robot ONLY has an ASV sensor for Arsenic (As).
 - Lead, Cadmium, Mercury, Chromium, Fluoride, and Nitrate are cataloged capabilities but require dedicated sensor modules or external laboratory testing. Never claim the single arsenic strip detects all metals simultaneously.
 
-Neural Network (AquaNet-V1):
-- Architecture: 5-8-6-4 Dense Multi-Layer Perceptron (MLP).
-- Exact Topology: 23 Nodes, 112 Synapses (5*8 + 8*6 + 6*4 = 40 + 48 + 24 = 112 connections).
-- Inputs: Dissolved Arsenic (mg/L), pH, Electrical Conductivity (µS/cm), Turbidity (NTU), Temperature (°C).
-- Outputs: Safe, Caution, Unsafe, Hazardous.
-- How it was made: V1's weights were set by hand from the WHO/BIS arsenic thresholds (they were not learned from data). Only the arsenic input affects V1's vote; pH, turbidity and conductivity are checked by fixed safety rules after the network. A trained version, AquaNet-V2, learns all five inputs from 300,000 synthetic samples (99.6% correct on synthetic test data). Neither has been validated on real field samples.
-- Precedence Rule: The model can never downgrade a measured reading > 50 µg/L to Safe.
+Neural Network (AquaNet-V3, used for stored readings and on the ESP32):
+- 5-16-12-4 multilayer perceptron, 352 parameters (about 1.4 KB as float32), trained on simulated readings with
+  realistic sensor noise. Inputs: arsenic (log10), pH, conductivity, turbidity, temperature. Outputs: Safe, Caution, Unsafe, Hazardous.
+- Fixed safety rules run after the network and can only make the verdict stricter: arsenic >= 20 µg/L (detected)
+  is at least Unsafe, > 150 µg/L is Hazardous, 10-20 µg/L is Caution (unconfirmed, lab test). pH, turbidity and
+  conductivity limits also apply.
+- AquaNet-V1 (5-8-6-4, 112 hand-set weights) is the original, kept for comparison.
+- All accuracy figures are from simulated data; the model has not been validated on real field samples.
 
 Robot Hardware Specs:
 - Twin-hull catamaran (1.05m x 0.62m, 11.4kg displacement).
@@ -1154,8 +1331,11 @@ Robot Hardware Specs:
 """
 
 
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+
+
 @app.post("/api/chat", response_model=schemas.ChatResponse, tags=["AI Chat"])
-async def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
+def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
     """
     Intelligent chatbot endpoint with server-side intent classification,
     grounded database context, and public health guardrails.
@@ -1198,14 +1378,14 @@ async def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model=GEMINI_MODEL,
             contents=request.message,
             config=types.GenerateContentConfig(
                 system_instruction=dynamic_prompt,
                 temperature=0.2,
             ),
         )
-        return schemas.ChatResponse(reply=response.text, intent="in_scope", grounded=True)
+        return schemas.ChatResponse(reply=response.text or "(no answer returned)", intent="in_scope", grounded=True)
     except Exception as e:
         error_str = str(e)
         if "503" in error_str or "high demand" in error_str:
@@ -1214,8 +1394,10 @@ async def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
                 intent="in_scope",
                 grounded=False,
             )
+        print(f"[chat] Gemini error: {error_str}")
+        hint = " Check GEMINI_API_KEY and GEMINI_MODEL in .env." if any(k in error_str for k in ("401", "403", "404", "API key", "not found")) else ""
         return schemas.ChatResponse(
-            reply=f"⚠️ *AI Notice:* Could not complete request: {error_str}",
+            reply=f"⚠️ *AI Notice:* The assistant could not answer right now.{hint}",
             intent="in_scope",
             grounded=False,
         )
@@ -1235,8 +1417,18 @@ async def websocket_voltammetry_stream(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
+            if not isinstance(data, dict):
+                await websocket.send_json({"type": "error", "message": "Send a JSON object."})
+                continue
             cmd = data.get("command", "start_sweep")
-            as_conc = float(data.get("arsenic_mg_l", 0.035))
+            try:
+                as_conc = float(data.get("arsenic_mg_l", 0.035))
+            except (TypeError, ValueError):
+                await websocket.send_json({"type": "error", "message": "arsenic_mg_l must be a number."})
+                continue
+            if not (0.0 <= as_conc <= 1.0) or as_conc != as_conc:
+                await websocket.send_json({"type": "error", "message": "arsenic_mg_l must be between 0 and 1."})
+                continue
 
             if cmd in ("start_sweep", "simulate"):
                 potentials, currents = generate_synthetic_asv_trace(as_conc * 1000.0)  # function expects µg/L
@@ -1283,7 +1475,7 @@ def download_potability_certificate(
     Download a one-page PDF screening report for a stored reading (the latest one if no id is given).
     Returns 404 if there is no such reading: the report never invents values.
     """
-    if reading_id:
+    if reading_id is not None:
         rec = db.query(models.Reading).filter_by(id=reading_id).first()
     else:
         rec = db.query(models.Reading).order_by(models.Reading.recorded_at.desc()).first()
@@ -1301,16 +1493,18 @@ def download_potability_certificate(
         "conductivity_us_cm": rec.conductivity_us_cm,
         "temperature_c": rec.temperature_c,
         "predicted_class": rec.classification,
+        "model_version": rec.model_version or active_model_name(),
     }
-    # Model confidence is recomputed from the stored values (defaults only where a sensor was not fitted).
+    # Model confidence is recomputed from the stored values with the model that classified the reading.
     try:
-        nn = forward_pass(
-            arsenic_mg_l=data["arsenic_mg_l"],
-            ph=rec.ph if rec.ph is not None else 7.2,
-            conductivity_us_cm=rec.conductivity_us_cm if rec.conductivity_us_cm is not None else 400.0,
-            turbidity_ntu=rec.turbidity_ntu if rec.turbidity_ntu is not None else 2.0,
-            temperature_c=rec.temperature_c if rec.temperature_c is not None else 24.0,
-        )
+        args = dict(arsenic_mg_l=data["arsenic_mg_l"], ph=_val(rec.ph, 7.2),
+                    conductivity_us_cm=_val(rec.conductivity_us_cm, 400.0),
+                    turbidity_ntu=_val(rec.turbidity_ntu, 2.0), temperature_c=_val(rec.temperature_c, 24.0))
+        if (rec.model_version or "").upper().endswith("V1"):
+            nn = forward_pass(**args)
+        else:
+            from .aquanet_v3 import predict as _v3_predict
+            nn = _v3_predict(args["arsenic_mg_l"], args["ph"], args["conductivity_us_cm"], args["turbidity_ntu"], args["temperature_c"])
         data["model_confidence_pct"] = nn["confidence_pct"]
         data["model_entropy"] = nn["entropy"]
     except Exception:
@@ -1329,19 +1523,28 @@ def download_potability_certificate(
 # ===========================================================================
 
 @app.get("/api/alerts/recent", tags=["Alerts"])
-def get_recent_alerts():
-    """Retrieve recent emergency water quality exceedance alerts."""
-    return {
-        "count": len(RECENT_EMERGENCY_ALERTS),
-        "alerts": list(reversed(RECENT_EMERGENCY_ALERTS[-20:])),
-    }
+def get_recent_alerts(limit: int = Query(20, ge=1, le=100), db: Session = Depends(get_db)):
+    """Recent Unsafe / Hazardous readings as alerts. Built from the database, so they survive a server restart."""
+    rows = (db.query(models.Reading)
+            .filter(models.Reading.classification.in_(["Unsafe", "Hazardous"]))
+            .order_by(models.Reading.recorded_at.desc()).limit(limit).all())
+    alerts = []
+    for r in rows:
+        a = build_alert(r.classification, r.arsenic_ppb, reading_id=r.id, source_type=r.source_type,
+                        source_label=r.source_label,
+                        device_code=r.device.device_code if getattr(r, "device", None) is not None else None)
+        if a:
+            ts = r.recorded_at if r.recorded_at.tzinfo else r.recorded_at.replace(tzinfo=timezone.utc)
+            a["id"], a["timestamp"] = f"reading-{r.id}", ts.isoformat()
+            alerts.append(a)
+    return {"count": len(alerts), "alerts": alerts}
 
 
 # ===========================================================================
 # Imp 22: SQLite WAL Compaction Endpoint
 # ===========================================================================
 
-@app.post("/api/admin/db/compact", tags=["Admin"])
+@app.post("/api/admin/db/compact", tags=["Admin"], dependencies=[Depends(require_admin)])
 def compact_sqlite_database():
     """Imp 22: Execute SQLite WAL checkpointing, PRAGMA optimize, and report file stats."""
     return compact_database()

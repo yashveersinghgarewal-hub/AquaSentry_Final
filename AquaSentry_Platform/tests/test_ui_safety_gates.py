@@ -44,11 +44,12 @@ class TestStrictPotabilitySafetyGates:
             assert eval_res.analytical_status == AnalyticalStatus.NOT_QUANTIFIABLE
 
     def test_reading_exceeding_who_guideline_is_not_safe(self):
-        """Release Gate: Caution tier (30 to 50 µg/L) must not be labeled safe to drink."""
-        for val in [30.1, 40.0, 50.0]:
+        """Release Gate: any detected arsenic (>= 20 µg/L LOD) is above the 10 µg/L WHO / IS 10500 limit."""
+        for val in [20.0, 30.1, 40.0, 50.0]:
             eval_res = evaluate_measurement(arsenic_ppb=val)
             assert eval_res.is_safe_to_drink is False
-            assert eval_res.regulatory_tier == RegulatoryTier.CAUTION
+            assert eval_res.regulatory_tier == RegulatoryTier.UNSAFE
+            assert eval_res.severity >= 2
 
     def test_reading_exceeding_bis_permissible_is_unsafe(self):
         """Release Gate: Readings > 50 µg/L must strictly trigger Unsafe."""
@@ -84,8 +85,14 @@ class TestStrictPotabilitySafetyGates:
             turbidity_ntu=2.0,
             temperature_c=24.0,
         )
-        assert res_below_lod.is_safe_to_drink is None
-        assert "Below Sensor LOD" in res_below_lod.label or "Unverified" in res_below_lod.regulatory_tier
+        # 12 µg/L is above the 10 µg/L limit but below what the sensor can confirm: Caution, never Safe.
+        assert res_below_lod.is_safe_to_drink is False
+        assert res_below_lod.label == "Caution"
+
+        res_clear = classify_arsenic_neural(arsenic_ppb=5.0, ph=7.2, conductivity_us_cm=400.0,
+                                            turbidity_ntu=2.0, temperature_c=24.0)
+        assert res_clear.is_safe_to_drink is None
+        assert res_clear.label == "Below Sensor LOD"
 
     def test_negative_arsenic_strictly_rejected(self):
         with pytest.raises(ValueError):

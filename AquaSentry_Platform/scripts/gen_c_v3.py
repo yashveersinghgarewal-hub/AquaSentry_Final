@@ -121,7 +121,7 @@ aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conducti
     const char *reason = "NOMINAL_NEURAL_V3";
     if (r.is_out_of_bounds) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_OUT_OF_BOUNDS");
     if (arsenic_mg_l > 0.150f) raise_to(&cls, AQUANET_CLASS_HAZARDOUS, &reason, "SAFETY_OVERRIDE_ARSENIC_ACUTE_HAZARD");
-    else if (arsenic_mg_l >= 0.050f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_ARSENIC_EXCEEDS_BIS");
+    else if (arsenic_mg_l >= 0.020f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_ARSENIC_EXCEEDS_BIS"); /* detected >= LOD: above IS 10500 10 ug/L */
     else if (arsenic_mg_l > 0.010f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_ARSENIC_ABOVE_WHO");
     if (!r.is_out_of_bounds) {{
         if (ph < 6.0f || ph > 9.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_SEVERE_PH_VIOLATION");

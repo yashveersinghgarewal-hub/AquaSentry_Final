@@ -4,7 +4,8 @@ Pydantic schemas: define validated shapes accepted and returned by the API.
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from datetime import timezone
+from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
 
 
 # ---------- Incoming: what the Arduino / bridge sends ----------
@@ -49,6 +50,18 @@ class ReadingCreate(BaseModel):
         None, description="Original raw payload string received over Bluetooth/serial for audit lineage."
     )
 
+    @field_validator("recorded_at", mode="after")
+    @classmethod
+    def _recorded_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """Store every sample time in UTC. A device clock more than a day in the future is ignored."""
+        if v is None:
+            return None
+        v = v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
+        from datetime import timedelta as _td
+        if v > datetime.now(timezone.utc) + _td(days=1):
+            return None
+        return v
+
 
 # ---------- Outgoing: what the API returns ----------
 
@@ -82,6 +95,12 @@ class ReadingOut(BaseModel):
     recorded_at: datetime
     received_at: datetime
 
+    @field_validator("recorded_at", "received_at", mode="after")
+    @classmethod
+    def _as_utc(cls, v: datetime) -> datetime:
+        """SQLite hands back naive datetimes; they are UTC, so say so (the JSON then ends in +00:00)."""
+        return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
+
 
 class ReadingResponse(BaseModel):
     reading: ReadingOut
@@ -107,6 +126,7 @@ class DashboardReading(BaseModel):
     confirmedByHomes: int = 0
     source: str
     detectedAt: str
+    detectedAtIso: Optional[str] = None
     batteryPct: Optional[float] = None
     lastPatrolMin: Optional[float] = None
     nextPatrolMin: Optional[int] = None

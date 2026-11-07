@@ -3,12 +3,12 @@ AquaNet-V3 inference (pure Python, no NumPy). Identical maths and safety rules t
 Firmware/esp32_firmware/aquanet_v3.c that runs on the ESP32, and to the dashboard (frontend/neural.js).
 
 V3 = trained from random weights on all five readings, with arsenic fed in as log10(As + 0.001)
-so the 10 / 50 / 150 ug/L limits are easy to separate. Training code: Neural_Network/v3_training/.
+so the 10 / 20 / 150 ug/L rule edges are easy to separate. Training code: Neural_Network/v3_training/.
 
     from aquanet_v3 import predict
     predict(arsenic_mg_l=0.005, ph=5.8, conductivity_us_cm=400, turbidity_ntu=2, temperature_c=24)
 
-After the network votes, fixed WHO / BIS 10500 rules run; a rule can only make the verdict stricter.
+After the network votes, fixed WHO / IS 10500 (as amended 2015: 10 ug/L, no relaxation) rules run; a rule can only make the verdict stricter.
 """
 
 from __future__ import annotations
@@ -75,9 +75,11 @@ def apply_rules(vote: str, raw: List[float], entropy: float):
         at_least("Unsafe", "SAFETY_OVERRIDE_OUT_OF_BOUNDS")
     if arsenic > 0.150:
         at_least("Hazardous", "SAFETY_OVERRIDE_ARSENIC_ACUTE_HAZARD")
-    elif arsenic >= 0.050:
+    elif arsenic >= 0.020:
+        # Detected (>= the 20 ug/L sensor LOD) means above the 10 ug/L IS 10500 / WHO limit.
         at_least("Unsafe", "SAFETY_OVERRIDE_ARSENIC_EXCEEDS_BIS")
     elif arsenic > 0.010:
+        # Above 10 ug/L but below the LOD: not confirmed, so Caution + lab test.
         at_least("Caution", "POTABILITY_ADVISORY_ARSENIC_ABOVE_WHO")
     if not oob:
         if ph < 6.0 or ph > 9.0:

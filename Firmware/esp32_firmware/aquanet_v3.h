@@ -1,6 +1,6 @@
 /**
  * AquaNet-V3 (5-16-12-4) - trained water-safety classifier for ESP32 / any C99 microcontroller.
- * GENERATED from aquanet_v3_installed_balanced.json by scripts/gen_c_v3.py - do not edit by hand.
+ * GENERATED from aquanet_v3_amd2015_balanced.json by scripts/gen_c_v3.py - do not edit by hand.
  *
  * - float32 only (the ESP32 has a hardware FPU), weights in flash, no malloc, only <math.h>
  * - 352 parameters = 1408 bytes of flash; RAM use < 200 bytes on the stack

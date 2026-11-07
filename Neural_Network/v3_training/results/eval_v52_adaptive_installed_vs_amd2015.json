@@ -1,0 +1,142 @@
+{
+ "A_exact_network_only": {
+  "v1": {
+   "field_like": {
+    "accuracy_pct": 62.769,
+    "dangerous_missed": 23710,
+    "dangerous_called_safe": 8410,
+    "false_alarms": 0,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 51.991,
+    "dangerous_missed": 30635,
+    "dangerous_called_safe": 12333,
+    "false_alarms": 0,
+    "n": 100000
+   }
+  },
+  "v2": {
+   "field_like": {
+    "accuracy_pct": 89.115,
+    "dangerous_missed": 10596,
+    "dangerous_called_safe": 0,
+    "false_alarms": 243,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 89.683,
+    "dangerous_missed": 9716,
+    "dangerous_called_safe": 0,
+    "false_alarms": 532,
+    "n": 100000
+   }
+  },
+  "v3_installed_balanced.json": {
+   "field_like": {
+    "accuracy_pct": 88.614,
+    "dangerous_missed": 10304,
+    "dangerous_called_safe": 0,
+    "false_alarms": 945,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 88.423,
+    "dangerous_missed": 9391,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2038,
+    "n": 100000
+   }
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.593,
+    "dangerous_missed": 10,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1356,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.143,
+    "dangerous_missed": 34,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2744,
+    "n": 100000
+   }
+  }
+ },
+ "B_noisy_end_to_end_realistic_water_scans1": {
+  "rules only": {
+   "accuracy_pct": 94.729,
+   "dangerous_missed": 1992,
+   "dangerous_called_safe": 0,
+   "false_alarms": 5499,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 94.704,
+   "dangerous_missed": 1992,
+   "dangerous_called_safe": 0,
+   "false_alarms": 5685,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 94.7,
+   "dangerous_missed": 1925,
+   "dangerous_called_safe": 0,
+   "false_alarms": 5798,
+   "n": 200000
+  },
+  "v3_installed_balanced.json": {
+   "accuracy_pct": 94.552,
+   "dangerous_missed": 1761,
+   "dangerous_called_safe": 0,
+   "false_alarms": 6589,
+   "n": 200000
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "accuracy_pct": 94.525,
+   "dangerous_missed": 1565,
+   "dangerous_called_safe": 0,
+   "false_alarms": 7096,
+   "n": 200000
+  }
+ },
+ "B_noisy_end_to_end_near_limits_scans1": {
+  "rules only": {
+   "accuracy_pct": 90.246,
+   "dangerous_missed": 5689,
+   "dangerous_called_safe": 0,
+   "false_alarms": 9742,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 90.246,
+   "dangerous_missed": 5689,
+   "dangerous_called_safe": 0,
+   "false_alarms": 9900,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 90.227,
+   "dangerous_missed": 5421,
+   "dangerous_called_safe": 0,
+   "false_alarms": 10271,
+   "n": 200000
+  },
+  "v3_installed_balanced.json": {
+   "accuracy_pct": 90.05,
+   "dangerous_missed": 4706,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11930,
+   "n": 200000
+  },
+  "noisy_amd2015_s3_5x16x12x4": {
+   "accuracy_pct": 89.989,
+   "dangerous_missed": 4435,
+   "dangerous_called_safe": 0,
+   "false_alarms": 12628,
+   "n": 200000
+  }
+ }
+}

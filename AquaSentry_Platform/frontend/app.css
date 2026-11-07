@@ -382,7 +382,7 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 
 /* strip */
 .strip { margin: 22px 0 0; }
-.strip-track { position: relative; display: grid; grid-template-columns: 20% 25% 30% 25%; height: 44px; border-radius: 14px; overflow: visible; }
+.strip-track { position: relative; display: grid; grid-template-columns: 20% 15% 40% 25%; height: 44px; border-radius: 14px; overflow: visible; }
 .strip-seg { display: grid; place-items: center; font-weight: 700; font-size: .88rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
 .seg-safe { background: linear-gradient(90deg, #059669, #34D399); border-radius: 14px 0 0 14px; }
 .seg-caution { background: linear-gradient(90deg, #D97706, #FBBF24); color: #3A2600; text-shadow: none; }

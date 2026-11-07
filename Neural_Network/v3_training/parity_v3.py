@@ -5,7 +5,7 @@ sys.path.insert(0, nndir)
 import aquanet_v3 as A
 rng = random.Random(5)
 rows = []
-lims = {0: [0.010, 0.050, 0.150, 0.020], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500, 2000], 3: [5, 10]}
+lims = {0: [0.010, 0.020, 0.150], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500, 2000], 3: [5, 10]}
 for i in range(100000):
     r = [math.exp(rng.uniform(math.log(0.0002), math.log(0.6))), rng.uniform(4.6, 10.4), math.exp(rng.uniform(math.log(60), math.log(4900))),
          math.exp(rng.uniform(math.log(0.05), math.log(90))), rng.uniform(6, 44)]

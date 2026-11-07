@@ -46,7 +46,14 @@
   };
 
   // ---------------- readings ----------------
-  function evaluate(r) { return window.AquaNet.evaluate(r.asMgL, r.ph, r.ec, r.turb, r.temp, state.model); }
+  // Sensors that are not fitted stay null (shown as "not measured"); the model still needs a number,
+  // so typical values are used for the vote only, exactly like the ESP32 firmware does.
+  const TYPICAL = { ph: 7.2, ec: 400, turb: 2.0, temp: 24 };
+  const val = (r, k) => (r[k] == null ? TYPICAL[k] : r[k]);
+  function evaluate(r) { return window.AquaNet.evaluate(r.asMgL, val(r, 'ph'), val(r, 'ec'), val(r, 'turb'), val(r, 'temp'), state.model); }
+  // A "Safe" vote with arsenic below the 20 µg/L LOD is shown as "No arsenic detected", never "Safe to drink":
+  // the sensor cannot see the 10 µg/L limit.
+  function verdictKey(res) { return res.final === 'Safe' && res.belowLod ? 'Clear' : res.final; }
   function setReading(r, opts) {
     state.reading = r;
     const res = evaluate(r);
@@ -62,8 +69,9 @@
   }
 
   function stripPercent(u) {
-    // piecewise scale: 0-10 -> 0-20%, 10-50 -> 20-45%, 50-150 -> 45-75%, 150-300 -> 75-100%
-    const seg = [[0, 10, 0, 20], [10, 50, 20, 45], [50, 150, 45, 75], [150, 300, 75, 100]];
+    // piecewise scale matching the verdict edges: 0-10 -> 0-20%, 10-20 (below LOD) -> 20-35%,
+    // 20-150 (detected = above IS 10500) -> 35-75%, 150-300 -> 75-100%
+    const seg = [[0, 10, 0, 20], [10, 20, 20, 35], [20, 150, 35, 75], [150, 300, 75, 100]];
     const v = Math.max(0, Math.min(300, u));
     for (const [a, b, p, q] of seg) if (v <= b) return p + (v - a) / (b - a) * (q - p);
     return 100;
@@ -83,14 +91,14 @@
     $('ringTrack').setAttribute('d', arcPath(0, 1));
     $('ringVal').setAttribute('d', arcPath(0, 1));
     $('ringBands').innerHTML = '';
-    [[0, 0.2, '#34D399'], [0.2, 0.45, '#FBBF24'], [0.45, 0.75, '#FB923C'], [0.75, 1, '#F43F5E']].forEach(([a, b, c]) => {
+    [[0, 0.2, '#34D399'], [0.2, 0.35, '#FBBF24'], [0.35, 0.75, '#FB923C'], [0.75, 1, '#F43F5E']].forEach(([a, b, c]) => {
       const p = document.createElementNS(NS, 'path');
       p.setAttribute('d', arcPath(a + 0.004, b - 0.004, RING.r + 17)); p.setAttribute('class', 'ring-band'); p.setAttribute('stroke', c);
       p.style.strokeWidth = '4'; p.style.opacity = '.85'; p.style.strokeLinecap = 'round';
       $('ringBands').appendChild(p);
     });
     $('ringTicks').innerHTML = '';
-    [[0, '0'], [0.2, '10'], [0.45, '50'], [0.75, '150'], [1, '300']].forEach(([f, lab]) => {
+    [[0, '0'], [0.2, '10'], [0.35, '20'], [0.75, '150'], [1, '300']].forEach(([f, lab]) => {
       const [tx, ty] = polar(RING.start + RING.sweep * f, RING.r - 24);
       const text = document.createElementNS(NS, 'text');
       text.setAttribute('x', tx.toFixed(1)); text.setAttribute('y', (ty + 4).toFixed(1)); text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'ring-tick-l');
@@ -131,12 +139,13 @@
       return;
     }
     const res = evaluate(r);
+    const vk = verdictKey(res);
     v.dataset.tone = res.final;
-    $('verdictIcon').innerHTML = ICONS[res.final];
-    $('verdictBadge').textContent = t('class.' + res.final);
-    const vt = t('verdict.' + res.final + '.title');
+    $('verdictIcon').innerHTML = vk === 'Clear' ? ICONS.none : ICONS[res.final];
+    $('verdictBadge').textContent = t('class.' + vk);
+    const vt = t('verdict.' + vk + '.title');
     if ($('verdictTitle').textContent !== vt) { if (window.AquaMotion) window.AquaMotion.decode($('verdictTitle'), vt, 650); else $('verdictTitle').textContent = vt; }
-    $('verdictAction').textContent = t('verdict.' + res.final + '.action');
+    $('verdictAction').textContent = t('verdict.' + vk + '.action');
     $('verdictTime').textContent = fmtTime(r.time);
     UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
     $('asMgl').textContent = t('ov.mgl', { v: r.asMgL.toFixed(4) });
@@ -162,8 +171,8 @@
     const b = $('alertBanner');
     b.hidden = false;
     b.className = 'alert-banner' + (res.final === 'Safe' ? ' ok' : res.final === 'Caution' ? ' warn' : '');
-    $('alertTitle').textContent = t('alert.' + res.final + '.t');
-    $('alertText').textContent = t('alert.' + res.final + '.d');
+    $('alertTitle').textContent = t('alert.' + vk + '.t');
+    $('alertText').textContent = t('alert.' + vk + '.d');
     $('alertBtn1').hidden = res.final === 'Safe';
     $('alertBtn2').hidden = res.final === 'Safe' || res.final === 'Caution';
 
@@ -181,7 +190,7 @@
   function renderReadingsGrid(r) {
     const grid = $('readingsGrid');
     grid.innerHTML = READ_DEFS.map((d) => {
-      const val = r ? r[d.key] : null;
+      const val = r ? (r[d.key] ?? null) : null;
       const pct = (x) => Math.max(0, Math.min(100, (x - d.min) / (d.max - d.min) * 100));
       const okBand = d.ok ? `<div class="gauge-ok" style="left:${pct(d.ok[0])}%;width:${pct(d.ok[1]) - pct(d.ok[0])}%"></div>` : '';
       const dot = val !== null ? `<div class="gauge-dot" style="left:${pct(val)}%"></div>` : '';
@@ -210,8 +219,8 @@
       const d = await api(`/api/readings/latest?device_code=${encodeURIComponent(code)}`);
       setReading({
         device: code,
-        asMgL: (d.arsenic_ppb || 0) / 1000, ph: d.ph ?? 7.3, ec: d.conductivity_us_cm ?? 420, turb: d.turbidity_ntu ?? 2.0,
-        temp: d.temperature_c ?? 25, battery: d.battery_pct, lat: d.latitude, lon: d.longitude,
+        asMgL: (d.arsenic_ppb || 0) / 1000, ph: d.ph ?? null, ec: d.conductivity_us_cm ?? null, turb: d.turbidity_ntu ?? null,
+        temp: d.temperature_c ?? null, battery: d.battery_pct, lat: d.latitude, lon: d.longitude,
         time: d.recorded_at ? new Date(d.recorded_at.endsWith('Z') || d.recorded_at.includes('+') ? d.recorded_at : d.recorded_at + 'Z') : new Date(),
         source: d.is_simulated === false || d.source_type === 'hardware' ? 'device' : 'demo', savedOnServer: true,
       });
@@ -351,7 +360,7 @@
   const NN_IDS = [['nnAs', 'nnOutAs', (v) => `${(v * 1000).toFixed(0)} µg/L`], ['nnPh', 'nnOutPh', (v) => v.toFixed(2)], ['nnEc', 'nnOutEc', (v) => `${Math.round(v)} µS/cm`], ['nnTurb', 'nnOutTurb', (v) => `${v.toFixed(1)} NTU`], ['nnTemp', 'nnOutTemp', (v) => `${v.toFixed(1)} °C`]];
   function nnValues() { return NN_IDS.map(([id]) => parseFloat($(id).value)); }
   function syncNetworkInputs(r) {
-    const vals = [Math.min(0.3, r.asMgL), r.ph, r.ec, Math.min(25, r.turb), r.temp];
+    const vals = [Math.min(0.3, r.asMgL), val(r, 'ph'), val(r, 'ec'), Math.min(25, val(r, 'turb')), val(r, 'temp')];
     NN_IDS.forEach(([id], i) => { $(id).value = vals[i]; UI().fillRange($(id)); });
     updateNetwork();
   }
@@ -385,7 +394,7 @@
 
   // ---------------- contaminants ----------------
   const ANALYTES = [
-    { id: 'arsenic', f: 'As(III) / As(V)', status: 'supported_screening', lod: '20 µg/L', bis: '10 µg/L (50 permissible)', method: 'Anodic stripping voltammetry (MAS-G1)' },
+    { id: 'arsenic', f: 'As(III) / As(V)', status: 'supported_screening', lod: '20 µg/L', bis: '10 µg/L (no relaxation)', method: 'Anodic stripping voltammetry (MAS-G1)' },
     { id: 'lead', f: 'Pb²⁺', status: 'planned', lod: '5 µg/L', bis: '10 µg/L', method: 'Differential pulse ASV at −450 mV' },
     { id: 'cadmium', f: 'Cd²⁺', status: 'planned', lod: '1 µg/L', bis: '3 µg/L', method: 'Differential pulse ASV at −600 mV' },
     { id: 'mercury', f: 'Hg²⁺', status: 'experimental', lod: '0.5 µg/L', bis: '1 µg/L', method: 'Square-wave ASV on gold electrode' },
@@ -416,9 +425,12 @@
       ['auth.f.station', `${r.device || DEVICE} (${t('auth.f.stationType')})`],
       ['auth.f.contaminant', t('auth.f.arsenicTotal')],
       ['auth.f.reading', `${r.asMgL.toFixed(4)} mg/L (${fmtUg(r.asMgL)} µg/L)`],
-      ['auth.f.limits', 'WHO 10 µg/L · BIS 10500: 10 µg/L (50 µg/L permissible)'],
-      ['auth.f.tier', `${t('class.' + res.final)} — ${t('verdict.' + res.final + '.title')}`],
-      ['auth.f.other', `pH ${r.ph.toFixed(2)} · ${Math.round(r.ec)} µS/cm · ${r.turb.toFixed(1)} NTU · ${r.temp.toFixed(1)} °C`],
+      ['auth.f.limits', 'WHO 10 µg/L · IS 10500: 10 µg/L (no relaxation since 2015)'],
+      ['auth.f.tier', `${t('class.' + verdictKey(res))} — ${t('verdict.' + verdictKey(res) + '.title')}`],
+      ['auth.f.other', [
+        r.ph == null ? null : `pH ${r.ph.toFixed(2)}`, r.ec == null ? null : `${Math.round(r.ec)} µS/cm`,
+        r.turb == null ? null : `${r.turb.toFixed(1)} NTU`, r.temp == null ? null : `${r.temp.toFixed(1)} °C`,
+      ].filter(Boolean).join(' · ') || t('auth.f.notMeasured')],
       ['auth.f.method', t('auth.f.methodVal')],
       ['auth.f.geotag', r.lat != null ? `${r.lat.toFixed(4)}°N, ${r.lon.toFixed(4)}°E` : t('auth.f.noGps')],
       ['auth.f.time', fmtDateTime(r.time)],

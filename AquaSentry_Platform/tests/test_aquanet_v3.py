@@ -30,7 +30,7 @@ FW = os.path.join(ROOT, "Firmware", "esp32_firmware")
 def rule_class(a, ph, ec, tu):
     c = 0
     if a > 0.010: c = max(c, 1)
-    if a >= 0.050: c = max(c, 2)
+    if a >= 0.020: c = max(c, 2)   # detected (>= LOD) = above IS 10500's 10 ug/L (no relaxation since 2015)
     if a > 0.150: c = max(c, 3)
     if ph < 6.5 or ph > 8.5: c = max(c, 1)
     if ph < 6.0 or ph > 9.0: c = max(c, 2)
@@ -43,7 +43,7 @@ def rule_class(a, ph, ec, tu):
 
 def random_inputs(n, seed):
     rng = random.Random(seed)
-    lims = {0: [0.010, 0.050, 0.150], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500, 2000], 3: [5, 10]}
+    lims = {0: [0.010, 0.020, 0.150], 1: [6.0, 6.5, 8.5, 9.0], 2: [1500, 2000], 3: [5, 10]}
     rows = []
     for i in range(n):
         r = [math.exp(rng.uniform(math.log(0.0005), math.log(0.5))), rng.uniform(4.6, 10.4),
@@ -156,6 +156,6 @@ class TestAdaptiveRescan:
                              text=True, check=True).stdout.split()
         for (u, n), got in zip(cases, out):
             sd = (5.0 if u < 50 else 7.5 if u <= 150 else 15.0) / math.sqrt(n)
-            want = any(abs(u - L) < z * sd for L in (10.0, 50.0, 150.0))
-            if abs(min(abs(u - L) for L in (10.0, 50.0, 150.0)) - z * sd) > 1e-3:   # skip float ties
+            want = any(abs(u - L) < z * sd for L in (10.0, 20.0, 150.0))
+            if abs(min(abs(u - L) for L in (10.0, 20.0, 150.0)) - z * sd) > 1e-3:   # skip float ties
                 assert int(got) == int(want), (u, n)

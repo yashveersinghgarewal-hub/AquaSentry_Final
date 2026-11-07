@@ -9,7 +9,7 @@ This directory contains the production firmware for the AquaSentry autonomous wa
 - **Electrochemical Conditioning**: +1.200 V pre-cleaning pulse for 2.0 seconds prior to cathodic deposition to strip biofouling and contaminants from the electrode surface.
 - **I2C 9-Pulse Bus Recovery**: Automatic hardware clock cycling to release hung I2C slave devices.
 - **Peristaltic Tubing Anti-Set**: 1/4-turn ($90^\circ$) reverse stroke after each purge to release roller compression on silicone tubing.
-- **Adaptive re-scanning**: every test starts with **3 voltammetry scans** (`SCANS_PER_READING`). If the averaged arsenic reading is within 2 standard errors (`RESCAN_Z`) of 10, 50 or 150 µg/L, the board takes 3 more scans, and again up to 9 (`MAX_SCANS_PER_READING`). Clear readings finish in about 3½ minutes; borderline ones take up to about 10½. In simulation this lifts overall accuracy from 93.4% to 94.6% for about 1.5× the average scan time. The Serial Monitor shows `close to a limit ... scanning again` when it happens.
+- **Adaptive re-scanning**: every test starts with **3 voltammetry scans** (`SCANS_PER_READING`). If the averaged arsenic reading is within 2 standard errors (`RESCAN_Z`) of 10, 20 or 150 µg/L (the 10 µg/L IS 10500 / WHO limit, the 20 µg/L detection limit above which arsenic counts as detected, and the hazard level), the board takes 3 more scans, and again up to 9 (`MAX_SCANS_PER_READING`). Clear readings finish in about 3½ minutes; borderline ones take up to about 10½. In simulation this lifts overall accuracy from 93.4% to 94.6% for about 1.5× the average scan time. The Serial Monitor shows `close to a limit ... scanning again` when it happens.
 - **Local Edge AI Inference (AquaNet-V3)**: after scanning, the board runs `aquanet_v3_predict()` on the ESP32 itself — no Wi-Fi or cloud needed. The network is a trained 5-16-12-4 model: 352 float32 weights (1.4 KB of flash), no `malloc`, under 200 bytes of stack, only `<math.h>`. The same safety rules as the server are applied afterwards and can only make the verdict stricter. The old hand-built V1 engine (`aquanet_v1.c`) is kept because V3 reuses its result type and entropy function.
 
 ## Hardware Pinout
@@ -34,7 +34,8 @@ This directory contains the production firmware for the AquaSentry autonomous wa
    const char* BACKEND_API_URL  = "http://<your PC's IPv4 address>:8000/api/readings";
    const char* DEVICE_CODE      = "TANK-001";
    const char* OTA_USER         = "admin";
-   const char* OTA_PASS         = "change-me";
+   const char* OTA_PASS         = "change-me";   // OTA is disabled until you change this
+   const char* DEVICE_API_KEY   = "";            // same value as AQUASENTRY_API_KEY in the server's .env
    ```
 5. Connect the ESP32 by USB, pick its port, and click **Upload**.
 6. Open the Serial Monitor at **115200** baud. The board prints its IP address once Wi-Fi connects.
@@ -50,6 +51,8 @@ Allow Python through Windows Firewall on **Private** networks when asked. The ne
 `POST /api/readings` with JSON in the format the server expects:
 `{"device_code":"TANK-001","arsenic_concentration_mg_l":0.0371,"source_type":"hardware","source_label":"ESP32 node","idempotency_key":"TANK-001-42", ...}`.
 pH, conductivity, turbidity and temperature are included **only** when you fit those sensors. Write the code in `read_ph()`, `read_conductivity()`, `read_turbidity()` and `read_temperature()`; until then they return NAN and are not sent. The idempotency key stops a reading that is re-sent from the offline buffer from being stored twice.
+
+Once Wi-Fi connects the board sets its clock by NTP, and each reading carries `"recorded_at"` (UTC), so readings buffered while offline keep the time they were taken. If the server sets `AQUASENTRY_API_KEY`, put the same value in `DEVICE_API_KEY`; the board sends it as the `X-API-Key` header. A reading the server rejects for good (any 4xx except 408/429, e.g. bad data or a wrong key) is logged and dropped instead of blocking the offline queue forever.
 
 ## How arsenic is measured (same maths as the server)
 Clean at +1.2 V (2 s), deposit at −1.1 V (60 s), then sweep −1100 → −500 mV in 5 mV steps. Then:
@@ -77,4 +80,4 @@ This regenerates `aquanet_v3.c/.h` here **and** updates the server and dashboard
 | `[ASV] Too few points recorded` | DAC/ADC wiring problem (check I2C on GPIO 21/22) |
 
 ## Over-The-Air (OTA) Updates
-Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. Change the default password before deploying: anyone on the network who knows it can replace the firmware.
+Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. OTA is **disabled while `OTA_PASS` is still `change-me`**, so nobody can flash the board with the default login. Pick a long password, then re-flash over USB once.

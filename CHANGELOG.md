@@ -1,5 +1,47 @@
 # Changelog
 
+## v5.2 — audit release: correct arsenic limit, honest verdicts, hardening
+**Public-health correctness**
+- **India's arsenic limit is 10 µg/L, not 50.** IS 10500:2012 originally allowed 0.05 mg/L "in the absence of an alternate source"; Amendment No. 1 (2015) removed that relaxation (CGWA's reply to the NGT in OA 538/2024 states the limit "was revised from 0.05 mg/L (50 ppb) to 0.01 mg/L (10 ppb) in the year 2015"). The whole stack used 50. Fixed in `standards.py`, `analytes.py`, the classification layer, all four AquaNet-V3 rule copies (server, `Neural_Network/`, browser `neural.js`, ESP32 `aquanet_v3.c` + its generator), PDF reports, the chat assistant's knowledge, the dashboard strip/gauge/standards table, and the docs.
+- Because the sensor's LOD (20 µg/L) is already twice that limit, the rules are now: **≥ 20 µg/L (detected) → at least Unsafe**, **10–20 µg/L → Caution** (above the limit but not confirmable, lab test), **> 150 µg/L → Hazardous**. The network weights are unchanged; the rules only make verdicts stricter.
+- **No more "Safe to drink" below the detection limit.** The dashboard now says **"No arsenic detected"** with a one-line ask for a lab test (English and Hindi). Previously 4.5 µg/L showed a large green "Safe to drink", while the server itself said "cannot confirm".
+- Server and dashboard now agree for 10–20 µg/L (server said "Below LOD", dashboard said "Caution").
+- Alerts fire on **every Unsafe/Hazardous verdict** (they used to need ≥ 50 µg/L, so 20–49 µg/L and pH/turbidity failures never alerted). `/api/alerts/recent` is built from the database, so alerts survive a restart; the webhook runs in a background thread instead of blocking the ESP32 upload.
+- `scripts/reclassify_readings.py` re-applies the current rules to stored readings (preview, then `--apply` with a backup). Applied to the shipped `aquasentry.db`: 130 readings updated (105 were "Caution" at 20–50 µg/L).
+
+**Bugs fixed**
+- Real zeros were replaced by defaults (`x or default`): 0 NTU, 0 °C, 0 µS/cm and `arsenic_mg_l: 0` were classified as 2 NTU, 24 °C, 400 µS/cm and "use arsenic_ppb instead".
+- CSV/JSON import matched column names by substring: `class`, `basin`, `measured_at` became arsenic, `recorded_at` became conductivity, `phosphate` became pH. Now whole-word matching shared by preview and commit, mg/L vs µg/L detection, sample times kept, zero arsenic accepted, duplicates inside one file caught, 20,000-row cap.
+- The dashboard showed made-up pH/EC/turbidity/temperature (7.3, 420, 2.0, 25) for hardware readings that did not measure them. Now "–" / "Not measured"; typical values are used only for the model vote, as on the ESP32.
+- API timestamps had no time zone; the dashboard's `detectedAt` showed UTC as if it were local time. All times are now explicit UTC; incoming sample times are converted to UTC and a device clock more than a day ahead is ignored.
+- `/api/health`, PDF reports and the chat prompt named AquaNet-V1 while readings were classified by V3; the PDF recomputed confidence with V1. Now the stored model is used everywhere.
+- Re-sent readings (idempotency hit) were re-classified with defaults instead of their stored values.
+- The dashboard's "confirmed by other homes" query compared naive and aware datetimes.
+- The default SQLite path was relative to the current folder, so starting the server elsewhere silently created an empty database.
+- The chat endpoint was `async` but made a blocking Gemini call (froze the server while waiting) and returned raw exception text. Model is now configurable (`GEMINI_MODEL`).
+- The voltammetry WebSocket crashed on non-numeric input.
+
+**Security**
+- Optional write protection: set `AQUASENTRY_API_KEY` and network clients must send `X-API-Key` to add readings, import or load demo data. The dashboard on the same computer keeps working without it. `/api/admin/db/compact` is never available to anonymous network clients. `/api/health` reports `write_auth`.
+
+**ESP32 firmware**
+- Sends `X-API-Key` (`DEVICE_API_KEY`), syncs its clock by NTP and sends `recorded_at`, so readings buffered offline keep their real time (they used to get the upload time).
+- A reading the server rejects for good (4xx other than 408/429) is dropped with a log line. Before, one rejected reading blocked the whole offline buffer forever.
+- Web OTA is disabled while `OTA_PASS` is still `change-me`.
+- Adaptive re-scan edges are now 10 / 20 / 150 µg/L (the verdict edges) instead of 10 / 50 / 150.
+
+**Tests and CI**
+- 29 new tests in `tests/test_v52_regressions.py` (139 total): amended limit, zeros, import columns, auth, UTC times, alerts, WebSocket validation, and **cross-engine parity** of the safety rules (server Python ↔ `Neural_Network/` copy ↔ browser JS under Node ↔ ESP32 C compiled with gcc), plus a check that the firmware's upload JSON is valid and accepted by the API schema.
+- CI: Python 3.10–3.13, Node syntax check of every dashboard script, gcc/g++ for the C parity tests.
+
+**AquaNet-V3 retrained for the amended limit**
+- `train_v3.py` now labels with the current edges (`AS_EDGES`, default 10 / 20 / 150 µg/L; `10,50,150` reproduces older models). New installed model `models/aquanet_v3_amd2015_balanced.json` (same 5-16-12-4 size, 352 parameters, 1.4 KB on the ESP32), installed with `install_aquanet_v3.py` into the server, dashboard, firmware and toolkit.
+- Under the current rules (synthetic test sets, same seeds as before; `results/eval_v52_*.json`): the network's own vote matches the rules 98.6% of the time on exact readings (old model: 88.6%, because it was trained on the 50 µg/L edge). End to end with 3-scan sensor noise, dangerous samples missed fall from 2,198 to 2,039 out of 200,000 (−7%); with the firmware's adaptive re-scan, 1,761 → 1,565 (−11%). The price is about 7% more false alarms. No dangerous sample is ever called Safe.
+- C engine vs Python on 100,000 inputs: 0 verdict mismatches (`results/c_vs_python_parity_100k.txt`).
+- The previous model stays in `models/aquanet_v3_installed_balanced.json` if you want to compare.
+
+**Known limits**: all accuracy figures are from simulated data; the model still needs checking against real lab-tested samples. The standalone V1 toolkit in `Neural_Network/` (hand-built weights) still encodes 50 µg/L as a historical reference; the server enforces the current limit on top of it.
+
 ## v5.1 — black & blue, more motion
 - New colour scheme: deep blue-black background with electric blue, cyan and indigo accents (light theme updated to match). Safety colours (green/amber/orange/red) unchanged.
 - New `frontend/motion.js` on every page: animated 3D dotted-wave background that ripples around the cursor, soft cursor light, sweeping light beam, scroll progress bar, word-by-word heading reveals, "decode" animation on the verdict title, magnetic buttons, parallax on hero visuals.

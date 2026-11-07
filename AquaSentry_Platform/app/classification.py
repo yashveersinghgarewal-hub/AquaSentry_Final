@@ -19,6 +19,7 @@ from .standards import (
     LOQ_UG_L,
     BIS_PERMISSIBLE_LIMIT_UG_L,
     WHO_GUIDELINE_UG_L,
+    HAZARD_THRESHOLD_UG_L,
 )
 
 
@@ -112,21 +113,24 @@ def classify_arsenic_neural(
         non_arsenic_issue = any(k in r for r in reasons for k in ("PH", "TURBIDITY", "SALINITY", "CONDUCTIVITY", "OUT_OF_BOUNDS"))
     conf = nn_res["confidence_pct"]
 
-    # --- SAFETY PRECEDENCE RULES ---
-    # 1. A measured arsenic level above the BIS limit can never be shown as Safe or Caution.
+    # --- SAFETY PRECEDENCE RULES (can only make the verdict stricter) ---
     effective_label = nn_label
     precedence_note = ""
-    if arsenic_ppb > BIS_PERMISSIBLE_LIMIT_UG_L and nn_label in ("Safe", "Caution"):
-        effective_label = "Unsafe"
-        precedence_note = (f" [Precedence Override: Measured concentration ({arsenic_ppb:.1f} µg/L) "
-                           f"exceeds BIS permissible limit; ML downgrade prohibited.]")
-    elif arsenic_ppb < LOD_UG_L:
-        # 2. Below the sensor's detection limit the arsenic result is unverified. Only show "Below Sensor LOD"
+    rank = {"Safe": 0, "Caution": 1, "Unsafe": 2, "Hazardous": 3}
+    if arsenic_ppb < LOD_UG_L:
+        # 1. Below the sensor's detection limit the arsenic result is unverified. Only show "Below Sensor LOD"
         #    when nothing else is wrong; a pH / turbidity / conductivity problem must stay visible.
         precedence_note = (f" [Method Limit Notice: arsenic is below the sensor LOD ({LOD_UG_L:.0f} µg/L); "
                            f"cannot confirm WHO guideline compliance without a laboratory test.]")
-        if effective_label in ("Safe", "Caution") and not non_arsenic_issue:
+        if effective_label in ("Safe", "Caution") and not non_arsenic_issue and arsenic_ppb <= WHO_GUIDELINE_UG_L:
             effective_label = "Below Sensor LOD"
+    else:
+        # 2. Detected arsenic (>= LOD, which is above the 10 µg/L WHO / IS 10500 limit) is never Safe or Caution.
+        floor = "Hazardous" if arsenic_ppb > HAZARD_THRESHOLD_UG_L else "Unsafe"
+        if rank.get(effective_label, 0) < rank[floor]:
+            effective_label = floor
+            precedence_note = (f" [Precedence Override: measured arsenic ({arsenic_ppb:.1f} µg/L) exceeds the "
+                               f"IS 10500 / WHO limit ({BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L); ML downgrade prohibited.]")
 
     sev_map = {"Below Sensor LOD": 0, "Below LOD": 0, "Safe": 0, "Caution": 1, "Unsafe": 2, "Hazardous": 3}
     severity = sev_map.get(effective_label, base_result.severity)
@@ -173,7 +177,7 @@ def classify_water(
         temperature_c=temperature,
         source_type=source_type,
     )
-    override_applied = arsenic_ppb > BIS_PERMISSIBLE_LIMIT_UG_L and ("Precedence Override" in res.message)
+    override_applied = "Precedence Override" in res.message
     reason_code = "SAFETY_OVERRIDE_ARSENIC_EXCEEDS_BIS" if override_applied else "NOMINAL"
     metadata = {
         "severity": res.severity,

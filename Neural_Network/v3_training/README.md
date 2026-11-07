@@ -31,7 +31,7 @@ python ../main.py --test
 ```
 On Windows PowerShell set the variables first, e.g. `$env:SCANS=3; $env:W_DANGER=2; ...`.
 
-Settings (environment variables): `SCANS` scans averaged per reading, `ADAPTIVE=1` use the firmware's adaptive re-scan rule instead (3 → 6 → 9 scans while within `ADAPT_Z` standard errors of a limit; must match `RESCAN_Z` in the firmware), `W_DANGER` / `W_CAUTION` extra training weight for Unsafe-Hazardous / Caution samples, `EPOCHS`, `NTRAIN` training samples, `TAG` added to the output file name.
+Settings (environment variables): `AS_EDGES` arsenic class edges in µg/L (default `10,20,150` = the IS 10500 / WHO 10 µg/L limit, the 20 µg/L detection limit and the hazard level; `10,50,150` reproduces models from before v5.2), `SCANS` scans averaged per reading, `ADAPTIVE=1` use the firmware's adaptive re-scan rule instead (3 → 6 → 9 scans while within `ADAPT_Z` standard errors of a limit; must match `RESCAN_Z` in the firmware), `W_DANGER` / `W_CAUTION` extra training weight for Unsafe-Hazardous / Caution samples, `EPOCHS`, `NTRAIN` training samples, `TAG` added to the output file name.
 
 **Keep the network ESP32-sized:** the tests allow up to 600 weights. 5-8-6-4 = 130, 5-16-12-4 = 352.
 

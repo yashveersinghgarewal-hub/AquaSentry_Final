@@ -1,0 +1,9 @@
+[noisy] 5x16x12x4 seed 0 ep 20 val 90.397% dangerous->safe 0 (3s)
+[noisy] 5x16x12x4 seed 0 ep 40 val 90.645% dangerous->safe 0 (6s)
+[noisy] 5x16x12x4 seed 0 ep 60 val 90.607% dangerous->safe 0 (9s)
+[noisy] 5x16x12x4 seed 0 ep 80 val 90.658% dangerous->safe 0 (16s)
+[noisy] 5x16x12x4 seed 0 ep 100 val 90.662% dangerous->safe 0 (23s)
+[noisy] 5x16x12x4 seed 0 ep 120 val 90.693% dangerous->safe 0 (31s)
+[noisy] 5x16x12x4 seed 0 ep 140 val 90.738% dangerous->safe 0 (38s)
+[noisy] 5x16x12x4 seed 0 ep 160 val 90.742% dangerous->safe 0 (45s)
+==> [noisy] 5x16x12x4 best seed 0 ep 160 {'accuracy_pct': 90.742, 'dangerous_called_safe': 0, 'under_calls': 2089, 'over_calls': 3466, 'n': 60000}

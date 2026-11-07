@@ -8,7 +8,7 @@
 
   window.I18N.extend('en', {
     'mq.1': 'WHO limit <b>10 µg/L</b>',
-    'mq.2': 'India BIS limit <b>50 µg/L</b>',
+    'mq.2': 'India IS 10500 limit <b>10 µg/L</b>',
     'mq.3': 'Sensor detection limit <b>20 µg/L</b>',
     'mq.4': 'AquaNet-V3 · <b>352 weights</b> on the ESP32',
     'mq.5': 'Cost per test <b>₹56</b>',
@@ -33,6 +33,8 @@
     'ring.unit': 'µg/L arsenic',
     'alert.steps': 'What to do',
     'alert.report': 'Alert authorities',
+    'alert.Clear.t': 'No arsenic detected. ',
+    'alert.Clear.d': 'This sensor cannot see below 20 µg/L. Confirm with one lab test that the water is under 10 µg/L.',
     'alert.Safe.t': 'Water is within safe limits. ',
     'alert.Safe.d': 'Keep testing every month — arsenic levels can change with the seasons.',
     'alert.Caution.t': 'Be careful with this water. ',
@@ -159,7 +161,7 @@
     'disc.lod.t': 'Detection limit vs WHO guideline',
     'disc.lod.d': 'The sensor cannot measure below 20 µg/L, but the WHO guideline is 10 µg/L. A reading under 20 µg/L cannot rule out 10–20 µg/L, so a certified lab test (ICP-MS) is needed before declaring water safe.',
     'disc.rules.t': 'Safety rules always win',
-    'disc.rules.d': 'Fixed public-health limits run after the neural network and can only make a verdict stricter. A reading above the India limit (50 µg/L) can never be called Safe.',
+    'disc.rules.d': 'Fixed public-health limits run after the neural network and can only make a verdict stricter. Any arsenic the sensor detects (20 µg/L or more) is above the 10 µg/L limit set by India and the WHO, so it can never be called Safe.',
 
     'imp.eyebrow': 'Why it matters',
     'imp.heading': 'Impact and market',
@@ -184,7 +186,7 @@
 
   window.I18N.extend('hi', {
     'mq.1': 'WHO सीमा <b>10 µg/L</b>',
-    'mq.2': 'भारत BIS सीमा <b>50 µg/L</b>',
+    'mq.2': 'भारत IS 10500 सीमा <b>10 µg/L</b>',
     'mq.3': 'सेंसर की पहचान सीमा <b>20 µg/L</b>',
     'mq.4': 'AquaNet-V3 · ESP32 पर <b>352 वज़न</b>',
     'mq.5': 'प्रति जाँच ख़र्च <b>₹56</b>',
@@ -209,6 +211,8 @@
     'ring.unit': 'µg/L आर्सेनिक',
     'alert.steps': 'क्या करें',
     'alert.report': 'अधिकारियों को बताएँ',
+    'alert.Clear.t': 'आर्सेनिक नहीं मिला। ',
+    'alert.Clear.d': 'यह सेंसर 20 µg/L से कम नहीं देख सकता। एक लैब जाँच से पक्का करें कि पानी 10 µg/L से कम है।',
     'alert.Safe.t': 'पानी सुरक्षित सीमा में है। ',
     'alert.Safe.d': 'हर महीने जाँच करते रहें — मौसम के साथ आर्सेनिक बदल सकता है।',
     'alert.Caution.t': 'इस पानी से सावधान रहें। ',
@@ -335,7 +339,7 @@
     'disc.lod.t': 'पहचान सीमा बनाम WHO मानक',
     'disc.lod.d': 'सेंसर 20 µg/L से कम नहीं माप सकता, जबकि WHO का मानक 10 µg/L है। 20 µg/L से कम रीडिंग 10–20 µg/L को ख़ारिज नहीं कर सकती, इसलिए पानी को सुरक्षित कहने से पहले प्रमाणित लैब जाँच (ICP-MS) ज़रूरी है।',
     'disc.rules.t': 'सुरक्षा नियम हमेशा ऊपर',
-    'disc.rules.d': 'तय जन-स्वास्थ्य सीमाएँ न्यूरल नेटवर्क के बाद लगती हैं और फ़ैसले को सिर्फ़ और सख़्त कर सकती हैं। भारत की सीमा (50 µg/L) से ऊपर की रीडिंग को कभी सुरक्षित नहीं कहा जा सकता।',
+    'disc.rules.d': 'तय जन-स्वास्थ्य सीमाएँ न्यूरल नेटवर्क के बाद लगती हैं और फ़ैसले को सिर्फ़ और सख़्त कर सकती हैं। सेंसर को मिला कोई भी आर्सेनिक (20 µg/L या ज़्यादा) भारत की 10 µg/L सीमा से ऊपर है, इसलिए उसे कभी सुरक्षित नहीं कहा जा सकता।',
 
     'imp.eyebrow': 'यह क्यों ज़रूरी है',
     'imp.heading': 'असर और बाज़ार',

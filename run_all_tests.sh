@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # AquaSentry Universal Test Runner (macOS & Linux)
-# Runs all 110 tests across the Neural Network and Web Platform
+# Runs every test across the Neural Network toolkit and the Web Platform
 # ==============================================================================
 
 set -e

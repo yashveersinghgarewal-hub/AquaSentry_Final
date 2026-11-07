@@ -7,7 +7,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import train_v3 as T3
 
-LIMITS_UG = np.array([10.0, 50.0, 150.0])
+LIMITS_UG = T3.LIMITS_UG   # same edges as training (AS_EDGES)
 
 
 def load(path):

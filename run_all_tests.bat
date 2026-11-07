@@ -1,7 +1,7 @@
 @echo off
 REM ==============================================================================
 REM AquaSentry Universal Test Runner (Windows)
-REM Runs all 110 tests across the Neural Network and Web Platform
+REM Runs every test across the Neural Network toolkit and the Web Platform
 REM ==============================================================================
 
 if exist ".venv\Scripts\activate.bat" (

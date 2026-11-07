@@ -12,13 +12,17 @@ from typing import Dict, Any
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./aquasentry.db")
+# Default database lives next to the platform code, whatever folder the server was started from
+# (a relative "./aquasentry.db" used to create an empty second database when launched elsewhere).
+_PLATFORM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DEFAULT_DB = os.path.join(_PLATFORM_DIR, "aquasentry.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///" + _DEFAULT_DB)
 
 if os.environ.get("VERCEL") or os.environ.get("VERCEL_URL"):
     tmp_db_path = "/tmp/aquasentry.db"
     if not os.path.exists(tmp_db_path):
         try:
-            shutil.copy2("./aquasentry.db", tmp_db_path)
+            shutil.copy2(_DEFAULT_DB, tmp_db_path)
         except Exception as e:
             print(f"Warning: Could not copy initial DB to /tmp: {e}")
     DATABASE_URL = f"sqlite:///{tmp_db_path}"

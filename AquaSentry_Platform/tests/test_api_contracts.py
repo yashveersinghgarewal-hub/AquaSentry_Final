@@ -34,7 +34,8 @@ class TestHealthEndpoint:
         assert "diagnostics" in data
         diag = data["diagnostics"]
         assert diag["database"] == "connected"
-        assert "AquaNet-V1" in diag["neural_model"]
+        assert "AquaNet-V3" in diag["neural_model"] or "AquaNet-V1" in diag["neural_model"]
+        assert diag["model_version"] in ("AquaNet-V3", "AquaNet-V1")
         assert "standards_version" in diag
 
 

@@ -9,7 +9,7 @@ Nov 7, 2026 · @Suri
 
 AquaSentry is a water-safety system that measures arsenic electrochemically, reads four other water sensors, and labels the water **Safe, Caution, Unsafe or Hazardous** using a small neural network (AquaNet-V1) wrapped in hard safety rules.
 
-The problem it targets is arsenic in groundwater (a major issue in the Ganges–Brahmaputra basin). The WHO guideline is 10 µg/L (0.010 mg/L); India's BIS 10500 allows up to 50 µg/L only when no other source exists. Lab tests (ICP-MS) are accurate but slow and expensive, so AquaSentry aims to be a cheap, continuous *screening* device — the code repeatedly says it is not a certified lab instrument.
+The problem it targets is arsenic in groundwater (a major issue in the Ganges–Brahmaputra basin). The WHO guideline is 10 µg/L (0.010 mg/L); India's IS 10500 used to allow up to 50 µg/L when no other source existed, but Amendment No. 1 (2015) removed that relaxation: the limit is now 10 µg/L, full stop. Lab tests (ICP-MS) are accurate but slow and expensive, so AquaSentry aims to be a cheap, continuous *screening* device — the code repeatedly says it is not a certified lab instrument.
 
 ### The five parts of the package
 
@@ -59,8 +59,8 @@ This is the brain of the web platform. Requests come in through `main.py`, get v
 | --- | --- |
 | `main.py` (\~1,400 lines) | The FastAPI app. Defines every API route (table below), the emergency-alert dispatcher, the PDF certificate generator, the Gemini chatbot with its system prompt, and a WebSocket that streams a simulated scan point by point. |
 | `neural_classifier.py` | **AquaNet-V1 in Python.** Holds the weights, normalisation constants, ReLU, softmax and entropy functions, `forward_pass()` (the network plus safety rules) and `predict_int8()` (an integer-only version that mimics the microcontroller). Identical to `Neural_Network/aquanet_classifier.py`. |
-| `classification.py` | Combines the neural verdict with the regulatory rules. `classify_arsenic_neural()` rejects impossible inputs (e.g. pH 12), runs the network, then forces **Unsafe** if arsenic > 50 µg/L and marks **Below Sensor LOD** if arsenic < 20 µg/L. |
-| `standards.py` | Single source of truth for numbers: WHO 10 µg/L, BIS 10/50 µg/L, hazard 150 µg/L, sensor LOD 20 and LOQ 30 µg/L, calibration slope 0.8563 and intercept 0.0096. `evaluate_measurement()` turns a concentration into a status, tier, message, recommended action and uncertainty. |
+| `classification.py` | Combines the neural verdict with the regulatory rules. `classify_arsenic_neural()` rejects impossible inputs (e.g. pH 12), runs the network, then forces at least **Unsafe** for any detected arsenic (≥ 20 µg/L, which is already above the 10 µg/L limit), **Hazardous** above 150 µg/L, and marks **Below Sensor LOD** if arsenic ≤ 10 µg/L with nothing else wrong. |
+| `standards.py` | Single source of truth for numbers: WHO 10 µg/L, IS 10500 10 µg/L (no relaxation; the withdrawn 50 µg/L is kept only as a historical constant), hazard 150 µg/L, sensor LOD 20 and LOQ 30 µg/L, calibration slope 0.8563 and intercept 0.0096. `evaluate_measurement()` turns a concentration into a status, tier, message, recommended action and uncertainty. |
 | `signal_processing.py` | The full-quality voltammetry pipeline: checks the scan is valid, smooths it (Savitzky-Golay or rolling median), fits and subtracts a baseline, finds the arsenic peak, measures its height, width, area and signal-to-noise ratio, converts to concentration, and raises QC flags (saturation, unstable baseline, below LOD, above range). Also generates synthetic test scans. |
 | `asv_extractor.py` | A lighter version of the same pipeline used by the command line: reads a CSV, smooths, subtracts baseline, finds the peak between −850 and −740 mV, converts to mg/L, then calls the network. Also estimates cadmium, lead and copper peaks and has a standard-addition calculator. |
 | `analytes.py` | A catalogue of eight contaminants (arsenic, lead, cadmium, mercury, total and hexavalent chromium, fluoride, nitrate) with their limits and whether the hardware can actually measure them. Only arsenic is hardware-active. |
@@ -184,7 +184,7 @@ The scan is a list of (voltage, current) pairs — `Data/example_data.csv` has 8
 The network takes five numbers: arsenic (mg/L), pH, conductivity (µS/cm), turbidity (NTU) and temperature (°C). Section 4 explains what happens inside. After the network picks a class, `forward_pass()` applies rules in this order:
 
 1. **Out-of-range gate** — any sensor outside its valid range (e.g. pH outside 4.5–10.5) means the result can't be Safe or Caution; it becomes Unsafe.
-2. **Arsenic rules win** — above 0.150 mg/L is always Hazardous; 0.050 mg/L or more is at least Unsafe; below 0.020 mg/L adds a "below detection limit" notice.
+2. **Arsenic rules win** — above 0.150 mg/L is always Hazardous; 0.020 mg/L or more (detected) is at least Unsafe; above 0.010 mg/L but below detection is at least Caution; below 0.020 mg/L adds a "below detection limit" notice.
 3. **Other water standards** — pH outside 6.5–8.5 bumps Safe to Caution (outside 6.0–9.0 forces Unsafe); turbidity above 5 NTU → Caution, above 10 NTU → Unsafe; conductivity above 1500 µS/cm → Caution, above 2000 → Unsafe.
 4. **Uncertainty check** — if the network's answer is "spread out" (normalised entropy above 0.65) and it said Safe, it becomes Caution.
 
@@ -196,7 +196,7 @@ For the worked example (7.4 µg/L, pH 7.2, 400 µS/cm, 2 NTU, 24 °C) the networ
 
 1. The reading arrives at `POST /api/readings` (from the Bluetooth bridge, a device, an import, or the demo loader). Pydantic validates it; an `idempotency_key` stops the same reading being saved twice.
 2. It is classified (Stage C), saved to SQLite with full audit info (source type, method version, model version, raw payload), and linked to its device.
-3. If arsenic is 50 µg/L or more, `dispatch_emergency_alert()` records a WARNING (or CRITICAL at 150+) and POSTs it to a webhook if `ALERT_WEBHOOK_URL` is set.
+3. If the verdict is Unsafe or Hazardous, `dispatch_emergency_alert()` records a WARNING (CRITICAL for Hazardous) and POSTs it to `ALERT_WEBHOOK_URL` in a background thread. `/api/alerts/recent` rebuilds alerts from the database, so they survive a restart.
 4. The dashboard polls `/api/dashboard/latest`, recolours the status card, and syncs the neural-network picture to the new arsenic value.
 5. Optional extras: a PDF certificate (`/api/reports/certificate/pdf`) and the chatbot, which is fed the latest reading so it talks about real data.
 
@@ -381,7 +381,7 @@ The project runs with one command, but a code review turned up one urgent securi
 2. **See the API:** open `http://localhost:8000/docs` for the interactive Swagger page where you can try every route.
 3. **See the dashboard:** open `AquaSentry_Platform/frontend/index.html` in a browser, or run `AquaSentry_Platform/START_AQUASENTRY.bat` / `start_aquasentry.sh`, which also serves it at `http://localhost:8001/index.html`. (Opening `localhost:8000` itself shows "Not Found" — see issue 4.)
 4. **Analyse a scan without the server:** `python3 main.py --csv Data/example_data.csv --ph 7.4 --ec 450 --turb 1.8 --temp 25`.
-5. **Run tests:** `python3 main.py --test` (22 neural + 88 platform = 110 tests).
+5. **Run tests:** `python3 main.py --test` (22 neural + 117 platform = 139 tests).
 6. **Chatbot:** copy `.env.example` to `.env` and add a `GEMINI_API_KEY`; without it the chat answers in offline mode.
 
 I read every file but couldn't execute the project's own code here, so the numbers in sections 3 and 4 come from my own small script that re-implements the same maths on the shipped data and weights.
@@ -428,7 +428,7 @@ The full table with fixes follows.
 | µg/L, ppb, mg/L, ppm | 1 µg/L = 1 ppb; 1 mg/L = 1 ppm = 1000 µg/L. |
 | NTU | Turbidity unit (cloudiness). |
 | µS/cm | Conductivity unit (dissolved salts). |
-| WHO / BIS 10500 | World Health Organization guideline (10 µg/L arsenic) / Indian drinking-water standard (10 acceptable, 50 permissible). |
+| WHO / IS 10500 | World Health Organization guideline (10 µg/L arsenic) / Indian drinking-water standard (10 µg/L acceptable and permissible since Amendment No. 1, 2015; the old 50 µg/L relaxation is withdrawn). |
 | Weight, bias | The adjustable numbers in a neuron. |
 | Activation (ReLU) | The bend applied after the weighted sum; ReLU = max(0, z). |
 | Logit | A raw output score before softmax. |

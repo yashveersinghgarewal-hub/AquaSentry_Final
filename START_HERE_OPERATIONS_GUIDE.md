@@ -127,13 +127,13 @@ run_all_tests.bat
 python3 main.py --test
 ```
 
-### What is Tested (110 Automated Test Cases):
+### What is Tested (139 Automated Test Cases):
 * **22 Standalone Neural Parity Tests** (`Neural_Network/test_aquanet_parity.py`):
   * Exact 23-node, 112-synapse forward pass parity.
   * Multi-parameter potability downgrades (pH outside 6.5–8.5, turbidity $> 5.0\text{ NTU}$, conductivity $> 1500\ \mu\text{S/cm}$).
   * Out-of-bounds sensor fail-safes (invalid negative temperatures or extreme pH immediately revoke safe status).
-  * Conservative statutory precedence overrides (arsenic $>0.150\text{ mg/L} \to \text{Hazardous}$; $\ge 0.050\text{ mg/L} \to \text{Unsafe}$).
-* **88 Platform Integration Tests** (`AquaSentry_Platform/run_tests.py`):
+  * Conservative statutory precedence overrides (arsenic $>0.150\text{ mg/L} \to \text{Hazardous}$; $\ge 0.020\text{ mg/L}$ detected $\to \text{Unsafe}$, because the IS 10500 limit is $0.010\text{ mg/L}$ with no relaxation).
+* **117 Platform Integration Tests** (`AquaSentry_Platform/run_tests.py`):
   * REST API contracts, reading ingestion, duplicate protection.
   * Digital filtering, Savitzky-Golay convolution, peak detection.
   * Chat policy prompt injection prevention.
@@ -148,7 +148,7 @@ You can execute common tasks directly from your terminal using `main.py`:
 | :--- | :--- |
 | `python3 main.py --serve` | Starts the web platform and API on port 8000. |
 | `python3 main.py --serve --port 8080` | Starts on custom port 8080. |
-| `python3 main.py --test` | Runs all 110 test cases across both suites. |
+| `python3 main.py --test` | Runs all 139 test cases across both suites. |
 | `python3 main.py --csv Data/example_data.csv` | Processes a raw voltammetric CSV file and prints classification JSON. |
 | `python3 main.py --csv Data/example_data.csv --ph 7.8 --ec 500 --turb 3.0 --temp 24` | Processes CSV with specific field sensor values. |
 | `python3 main.py --neural` | Runs the standalone AquaNet neural network benchmark scenarios. |
@@ -197,7 +197,7 @@ The platform adheres to international drinking water health standards:
 | Standard / Parameter | Threshold | Safety Enforcement |
 | :--- | :--- | :--- |
 | **WHO Arsenic Guideline** | $0.010\text{ mg/L}$ ($10\ \mu\text{g/L}$) | Caution triggered if exceeded. |
-| **BIS 10500 Permissible** | $0.050\text{ mg/L}$ ($50\ \mu\text{g/L}$) | Hard override forces `Unsafe`. Downgrades prohibited. |
+| **IS 10500 (Amd. 1, 2015)** | $0.010\text{ mg/L}$ ($10\ \mu\text{g/L}$), no relaxation | Any detected arsenic ($\ge$ 20 µg/L LOD) forces at least `Unsafe`. Downgrades prohibited. |
 | **Acute Toxic Hazard** | $> 0.150\text{ mg/L}$ ($150\ \mu\text{g/L}$) | Hard override forces `Hazardous`. |
 | **Method Limit of Detection** | $0.020\text{ mg/L}$ ($20\ \mu\text{g/L}$) | Analytical notice attached to output. |
 | **Drinking Water pH** | $6.5 - 8.5$ | Violations trigger potability downgrade. |

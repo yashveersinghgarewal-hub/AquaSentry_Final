@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout Repository
@@ -25,7 +25,16 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang
+          sudo apt-get install -y clang gcc g++
+
+      - name: Set up Node (dashboard JS checks + browser-engine parity test)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Syntax-check every dashboard script
+        run: |
+          for f in AquaSentry_Platform/frontend/*.js; do node --check "$f"; done
 
       - name: Install Python Dependencies
         run: |
@@ -41,6 +50,6 @@ jobs:
           clang -std=c99 -Wall -Wextra -Werror -c Firmware/esp32_firmware/aquanet_v3.c -I Firmware/esp32_firmware -o /tmp/aquanet_v3.o
           clang -std=c99 -Wall -Wextra -Werror -c Firmware/esp32_firmware/aquanet_v1.c -I Firmware/esp32_firmware -o /tmp/fw_aquanet_v1.o
 
-      - name: Run AquaNet Neural Parity & Platform Integration Test Suite (110 Tests)
+      - name: Run neural toolkit + platform tests (incl. Python / JS / C rule parity)
         run: |
           python main.py --test

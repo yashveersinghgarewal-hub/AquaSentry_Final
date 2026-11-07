@@ -59,12 +59,12 @@ class TestAnalyteRegistry:
         assert res["is_safe"] is None  # Cannot confirm safe because 10 < 20
         assert "below method detection limit" in res["message"].lower()
 
-    def test_arsenic_safe_exceedance_caution(self):
-        # 35 µg/L is above WHO 10 µg/L but within BIS permissible 50 µg/L
+    def test_arsenic_35_exceeds_amended_bis(self):
+        # 35 µg/L used to be "within BIS permissible 50". IS 10500 Amendment 1 (2015): 10 µg/L, no relaxation.
         res = evaluate_analyte_concentration("arsenic", 35.0, jurisdiction="bis_10500")
         assert res["is_below_lod"] is False
-        assert res["severity"] == 1
-        assert res["tier"] == "Caution (Permissible)"
+        assert res["severity"] >= 2
+        assert "Permissible" not in res["tier"]
         assert res["is_safe"] is False
 
     def test_arsenic_hazardous_exceedance(self):
