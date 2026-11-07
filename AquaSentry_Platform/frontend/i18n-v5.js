@@ -7,6 +7,14 @@
   if (!window.I18N || !window.I18N.extend) return;
 
   window.I18N.extend('en', {
+    'mq.1': 'WHO limit <b>10 µg/L</b>',
+    'mq.2': 'India BIS limit <b>50 µg/L</b>',
+    'mq.3': 'Sensor detection limit <b>20 µg/L</b>',
+    'mq.4': 'AquaNet-V3 · <b>352 weights</b> on the ESP32',
+    'mq.5': 'Cost per test <b>₹56</b>',
+    'mq.6': 'Result in <b>~4 minutes</b>',
+    'mq.7': '<b>220M+</b> people at risk worldwide',
+    'mq.8': 'Boiling does <b>not</b> remove arsenic',
     'nav.skip': 'Skip to content',
     'nav.group.water': 'Water safety',
     'nav.action': 'If arsenic is high',
@@ -175,6 +183,14 @@
   });
 
   window.I18N.extend('hi', {
+    'mq.1': 'WHO सीमा <b>10 µg/L</b>',
+    'mq.2': 'भारत BIS सीमा <b>50 µg/L</b>',
+    'mq.3': 'सेंसर की पहचान सीमा <b>20 µg/L</b>',
+    'mq.4': 'AquaNet-V3 · ESP32 पर <b>352 वज़न</b>',
+    'mq.5': 'प्रति जाँच ख़र्च <b>₹56</b>',
+    'mq.6': 'नतीजा <b>~4 मिनट</b> में',
+    'mq.7': 'दुनिया भर में <b>22 करोड़+</b> लोग जोखिम में',
+    'mq.8': 'उबालने से आर्सेनिक <b>नहीं</b> हटता',
     'nav.skip': 'सीधे सामग्री पर जाएँ',
     'nav.group.water': 'पानी की सुरक्षा',
     'nav.action': 'आर्सेनिक ज़्यादा हो तो',

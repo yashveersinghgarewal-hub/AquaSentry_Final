@@ -96,6 +96,7 @@ This is the brain of the web platform. Requests come in through `main.py`, get v
 | `index.html` | Live dashboard (v5): verdict with water-caustics effect and arsenic gauge, "what to do if arsenic is high", contact local authorities (incident report + directory), test a sample, AquaNet panel, 3D device viewer, contaminants, standards and methods, impact, report. |
 | `app.js` | Dashboard controller: readings, voltammetry maths (same as the server), AquaNet panel, incident report (email / copy / share / print) and saved local contacts, 3D viewer, CSV export. |
 | `shell.js` | Shared by every page: theme, mobile menu, sliding nav highlight, server connection pill, chat assistant, scroll reveal, cursor spotlight, 3D tilt, number counters, WebGL water shader. |
+| `motion.js` | Motion layer on every page: moving dotted-wave background, cursor light, scroll progress, heading reveals, magnetic buttons, parallax. |
 | `app.css` | The one design system for all pages (carbon black + light theme, glass cards, gradients, animations). |
 | `neural.js` | AquaNet V1 and V3 in JavaScript; draws the network as SVG. |
 | `i18n.js`, `i18n-v5.js`, `i18n-pages.js` | English and Hindi text for the dashboard, new sections and project pages. |

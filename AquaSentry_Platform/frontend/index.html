@@ -44,7 +44,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><b>AquaSentry v5.1</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -85,7 +85,7 @@
         </div>
 
         <div class="hero">
-          <div class="verdict beam" id="verdict" data-tone="none" aria-live="polite" data-reveal>
+          <div class="verdict beam" id="verdict" data-tone="none" aria-live="polite" data-reveal data-depth="6">
             <span class="beam-ring" aria-hidden="true"></span>
             <canvas class="fx" id="heroFx" aria-hidden="true"></canvas>
             <div class="verdict-top">
@@ -108,14 +108,17 @@
             </div>
           </div>
 
-          <div class="card gauge-card spot" data-reveal style="--d:120ms">
+          <div class="card gauge-card spot" data-reveal style="--d:120ms" data-depth="12">
             <div class="ring" id="ring">
               <svg viewBox="0 0 240 240" aria-hidden="true">
                 <defs><linearGradient id="ringGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#34D399"/><stop offset="45%" stop-color="#FBBF24"/><stop offset="75%" stop-color="#FB923C"/><stop offset="100%" stop-color="#F43F5E"/></linearGradient></defs>
+                <circle class="ring-pulse" cx="120" cy="120" r="92"/>
                 <g id="ringBands"></g>
                 <path class="ring-track" id="ringTrack"/>
                 <path class="ring-val" id="ringVal"/>
                 <g id="ringTicks"></g>
+                <g class="ring-orbit"><circle cx="120" cy="6" r="3.2"/><circle class="c2" cx="234" cy="120" r="2.2"/></g>
+                <g class="ring-orbit rev"><circle class="c2" cx="120" cy="232" r="2.6"/><circle cx="8" cy="120" r="1.8"/></g>
               </svg>
               <div class="ring-center"><div class="big mono" id="ringNum">–</div><div class="small" data-i18n="ring.unit">µg/L arsenic</div></div>
             </div>
@@ -146,6 +149,27 @@
           </div>
           <figcaption id="stripCaption" data-i18n="strip.caption">Arsenic in µg/L (parts per billion)</figcaption>
         </figure>
+
+        <div class="marquee" aria-hidden="true">
+          <div class="marquee-track">
+            <span class="marquee-item" data-i18n-html="mq.1">WHO limit <b>10 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.2">India BIS limit <b>50 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.3">Sensor detection limit <b>20 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.4">AquaNet-V3 · <b>352 weights</b> on the ESP32</span>
+            <span class="marquee-item" data-i18n-html="mq.5">Cost per test <b>₹56</b></span>
+            <span class="marquee-item" data-i18n-html="mq.6">Result in <b>~4 minutes</b></span>
+            <span class="marquee-item" data-i18n-html="mq.7"><b>220M+</b> people at risk worldwide</span>
+            <span class="marquee-item" data-i18n-html="mq.8">Boiling does <b>not</b> remove arsenic</span>
+            <span class="marquee-item" data-i18n-html="mq.1">WHO limit <b>10 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.2">India BIS limit <b>50 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.3">Sensor detection limit <b>20 µg/L</b></span>
+            <span class="marquee-item" data-i18n-html="mq.4">AquaNet-V3 · <b>352 weights</b> on the ESP32</span>
+            <span class="marquee-item" data-i18n-html="mq.5">Cost per test <b>₹56</b></span>
+            <span class="marquee-item" data-i18n-html="mq.6">Result in <b>~4 minutes</b></span>
+            <span class="marquee-item" data-i18n-html="mq.7"><b>220M+</b> people at risk worldwide</span>
+            <span class="marquee-item" data-i18n-html="mq.8">Boiling does <b>not</b> remove arsenic</span>
+          </div>
+        </div>
 
         <div class="ov-lower">
           <div class="card pad why spot" id="whyBox" data-reveal>
@@ -508,7 +532,7 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5 · AquaNet-V3</span>
+      <span>AquaSentry v5.1 · AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>
@@ -532,6 +556,7 @@
   <script src="i18n.js"></script>
   <script src="i18n-v5.js"></script>
   <script src="shell.js"></script>
+  <script src="motion.js"></script>
   <script src="charts.js"></script>
   <script src="neural.js"></script>
   <script src="device3d-data.js" defer></script>

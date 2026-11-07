@@ -1,5 +1,11 @@
 # Changelog
 
+## v5.1 — black & blue, more motion
+- New colour scheme: deep blue-black background with electric blue, cyan and indigo accents (light theme updated to match). Safety colours (green/amber/orange/red) unchanged.
+- New `frontend/motion.js` on every page: animated 3D dotted-wave background that ripples around the cursor, soft cursor light, sweeping light beam, scroll progress bar, word-by-word heading reveals, "decode" animation on the verdict title, magnetic buttons, parallax on hero visuals.
+- More movement: animated gradient text and buttons, shimmering labels, orbiting particles and pulse ring around the arsenic gauge, scrolling facts strip, floating icons, card lift and glow, self-drawing section dividers, staggered card entrances, page-to-page fade transitions, rippling water floor under the 3D device model.
+- Performance: removed expensive blur filters from moving layers (about 3–4× higher frame rate in testing). Reduced-motion users get a still version.
+
 ## v5 — new UI across every page
 - **One design system for every page** (`frontend/app.css` + `frontend/shell.js`): carbon-black glass UI with aqua gradients, light theme, English/Hindi on every page, same sidebar, top bar and assistant everywhere.
 - **Brought back from the original UI:** "What to do if arsenic is high" (4-step public-health protocol, filter options, health note), **Contact local authorities** (auto-filled incident report you can email, copy, share or print; directory: Gram Panchayat/VWSC, district water department, Jal Jeevan Mission Citizen Corner, CPGRAMS, 108/112; local contacts saved on the device), catamaran robot knowledge base, scientific disclosure, impact numbers, **market research graphs**, **sales graphs**, **ROI calculator**, competitor comparison, roadmap and the **device simulator**.

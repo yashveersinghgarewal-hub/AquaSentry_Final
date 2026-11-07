@@ -11,7 +11,7 @@
   const UI = () => window.AquaUI;
   const DEVICE = 'AQUA-001';
   const CAL = { slope: 0.8563, intercept: 0.0096, peakMv: -800, windowMv: 60, excludeMv: 105 };
-  const TONE_HEX = { none: '#2DD4BF', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E' };
+  const TONE_HEX = { none: '#3B82F6', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E' };
   const CONTACT_KEY = 'aquasentry.contacts';
 
   const state = {
@@ -134,7 +134,8 @@
     v.dataset.tone = res.final;
     $('verdictIcon').innerHTML = ICONS[res.final];
     $('verdictBadge').textContent = t('class.' + res.final);
-    $('verdictTitle').textContent = t('verdict.' + res.final + '.title');
+    const vt = t('verdict.' + res.final + '.title');
+    if ($('verdictTitle').textContent !== vt) { if (window.AquaMotion) window.AquaMotion.decode($('verdictTitle'), vt, 650); else $('verdictTitle').textContent = vt; }
     $('verdictAction').textContent = t('verdict.' + res.final + '.action');
     $('verdictTime').textContent = fmtTime(r.time);
     UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);

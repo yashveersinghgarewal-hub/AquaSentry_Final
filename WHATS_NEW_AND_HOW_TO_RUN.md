@@ -1,6 +1,6 @@
-# AquaSentry v5 — what's new and how to run it
+# AquaSentry v5.1 — what's new and how to run it
 
-This package replaces `AquaSentry.zip`, `AquaSentry_v2.zip`, `AquaSentry_v3.zip`, `AquaSentry_v3.1.zip`, `AquaSentry_v4.zip` and `AquaSentry_v4.1.zip`. Use this one. What changed in each version: **`CHANGELOG.md`**. The v3 error fixes, with file and line: **`FIXES_v3.md`**.
+This package replaces `AquaSentry.zip`, `AquaSentry_v2.zip`, `AquaSentry_v3.zip`, `AquaSentry_v3.1.zip`, `AquaSentry_v4.zip`, `AquaSentry_v4.1.zip` and `AquaSentry_v5.zip`. Use this one. What changed in each version: **`CHANGELOG.md`**. The v3 error fixes, with file and line: **`FIXES_v3.md`**.
 
 ## How to run the desktop app (Windows)
 
@@ -27,6 +27,13 @@ If the window doesn't open (for example, Microsoft Edge WebView2 is missing), ru
    - **AquaSentry: Desktop app** — its own window
    - **AquaSentry: Open in browser**
    - **AquaSentry: Server only (port 8000)** — then open http://localhost:8000
+
+## What changed in v5.1 (compared with v5)
+
+- **Colours:** black and blue throughout (deep blue-black background, electric blue / cyan / indigo accents). Safety colours unchanged. Files: `app.css` (colour tokens + new motion styles).
+- **Motion:** new `motion.js` on every page — moving dotted-wave background that reacts to the cursor, cursor light, light beam, scroll progress bar, word-by-word headings, decoding verdict title, magnetic buttons, parallax. Plus animated gradients, gauge orbit and pulse, scrolling facts strip, card glow, page transitions and a rippling water floor in the 3D model (`device3d.js`).
+- **Small edits:** `index.html` (facts strip, gauge orbit), `app.js` (verdict decode, blue default), `shell.js` (blue water shader), `i18n-v5.js` (facts strip in English and Hindi), project pages rebuilt with the motion layer.
+- **Not changed:** content, safety logic, AquaNet, firmware, server, tests.
 
 ## What changed in v5 (compared with v4.1) — the new UI
 

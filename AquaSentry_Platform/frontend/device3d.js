@@ -34,14 +34,18 @@ void main(){
   vec3 col = base * (0.28 + 0.32 * hemi + 0.55 * diff) + vec3(1.0) * spec * 0.35 + rim * fres * 0.9;
   gl_FragColor = vec4(col, alpha + fres * (1.0 - alpha) * 0.6);
 }`;
-  const PVS = `attribute vec3 p; uniform mat4 mvp; void main(){ gl_Position = mvp * vec4(p, 1.0); gl_PointSize = 1.6; }`;
-  const PFS = `precision mediump float; uniform vec3 rim; void main(){ gl_FragColor = vec4(rim, 0.35); }`;
+  // animated "water surface" of dots under the model: ripples spread out from the centre
+  const PVS = `attribute vec3 p; uniform mat4 mvp; uniform float t; varying float h; varying float f;
+void main(){ float r = length(p.xz); float w = sin(r * 0.075 - t * 2.2) * 3.2 * exp(-r * 0.006) + sin(p.x * 0.05 + t * 1.3) * 1.2;
+  h = w; f = 1.0 - smoothstep(60.0, 175.0, r); gl_Position = mvp * vec4(p.x, p.y + w, p.z, 1.0); gl_PointSize = 1.4 + max(w, 0.0) * 0.45; }`;
+  const PFS = `precision mediump float; uniform vec3 rim; varying float h; varying float f;
+void main(){ vec2 c = gl_PointCoord - 0.5; if (dot(c, c) > 0.25) discard; gl_FragColor = vec4(rim * (0.75 + h * 0.08) + vec3(0.15, 0.25, 0.45) * max(h, 0.0) * 0.12, (0.18 + max(h, 0.0) * 0.09) * f); }`;
 
   // Where each part sits (mm, STL z-up). explode: extra offset when the view is "exploded".
   const LAYOUT = {
-    base: { pos: [0, 0, 0], explode: [0, 0, 0], color: [0.16, 0.20, 0.23], alpha: 0.42 },
-    lid: { pos: [0, 0, 86], explode: [0, 0, 70], color: [0.20, 0.25, 0.28], alpha: 0.9 },
-    well: { pos: [0, 0, 12], explode: [0, 0, 42], color: [0.17, 0.83, 0.75], alpha: 1.0 },
+    base: { pos: [0, 0, 0], explode: [0, 0, 0], color: [0.09, 0.15, 0.30], alpha: 0.42 },
+    lid: { pos: [0, 0, 86], explode: [0, 0, 70], color: [0.13, 0.21, 0.40], alpha: 0.9 },
+    well: { pos: [0, 0, 12], explode: [0, 0, 42], color: [0.23, 0.51, 0.96], alpha: 1.0 },
     strainer: { pos: [0, -40, -44], explode: [0, -30, -40], color: [0.51, 0.55, 0.97], alpha: 1.0 },
   };
 
@@ -83,12 +87,13 @@ void main(){
     });
     // dotted floor
     const fl = [];
-    for (let r = 20; r <= 150; r += 10) for (let a = 0; a < Math.PI * 2; a += 6 / r) fl.push(Math.cos(a) * r, -48, Math.sin(a) * r);
+    for (let x = -180; x <= 180; x += 7) for (let z = -180; z <= 180; z += 7) if (x * x + z * z < 180 * 180) fl.push(x, -50, z);
     const fb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, fb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fl), gl.STATIC_DRAW);
     const floorN = fl.length / 3;
 
     const U = {}; ['mvp', 'model', 'eye', 'base', 'rim', 'alpha'].forEach((k) => { U[k] = gl.getUniformLocation(prog, k); });
-    const PU = { mvp: gl.getUniformLocation(pprog, 'mvp'), rim: gl.getUniformLocation(pprog, 'rim') };
+    const PU = { mvp: gl.getUniformLocation(pprog, 'mvp'), rim: gl.getUniformLocation(pprog, 'rim'), t: gl.getUniformLocation(pprog, 't') };
+    const t0 = performance.now();
     const aP = gl.getAttribLocation(prog, 'p'), aN = gl.getAttribLocation(prog, 'n'), aPP = gl.getAttribLocation(pprog, 'p');
 
     // label overlay
@@ -97,7 +102,7 @@ void main(){
     Object.keys(opts.labels || {}).forEach((k) => { const d = document.createElement('div'); d.className = 'viewer-label'; d.textContent = opts.labels[k]; labelBox.appendChild(d); labels[k] = d; });
 
     const st = { yaw: 0.7, pitch: 0.38, dist: 330, explode: 0, target: 0, drag: null, idle: 0, visible: true, running: false };
-    let rimColor = [0.18, 0.83, 0.75];
+    let rimColor = [0.31, 0.55, 1.0];
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -118,7 +123,7 @@ void main(){
       const view = M.lookAt(eye, [0, cy, 0], [0, 1, 0]);
       const vp = M.mul(proj, view);
 
-      gl.useProgram(pprog); gl.uniformMatrix4fv(PU.mvp, false, vp); gl.uniform3fv(PU.rim, rimColor);
+      gl.useProgram(pprog); gl.uniformMatrix4fv(PU.mvp, false, vp); gl.uniform3fv(PU.rim, rimColor); gl.uniform1f(PU.t, reduce ? 0 : (performance.now() - t0) / 1000);
       gl.bindBuffer(gl.ARRAY_BUFFER, fb); gl.enableVertexAttribArray(aPP); gl.vertexAttribPointer(aPP, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.POINTS, 0, floorN);
 

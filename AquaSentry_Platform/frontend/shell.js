@@ -208,7 +208,7 @@ void main(){
 
   class WaterFX {
     constructor(canvas) {
-      this.c = canvas; this.color = [0.18, 0.83, 0.75]; this.target = this.color.slice(); this.base = [0.02, 0.03, 0.035];
+      this.c = canvas; this.color = [0.23, 0.51, 0.96]; this.target = this.color.slice(); this.base = [0.008, 0.016, 0.04];
       const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false, alpha: false, powerPreference: 'low-power' });
       if (!gl) { canvas.remove(); this.ok = false; return; }
       this.gl = gl; this.ok = true;
