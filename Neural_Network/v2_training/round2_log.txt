@@ -1,0 +1,34 @@
+start [5, 8, 6, 4] {'accuracy_pct': 98.983, 'recall_pct': [97.87, 98.2, 99.73, 99.95], 'dangerous_called_safe': 0, 'under_calls': 70, 'n': 60000}
+  [5, 8, 6, 4] ep 10 val 98.687 dangerous->safe 0
+  [5, 8, 6, 4] ep 20 val 98.988 dangerous->safe 0
+  [5, 8, 6, 4] ep 30 val 98.955 dangerous->safe 0
+  [5, 8, 6, 4] ep 40 val 98.838 dangerous->safe 0
+  [5, 8, 6, 4] ep 50 val 98.93 dangerous->safe 0
+  [5, 8, 6, 4] ep 60 val 98.93 dangerous->safe 0
+  [5, 8, 6, 4] ep 70 val 99.173 dangerous->safe 0
+  [5, 8, 6, 4] ep 80 val 99.12 dangerous->safe 0
+  [5, 8, 6, 4] ep 90 val 99.047 dangerous->safe 0
+  [5, 8, 6, 4] ep 100 val 98.96 dangerous->safe 0
+  [5, 8, 6, 4] ep 110 val 99.123 dangerous->safe 0
+  [5, 8, 6, 4] ep 120 val 99.06 dangerous->safe 0
+  [5, 8, 6, 4] ep 130 val 99.102 dangerous->safe 0
+  [5, 8, 6, 4] ep 140 val 99.093 dangerous->safe 0
+  [5, 8, 6, 4] ep 150 val 99.158 dangerous->safe 0
+final [5, 8, 6, 4] {"field_like": {"accuracy_pct": 99.599, "recall_pct": [99.32, 99.35, 99.84, 99.99], "dangerous_called_safe": 0, "under_calls": 85, "n": 100000}, "boundary_dense": {"accuracy_pct": 98.803, "recall_pct": [95.61, 98.03, 99.54, 99.98], "dangerous_called_safe": 0, "under_calls": 241, "n": 100000}}
+start [5, 16, 12, 4] {'accuracy_pct': 99.55, 'recall_pct': [98.96, 99.39, 99.78, 99.87], 'dangerous_called_safe': 0, 'under_calls': 71, 'n': 60000}
+  [5, 16, 12, 4] ep 10 val 99.428 dangerous->safe 0
+  [5, 16, 12, 4] ep 20 val 98.917 dangerous->safe 0
+  [5, 16, 12, 4] ep 30 val 99.408 dangerous->safe 0
+  [5, 16, 12, 4] ep 40 val 99.508 dangerous->safe 0
+  [5, 16, 12, 4] ep 50 val 99.382 dangerous->safe 0
+  [5, 16, 12, 4] ep 60 val 99.448 dangerous->safe 0
+  [5, 16, 12, 4] ep 70 val 99.622 dangerous->safe 0
+  [5, 16, 12, 4] ep 80 val 99.565 dangerous->safe 0
+  [5, 16, 12, 4] ep 90 val 99.478 dangerous->safe 0
+  [5, 16, 12, 4] ep 100 val 99.652 dangerous->safe 0
+  [5, 16, 12, 4] ep 110 val 99.473 dangerous->safe 0
+  [5, 16, 12, 4] ep 120 val 99.51 dangerous->safe 0
+  [5, 16, 12, 4] ep 130 val 99.535 dangerous->safe 0
+  [5, 16, 12, 4] ep 140 val 99.542 dangerous->safe 0
+  [5, 16, 12, 4] ep 150 val 99.562 dangerous->safe 0
+final [5, 16, 12, 4] {"field_like": {"accuracy_pct": 99.839, "recall_pct": [99.67, 99.8, 99.91, 99.99], "dangerous_called_safe": 0, "under_calls": 33, "n": 100000}, "boundary_dense": {"accuracy_pct": 99.506, "recall_pct": [97.88, 99.37, 99.71, 99.97], "dangerous_called_safe": 0, "under_calls": 120, "n": 100000}}

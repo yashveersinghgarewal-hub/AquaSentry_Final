@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "AquaSentry: Desktop app",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/desktop_app.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "AquaSentry: Open in browser",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/desktop_app.py",
+      "args": [
+        "--browser"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "AquaSentry: Server only (port 8000)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/desktop_app.py",
+      "args": [
+        "--server-only",
+        "--port",
+        "8000"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "AquaSentry: Network mode for ESP32 (port 8000)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/desktop_app.py",
+      "args": [
+        "--lan",
+        "--browser"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

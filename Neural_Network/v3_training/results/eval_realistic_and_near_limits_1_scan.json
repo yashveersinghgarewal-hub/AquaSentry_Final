@@ -1,0 +1,352 @@
+{
+ "A_exact_network_only": {
+  "v1": {
+   "field_like": {
+    "accuracy_pct": 73.399,
+    "dangerous_missed": 13080,
+    "dangerous_called_safe": 8410,
+    "false_alarms": 0,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 62.574,
+    "dangerous_missed": 20052,
+    "dangerous_called_safe": 12333,
+    "false_alarms": 0,
+    "n": 100000
+   }
+  },
+  "v2": {
+   "field_like": {
+    "accuracy_pct": 99.599,
+    "dangerous_missed": 39,
+    "dangerous_called_safe": 0,
+    "false_alarms": 316,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 99.059,
+    "dangerous_missed": 121,
+    "dangerous_called_safe": 0,
+    "false_alarms": 751,
+    "n": 100000
+   }
+  },
+  "noisy_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 97.147,
+    "dangerous_missed": 7,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2581,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 94.426,
+    "dangerous_missed": 9,
+    "dangerous_called_safe": 0,
+    "false_alarms": 5137,
+    "n": 100000
+   }
+  },
+  "noisy_bal_s3_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.623,
+    "dangerous_missed": 22,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1338,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.381,
+    "dangerous_missed": 71,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2520,
+    "n": 100000
+   }
+  },
+  "noisy_bal_s3_long_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.842,
+    "dangerous_missed": 4,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1134,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.85,
+    "dangerous_missed": 32,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2097,
+    "n": 100000
+   }
+  },
+  "noisy_bal_s3_longB_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.814,
+    "dangerous_missed": 17,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1151,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.65,
+    "dangerous_missed": 76,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2233,
+    "n": 100000
+   }
+  },
+  "noisy_bal_s3_longB_5x8x6x4": {
+   "field_like": {
+    "accuracy_pct": 97.896,
+    "dangerous_missed": 151,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1765,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 95.543,
+    "dangerous_missed": 604,
+    "dangerous_called_safe": 0,
+    "false_alarms": 3534,
+    "n": 100000
+   }
+  },
+  "noisy_plain_s3_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 99.047,
+    "dangerous_missed": 116,
+    "dangerous_called_safe": 0,
+    "false_alarms": 379,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 98.03,
+    "dangerous_missed": 347,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1031,
+    "n": 100000
+   }
+  },
+  "noisy_mid_s3_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.558,
+    "dangerous_missed": 17,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1288,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 97.022,
+    "dangerous_missed": 64,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2766,
+    "n": 100000
+   }
+  },
+  "noisy_bal_5x16x12x4": {
+   "field_like": {
+    "accuracy_pct": 98.209,
+    "dangerous_missed": 83,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1116,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 96.591,
+    "dangerous_missed": 235,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2342,
+    "n": 100000
+   }
+  },
+  "noisy_bal_s3_5x8x6x4": {
+   "field_like": {
+    "accuracy_pct": 98.293,
+    "dangerous_missed": 27,
+    "dangerous_called_safe": 0,
+    "false_alarms": 1642,
+    "n": 100000
+   },
+   "near_limits": {
+    "accuracy_pct": 96.987,
+    "dangerous_missed": 73,
+    "dangerous_called_safe": 0,
+    "false_alarms": 2852,
+    "n": 100000
+   }
+  }
+ },
+ "B_noisy_end_to_end_realistic_water_scans1": {
+  "rules only": {
+   "accuracy_pct": 91.141,
+   "dangerous_missed": 2783,
+   "dangerous_called_safe": 0,
+   "false_alarms": 10041,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 91.069,
+   "dangerous_missed": 2783,
+   "dangerous_called_safe": 0,
+   "false_alarms": 10303,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 91.09,
+   "dangerous_missed": 2656,
+   "dangerous_called_safe": 0,
+   "false_alarms": 10419,
+   "n": 200000
+  },
+  "noisy_5x16x12x4": {
+   "accuracy_pct": 90.568,
+   "dangerous_missed": 1874,
+   "dangerous_called_safe": 0,
+   "false_alarms": 13158,
+   "n": 200000
+  },
+  "noisy_bal_s3_5x16x12x4": {
+   "accuracy_pct": 90.894,
+   "dangerous_missed": 2497,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11665,
+   "n": 200000
+  },
+  "noisy_bal_s3_long_5x16x12x4": {
+   "accuracy_pct": 90.989,
+   "dangerous_missed": 2495,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11330,
+   "n": 200000
+  },
+  "noisy_bal_s3_longB_5x16x12x4": {
+   "accuracy_pct": 90.955,
+   "dangerous_missed": 2425,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11387,
+   "n": 200000
+  },
+  "noisy_bal_s3_longB_5x8x6x4": {
+   "accuracy_pct": 90.494,
+   "dangerous_missed": 2464,
+   "dangerous_called_safe": 0,
+   "false_alarms": 12666,
+   "n": 200000
+  },
+  "noisy_plain_s3_5x16x12x4": {
+   "accuracy_pct": 91.092,
+   "dangerous_missed": 2668,
+   "dangerous_called_safe": 0,
+   "false_alarms": 10512,
+   "n": 200000
+  },
+  "noisy_mid_s3_5x16x12x4": {
+   "accuracy_pct": 90.951,
+   "dangerous_missed": 2260,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11513,
+   "n": 200000
+  },
+  "noisy_bal_5x16x12x4": {
+   "accuracy_pct": 90.981,
+   "dangerous_missed": 2532,
+   "dangerous_called_safe": 0,
+   "false_alarms": 11269,
+   "n": 200000
+  },
+  "noisy_bal_s3_5x8x6x4": {
+   "accuracy_pct": 90.753,
+   "dangerous_missed": 2454,
+   "dangerous_called_safe": 0,
+   "false_alarms": 12129,
+   "n": 200000
+  }
+ },
+ "B_noisy_end_to_end_near_limits_scans1": {
+  "rules only": {
+   "accuracy_pct": 86.597,
+   "dangerous_missed": 7616,
+   "dangerous_called_safe": 0,
+   "false_alarms": 13036,
+   "n": 200000
+  },
+  "v1": {
+   "accuracy_pct": 86.598,
+   "dangerous_missed": 7616,
+   "dangerous_called_safe": 0,
+   "false_alarms": 13141,
+   "n": 200000
+  },
+  "v2": {
+   "accuracy_pct": 86.627,
+   "dangerous_missed": 7158,
+   "dangerous_called_safe": 0,
+   "false_alarms": 13677,
+   "n": 200000
+  },
+  "noisy_5x16x12x4": {
+   "accuracy_pct": 86.037,
+   "dangerous_missed": 4911,
+   "dangerous_called_safe": 0,
+   "false_alarms": 18307,
+   "n": 200000
+  },
+  "noisy_bal_s3_5x16x12x4": {
+   "accuracy_pct": 86.522,
+   "dangerous_missed": 6615,
+   "dangerous_called_safe": 0,
+   "false_alarms": 15423,
+   "n": 200000
+  },
+  "noisy_bal_s3_long_5x16x12x4": {
+   "accuracy_pct": 86.608,
+   "dangerous_missed": 6696,
+   "dangerous_called_safe": 0,
+   "false_alarms": 14937,
+   "n": 200000
+  },
+  "noisy_bal_s3_longB_5x16x12x4": {
+   "accuracy_pct": 86.547,
+   "dangerous_missed": 6543,
+   "dangerous_called_safe": 0,
+   "false_alarms": 15158,
+   "n": 200000
+  },
+  "noisy_bal_s3_longB_5x8x6x4": {
+   "accuracy_pct": 86.104,
+   "dangerous_missed": 6243,
+   "dangerous_called_safe": 0,
+   "false_alarms": 16714,
+   "n": 200000
+  },
+  "noisy_plain_s3_5x16x12x4": {
+   "accuracy_pct": 86.648,
+   "dangerous_missed": 7020,
+   "dangerous_called_safe": 0,
+   "false_alarms": 14022,
+   "n": 200000
+  },
+  "noisy_mid_s3_5x16x12x4": {
+   "accuracy_pct": 86.407,
+   "dangerous_missed": 6065,
+   "dangerous_called_safe": 0,
+   "false_alarms": 15880,
+   "n": 200000
+  },
+  "noisy_bal_5x16x12x4": {
+   "accuracy_pct": 86.534,
+   "dangerous_missed": 6534,
+   "dangerous_called_safe": 0,
+   "false_alarms": 15246,
+   "n": 200000
+  },
+  "noisy_bal_s3_5x8x6x4": {
+   "accuracy_pct": 86.44,
+   "dangerous_missed": 6467,
+   "dangerous_called_safe": 0,
+   "false_alarms": 15899,
+   "n": 200000
+  }
+ }
+}

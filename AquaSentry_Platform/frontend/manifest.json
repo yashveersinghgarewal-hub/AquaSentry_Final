@@ -1,0 +1,29 @@
+{
+  "name": "AquaSentry Autonomous Water Safety System",
+  "short_name": "AquaSentry",
+  "description": "Autonomous Electrochemical Water Quality Surveillance & Edge Neural Safety System",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F0F0F",
+  "theme_color": "#0F0F0F",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "aquasentry-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ],
+  "categories": [
+    "utilities",
+    "health",
+    "science"
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "test_timestamp": "2026-10-23T22:35:13.547989",
+  "duration_minutes": 9.04,
+  "duration_seconds": 542.2,
+  "total_inferences": 2412500,
+  "inferences_per_second": 4449.4,
+  "overall_accuracy_pct": 99.43,
+  "confusion_matrix": {
+    "Safe": {
+      "Safe": 65242,
+      "Caution": 4647,
+      "Unsafe": 0,
+      "Hazardous": 0
+    },
+    "Caution": {
+      "Safe": 1970,
+      "Caution": 959271,
+      "Unsafe": 1847,
+      "Hazardous": 0
+    },
+    "Unsafe": {
+      "Safe": 0,
+      "Caution": 3318,
+      "Unsafe": 1054467,
+      "Hazardous": 677
+    },
+    "Hazardous": {
+      "Safe": 0,
+      "Caution": 0,
+      "Unsafe": 1314,
+      "Hazardous": 319747
+    }
+  },
+  "class_metrics": {
+    "Safe": {
+      "TP": 65242,
+      "FN": 4647,
+      "FP": 1970,
+      "TN": 2340641,
+      "precision_pct": 97.07,
+      "recall_pct": 93.35,
+      "f1_score": 0.9517,
+      "specificity_pct": 99.92
+    },
+    "Caution": {
+      "TP": 959271,
+      "FN": 3817,
+      "FP": 7965,
+      "TN": 1441447,
+      "precision_pct": 99.18,
+      "recall_pct": 99.6,
+      "f1_score": 0.9939,
+      "specificity_pct": 99.45
+    },
+    "Unsafe": {
+      "TP": 1054467,
+      "FN": 3995,
+      "FP": 3161,
+      "TN": 1350877,
+      "precision_pct": 99.7,
+      "recall_pct": 99.62,
+      "f1_score": 0.9966,
+      "specificity_pct": 99.77
+    },
+    "Hazardous": {
+      "TP": 319747,
+      "FN": 1314,
+      "FP": 677,
+      "TN": 2090762,
+      "precision_pct": 99.79,
+      "recall_pct": 99.59,
+      "f1_score": 0.9969,
+      "specificity_pct": 99.97
+    }
+  },
+  "zero_tolerance_safety": {
+    "toxic_false_negatives": 0,
+    "safety_precedence_triggers": 278,
+    "lod_advisories": 0,
+    "violation_rate_pct": 0.0
+  },
+  "latency_microseconds": {
+    "avg": 25.07,
+    "p50": 23.96,
+    "p95": 26.71,
+    "p99": 38.25
+  },
+  "seasonal_accuracy_pct": {
+    "Pre-Monsoon": 99.32,
+    "Monsoon": 99.68,
+    "Post-Monsoon": 100.0,
+    "Winter": 100.0
+  },
+  "snr_degradation_accuracy_pct": {
+    "30 dB": 99.72,
+    "24 dB": 99.58,
+    "18 dB": 99.34,
+    "14 dB": 99.02,
+    "10 dB": 98.62,
+    "6 dB": 98.2
+  },
+  "fault_injection": {
+    "out_of_bounds_tested": 300000,
+    "out_of_bounds_flagged": 300000,
+    "detection_rate_pct": 100.0
+  }
+}

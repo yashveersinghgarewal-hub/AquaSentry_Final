@@ -1,0 +1,46 @@
+name: AquaSentry Continuous Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile C99 Embedded Neural Engine
+        run: |
+          clang -std=c99 -Wall -Wextra -Werror -c Neural_Network/aquanet_v1.c -o /tmp/aquanet_v1.o
+
+      - name: Compile ESP32 AquaNet-V3 engine (float32, no malloc)
+        run: |
+          clang -std=c99 -Wall -Wextra -Werror -c Firmware/esp32_firmware/aquanet_v3.c -I Firmware/esp32_firmware -o /tmp/aquanet_v3.o
+          clang -std=c99 -Wall -Wextra -Werror -c Firmware/esp32_firmware/aquanet_v1.c -I Firmware/esp32_firmware -o /tmp/fw_aquanet_v1.o
+
+      - name: Run AquaNet Neural Parity & Platform Integration Test Suite (110 Tests)
+        run: |
+          python main.py --test

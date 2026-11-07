@@ -1,0 +1,235 @@
+/**
+ * AquaSentry — Primary Navigation Rail & Sidebar Styles
+ * Vibrant Cyber-Ocean Theme.
+ */
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 13, 0.7);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+  z-index: 998;
+}
+
+.sidebar-backdrop.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 290px;
+  background: #0a0f1c;
+  border-right: 1px solid #18233a;
+  display: flex;
+  flex-direction: column;
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.6);
+}
+
+.app-sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-locked {
+  overflow: hidden;
+}
+
+/* Header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid #18233a;
+  background: #0e1626;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #ffffff;
+}
+
+.sidebar-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-brand-name {
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.brand-teal {
+  color: #38d9c9;
+}
+
+.sidebar-station-tag {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #5c7876;
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.sidebar-close-btn {
+  background: transparent;
+  border: none;
+  color: #8aa7a5;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.sidebar-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* Navigation List */
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-group-title {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5c7876;
+  padding: 6px 12px;
+  margin-bottom: 2px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #8aa7a5;
+  font-size: 13.5px;
+  font-weight: 500;
+  position: relative;
+  transition: all 150ms ease;
+  border: 1px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: rgba(77, 141, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(77, 141, 255, 0.2);
+}
+
+.sidebar-link.active {
+  background: rgba(56, 217, 201, 0.12);
+  color: #38d9c9;
+  font-weight: 600;
+  border-color: rgba(56, 217, 201, 0.3);
+  box-shadow: 0 0 12px rgba(56, 217, 201, 0.15);
+}
+
+.sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: #38d9c9;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px #38d9c9;
+}
+
+.sidebar-icon {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.sidebar-link-title {
+  flex: 1;
+}
+
+.sidebar-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #8aa7a5;
+  border: 1px solid #18233a;
+}
+
+.sidebar-link.active .sidebar-badge {
+  background: rgba(56, 217, 201, 0.15);
+  border-color: rgba(56, 217, 201, 0.4);
+  color: #38d9c9;
+}
+
+/* Footer & Controls */
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid #18233a;
+  background: #0e1626;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sidebar-footer-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #18233a;
+  border-radius: 6px;
+  color: #8aa7a5;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+.sidebar-footer-btn:hover {
+  background: rgba(56, 217, 201, 0.1);
+  border-color: rgba(56, 217, 201, 0.3);
+  color: #ffffff;
+}

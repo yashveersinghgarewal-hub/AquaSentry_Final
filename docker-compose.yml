@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  aquasentry:
+    build: .
+    container_name: aquasentry_universal
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./aquasentry.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - ./data:/app/Data
+    restart: unless-stopped

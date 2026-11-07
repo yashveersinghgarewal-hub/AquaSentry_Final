@@ -1,0 +1,81 @@
+================================================================================
+AQUASENTRY - QUICK START GUIDE
+Autonomous Arsenic Surveillance Catamaran & AquaNet-V1 Neural Network
+================================================================================
+
+HOW TO RUN ON ANY COMPUTER:
+
+--------------------------------------------------------------------------------
+OPTION 1: FULL SYSTEM (Recommended — Websites + Live API + AI Chatbot + Database)
+--------------------------------------------------------------------------------
+1. Double-click "START_AQUASENTRY.bat" in this folder.
+2. The script will automatically:
+   - Configure Python dependencies
+   - Start the FastAPI backend API on port 8000
+   - Start the local web portal server on port 8001
+   - Open your web browser automatically!
+3. Access URLs on your machine:
+   - Water Quality Overview & Empty State:     http://localhost:8001/index.html
+   - Multi-Contaminant Registry:               http://localhost:8001/index.html#section-contaminants
+   - ASV Voltammetric Signal Processing:       http://localhost:8001/index.html#section-voltammetry
+   - AquaNet-V1 Neural Network Visualizer:     http://localhost:8001/index.html#section-neural
+   - Scientific Methods & Limitations:         http://localhost:8001/index.html#section-methods
+   - UI Component Styleguide:                  http://localhost:8001/styleguide.html
+   - Commercial Sales & Expansion Strategy:    http://localhost:8001/sales-expansion.html
+   - Market & Economic Research:               http://localhost:8001/market-research.html
+   - Interactive Backend API Docs:             http://localhost:8000/docs
+4. To stop the servers, simply close the two open terminal windows.
+
+--------------------------------------------------------------------------------
+OPTION 2: 1-CLICK AUTOMATED SCIENTIFIC TEST SUITE
+--------------------------------------------------------------------------------
+1. Double-click "RUN_TESTS.bat" (or run "python run_tests.py").
+2. Executes 72 automated pytest tests verifying analytical detection limits,
+   unit conversions, 112-synapse topology, Savitzky-Golay signal filtering,
+   chat policy intent gating, and public health safety overrides.
+
+--------------------------------------------------------------------------------
+OPTION 3: INSTANT OFFLINE MODE (Zero Installation — No Python Required)
+--------------------------------------------------------------------------------
+1. Double-click "OPEN_OFFLINE_WEBSITES.bat" (or open "frontend/index.html" in Chrome/Edge).
+2. All websites open instantly!
+3. The AquaNet-V1 Neural Network (23 nodes, 112 synapses) runs client-side inside your
+   browser with live SVG synaptic pulses, sliders, and scenario presets.
+4. The voltammetry processor, audio synthesizer, and styleguide work 100%.
+
+--------------------------------------------------------------------------------
+DO THE SAME LOCAL URLs APPLY TO ANY COMPUTER?
+--------------------------------------------------------------------------------
+YES! "localhost" (127.0.0.1) refers to whatever computer is running the script.
+Whoever you send this folder to will have the EXACT SAME links working on their
+machine when they double-click "START_AQUASENTRY.bat":
+   * http://localhost:8001/index.html
+   * http://localhost:8001/styleguide.html
+   * http://localhost:8001/sales-expansion.html
+   * http://localhost:8001/market-research.html
+   * http://localhost:8000/docs
+
+--------------------------------------------------------------------------------
+FOLDER STRUCTURE:
+--------------------------------------------------------------------------------
+AquaSentry_Platform/
+  ├── START_AQUASENTRY.bat        <-- 1-Click full system launcher
+  ├── OPEN_OFFLINE_WEBSITES.bat   <-- Instant browser opener (no Python needed)
+  ├── RUN_TESTS.bat               <-- 1-Click 79-test automated test runner
+  ├── run_tests.py                <-- Python test execution script
+  ├── QUICK_START.txt             <-- This guide
+  ├── README.md                   <-- Full engineering & architectural manual
+  ├── requirements.txt            <-- Backend Python packages
+  ├── .env.example                <-- Safe template for Gemini API key
+  ├── aquasentry.db               <-- SQLite database with real readings
+  ├── app/                        <-- FastAPI backend, multi-analyte, voltammetry & AquaNet-V1
+  ├── frontend/                   <-- Calm scientific UI, SVG brandmark, styleguide, portals
+  ├── tests/                      <-- 79 automated pytest tests (8 modules)
+  ├── bridge/                     <-- Bluetooth serial bridge (serial_bridge.py)
+  ├── scripts/                    <-- Training, sync and stress-test scripts
+  └── data/                       <-- Sample scans used by the tests
+      (Analysis scripts and documents are in ../Analysis and ../Docs)
+
+================================================================================
+Developed for HKU Arsenic Sensor Research & Jal Jeevan Mission Surveillance
+================================================================================

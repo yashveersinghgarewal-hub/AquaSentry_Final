@@ -1,0 +1,376 @@
+class mix (train): [0.14281333 0.33804333 0.34712667 0.17201667]
+  [5, 8, 6, 4] seed 0 ep   5 loss 0.6518 val 85.34% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  10 loss 0.4393 val 91.14% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  15 loss 0.3708 val 91.73% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  20 loss 0.3328 val 92.16% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  25 loss 0.3090 val 93.19% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  30 loss 0.2790 val 93.59% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  35 loss 0.2548 val 93.66% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  40 loss 0.2402 val 94.16% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  45 loss 0.2285 val 94.14% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  50 loss 0.2193 val 94.70% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  55 loss 0.2104 val 94.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  60 loss 0.2083 val 94.81% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  65 loss 0.2022 val 94.62% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  70 loss 0.1978 val 94.52% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  75 loss 0.1958 val 95.34% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  80 loss 0.1921 val 95.27% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  85 loss 0.1888 val 95.25% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  90 loss 0.1865 val 95.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep  95 loss 0.1850 val 95.10% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep 100 loss 0.1835 val 95.24% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep 105 loss 0.1824 val 95.47% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep 110 loss 0.1814 val 95.51% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep 115 loss 0.1809 val 95.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 0 ep 120 loss 0.1807 val 95.34% dangerous->safe 0
+==> [5, 8, 6, 4] seed 0: best val {'accuracy_pct': 95.512, 'recall_pct': [82.38, 94.41, 99.7, 99.98], 'dangerous_called_safe': 0, 'under_calls': 809, 'n': 60000} at epoch 110  [16s]
+  [5, 8, 6, 4] seed 1 ep   5 loss 0.5555 val 90.00% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  10 loss 0.3846 val 91.39% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  15 loss 0.3238 val 93.21% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  20 loss 0.2954 val 94.44% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  25 loss 0.2703 val 94.49% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  30 loss 0.2547 val 93.08% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  35 loss 0.2401 val 95.54% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  40 loss 0.2254 val 95.21% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  45 loss 0.2188 val 95.95% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  50 loss 0.2141 val 95.49% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  55 loss 0.2086 val 95.98% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  60 loss 0.2070 val 95.80% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  65 loss 0.2041 val 96.16% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  70 loss 0.2005 val 96.63% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  75 loss 0.1975 val 96.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  80 loss 0.1946 val 95.72% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  85 loss 0.1925 val 96.59% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  90 loss 0.1909 val 96.53% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep  95 loss 0.1894 val 96.53% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep 100 loss 0.1880 val 96.24% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep 105 loss 0.1871 val 96.37% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep 110 loss 0.1863 val 96.50% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep 115 loss 0.1859 val 96.66% dangerous->safe 0
+  [5, 8, 6, 4] seed 1 ep 120 loss 0.1857 val 96.58% dangerous->safe 0
+==> [5, 8, 6, 4] seed 1: best val {'accuracy_pct': 96.663, 'recall_pct': [89.22, 95.81, 98.85, 100.0], 'dangerous_called_safe': 0, 'under_calls': 469, 'n': 60000} at epoch 115  [31s]
+  [5, 8, 6, 4] seed 2 ep   5 loss 0.6029 val 87.43% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  10 loss 0.4988 val 90.70% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  15 loss 0.3252 val 94.87% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  20 loss 0.2594 val 95.89% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  25 loss 0.1983 val 96.64% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  30 loss 0.1627 val 97.73% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  35 loss 0.1410 val 97.97% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  40 loss 0.1280 val 98.35% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  45 loss 0.1177 val 97.84% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  50 loss 0.1103 val 98.39% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  55 loss 0.1044 val 98.61% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  60 loss 0.0993 val 98.72% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  65 loss 0.0958 val 98.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  70 loss 0.0917 val 98.45% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  75 loss 0.0880 val 98.77% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  80 loss 0.0850 val 98.81% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  85 loss 0.0838 val 98.83% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  90 loss 0.0816 val 98.72% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep  95 loss 0.0800 val 98.98% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep 100 loss 0.0787 val 98.94% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep 105 loss 0.0778 val 98.86% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep 110 loss 0.0773 val 99.05% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep 115 loss 0.0768 val 98.93% dangerous->safe 0
+  [5, 8, 6, 4] seed 2 ep 120 loss 0.0766 val 99.02% dangerous->safe 0
+==> [5, 8, 6, 4] seed 2: best val {'accuracy_pct': 99.047, 'recall_pct': [97.83, 98.38, 99.73, 99.96], 'dangerous_called_safe': 0, 'under_calls': 74, 'n': 60000} at epoch 110  [46s]
+  [5, 8, 6, 4] seed 3 ep   5 loss 0.4395 val 92.36% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  10 loss 0.2516 val 95.38% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  15 loss 0.2137 val 95.79% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  20 loss 0.1936 val 95.69% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  25 loss 0.1787 val 96.45% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  30 loss 0.1703 val 96.51% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  35 loss 0.1632 val 96.54% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  40 loss 0.1569 val 96.81% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  45 loss 0.1505 val 96.29% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  50 loss 0.1478 val 97.12% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  55 loss 0.1437 val 96.83% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  60 loss 0.1401 val 96.80% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  65 loss 0.1386 val 96.79% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  70 loss 0.1359 val 96.99% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  75 loss 0.1337 val 97.03% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  80 loss 0.1325 val 97.25% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  85 loss 0.1309 val 97.02% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  90 loss 0.1294 val 97.12% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep  95 loss 0.1283 val 97.24% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep 100 loss 0.1275 val 97.19% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep 105 loss 0.1268 val 97.32% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep 110 loss 0.1265 val 97.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep 115 loss 0.1262 val 97.24% dangerous->safe 0
+  [5, 8, 6, 4] seed 3 ep 120 loss 0.1259 val 97.23% dangerous->safe 0
+==> [5, 8, 6, 4] seed 3: best val {'accuracy_pct': 97.322, 'recall_pct': [88.53, 97.14, 99.76, 99.96], 'dangerous_called_safe': 0, 'under_calls': 347, 'n': 60000} at epoch 105  [61s]
+  [5, 8, 6, 4] seed 4 ep   5 loss 0.4698 val 90.94% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  10 loss 0.3111 val 93.32% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  15 loss 0.2727 val 93.66% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  20 loss 0.2548 val 94.31% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  25 loss 0.2431 val 93.98% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  30 loss 0.2352 val 94.18% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  35 loss 0.2268 val 95.01% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  40 loss 0.2215 val 94.03% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  45 loss 0.2176 val 95.23% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  50 loss 0.2159 val 95.28% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  55 loss 0.2096 val 95.35% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  60 loss 0.2074 val 95.36% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  65 loss 0.2055 val 94.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  70 loss 0.2035 val 94.58% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  75 loss 0.2024 val 95.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  80 loss 0.2001 val 95.38% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  85 loss 0.1980 val 95.19% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  90 loss 0.1964 val 95.26% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep  95 loss 0.1960 val 95.59% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep 100 loss 0.1943 val 95.42% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep 105 loss 0.1934 val 95.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep 110 loss 0.1926 val 95.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep 115 loss 0.1924 val 95.61% dangerous->safe 0
+  [5, 8, 6, 4] seed 4 ep 120 loss 0.1921 val 95.56% dangerous->safe 0
+==> [5, 8, 6, 4] seed 4: best val {'accuracy_pct': 95.667, 'recall_pct': [83.56, 94.75, 99.35, 99.93], 'dangerous_called_safe': 0, 'under_calls': 851, 'n': 60000} at epoch 105  [76s]
+  [5, 8, 6, 4] seed 5 ep   5 loss 0.6372 val 87.14% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  10 loss 0.3805 val 93.46% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  15 loss 0.2653 val 94.77% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  20 loss 0.2200 val 95.25% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  25 loss 0.1914 val 96.85% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  30 loss 0.1798 val 97.44% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  35 loss 0.1736 val 96.96% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  40 loss 0.1691 val 97.20% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  45 loss 0.1639 val 97.42% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  50 loss 0.1611 val 96.51% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  55 loss 0.1588 val 97.75% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  60 loss 0.1595 val 97.84% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  65 loss 0.1531 val 97.67% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  70 loss 0.1517 val 97.22% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  75 loss 0.1505 val 97.96% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  80 loss 0.1478 val 97.28% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  85 loss 0.1459 val 97.85% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  90 loss 0.1453 val 97.83% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep  95 loss 0.1435 val 97.46% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep 100 loss 0.1424 val 98.21% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep 105 loss 0.1416 val 97.71% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep 110 loss 0.1411 val 98.05% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep 115 loss 0.1406 val 98.04% dangerous->safe 0
+  [5, 8, 6, 4] seed 5 ep 120 loss 0.1404 val 97.93% dangerous->safe 0
+==> [5, 8, 6, 4] seed 5: best val {'accuracy_pct': 98.208, 'recall_pct': [95.74, 97.31, 99.22, 99.94], 'dangerous_called_safe': 0, 'under_calls': 288, 'n': 60000} at epoch 100  [91s]
+  [5, 8, 6, 4] seed 6 ep   5 loss 0.6539 val 85.45% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  10 loss 0.5084 val 89.40% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  15 loss 0.4345 val 91.22% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  20 loss 0.3980 val 92.22% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  25 loss 0.3869 val 92.77% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  30 loss 0.3759 val 92.75% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  35 loss 0.3585 val 93.11% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  40 loss 0.3503 val 93.23% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  45 loss 0.3455 val 93.66% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  50 loss 0.3435 val 93.23% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  55 loss 0.3409 val 93.58% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  60 loss 0.3383 val 92.30% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  65 loss 0.3361 val 93.52% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  70 loss 0.3356 val 93.74% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  75 loss 0.3323 val 93.53% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  80 loss 0.3309 val 93.39% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  85 loss 0.3297 val 93.94% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  90 loss 0.3287 val 93.99% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep  95 loss 0.3276 val 93.87% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep 100 loss 0.3267 val 93.85% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep 105 loss 0.3260 val 94.04% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep 110 loss 0.3255 val 93.88% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep 115 loss 0.3251 val 94.01% dangerous->safe 0
+  [5, 8, 6, 4] seed 6 ep 120 loss 0.3249 val 93.95% dangerous->safe 0
+==> [5, 8, 6, 4] seed 6: best val {'accuracy_pct': 94.038, 'recall_pct': [82.71, 91.62, 98.02, 99.99], 'dangerous_called_safe': 0, 'under_calls': 1034, 'n': 60000} at epoch 105  [112s]
+  [5, 8, 6, 4] seed 7 ep   5 loss 0.6031 val 86.19% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  10 loss 0.3632 val 92.93% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  15 loss 0.2981 val 93.81% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  20 loss 0.2616 val 94.94% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  25 loss 0.2272 val 95.83% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  30 loss 0.2080 val 96.47% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  35 loss 0.1983 val 96.88% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  40 loss 0.1887 val 96.44% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  45 loss 0.1822 val 97.10% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  50 loss 0.1780 val 96.71% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  55 loss 0.1721 val 96.71% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  60 loss 0.1680 val 96.40% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  65 loss 0.1648 val 97.55% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  70 loss 0.1617 val 97.37% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  75 loss 0.1595 val 97.52% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  80 loss 0.1577 val 97.24% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  85 loss 0.1556 val 97.43% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  90 loss 0.1536 val 97.39% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep  95 loss 0.1526 val 97.35% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep 100 loss 0.1516 val 97.66% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep 105 loss 0.1507 val 97.64% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep 110 loss 0.1501 val 97.70% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep 115 loss 0.1497 val 97.56% dangerous->safe 0
+  [5, 8, 6, 4] seed 7 ep 120 loss 0.1496 val 97.50% dangerous->safe 0
+==> [5, 8, 6, 4] seed 7: best val {'accuracy_pct': 97.7, 'recall_pct': [94.1, 96.22, 99.46, 99.98], 'dangerous_called_safe': 0, 'under_calls': 317, 'n': 60000} at epoch 110  [128s]
+  [5, 16, 12, 4] seed 0 ep   5 loss 0.4273 val 92.74% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  10 loss 0.2525 val 94.87% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  15 loss 0.2096 val 95.88% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  20 loss 0.1879 val 94.31% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  25 loss 0.1734 val 96.50% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  30 loss 0.1609 val 97.06% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  35 loss 0.1482 val 96.67% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  40 loss 0.1377 val 96.76% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  45 loss 0.1289 val 97.32% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  50 loss 0.1218 val 97.73% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  55 loss 0.1154 val 97.77% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  60 loss 0.1134 val 98.16% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  65 loss 0.1075 val 97.89% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  70 loss 0.1028 val 98.12% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  75 loss 0.0990 val 98.46% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  80 loss 0.0974 val 98.44% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  85 loss 0.0929 val 98.49% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  90 loss 0.0906 val 98.39% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep  95 loss 0.0891 val 98.31% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep 100 loss 0.0875 val 98.42% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep 105 loss 0.0862 val 98.55% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep 110 loss 0.0854 val 98.64% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep 115 loss 0.0848 val 98.45% dangerous->safe 0
+  [5, 16, 12, 4] seed 0 ep 120 loss 0.0845 val 98.48% dangerous->safe 0
+==> [5, 16, 12, 4] seed 0: best val {'accuracy_pct': 98.645, 'recall_pct': [97.29, 97.97, 99.19, 99.95], 'dangerous_called_safe': 0, 'under_calls': 281, 'n': 60000} at epoch 110  [146s]
+  [5, 16, 12, 4] seed 1 ep   5 loss 0.3785 val 92.65% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  10 loss 0.2779 val 94.62% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  15 loss 0.2521 val 94.55% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  20 loss 0.2348 val 94.68% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  25 loss 0.2263 val 94.58% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  30 loss 0.2163 val 95.11% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  35 loss 0.2008 val 95.73% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  40 loss 0.1878 val 96.20% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  45 loss 0.1750 val 96.05% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  50 loss 0.1649 val 96.37% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  55 loss 0.1565 val 96.61% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  60 loss 0.1483 val 96.98% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  65 loss 0.1429 val 96.07% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  70 loss 0.1358 val 97.47% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  75 loss 0.1293 val 97.56% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  80 loss 0.1250 val 97.24% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  85 loss 0.1212 val 97.94% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  90 loss 0.1184 val 97.57% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep  95 loss 0.1153 val 97.88% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep 100 loss 0.1135 val 97.32% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep 105 loss 0.1118 val 97.83% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep 110 loss 0.1105 val 97.91% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep 115 loss 0.1096 val 97.99% dangerous->safe 0
+  [5, 16, 12, 4] seed 1 ep 120 loss 0.1093 val 97.88% dangerous->safe 0
+==> [5, 16, 12, 4] seed 1: best val {'accuracy_pct': 97.992, 'recall_pct': [91.86, 98.2, 99.3, 99.96], 'dangerous_called_safe': 0, 'under_calls': 262, 'n': 60000} at epoch 115  [173s]
+  [5, 16, 12, 4] seed 2 ep   5 loss 0.3905 val 93.01% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  10 loss 0.2375 val 95.07% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  15 loss 0.1923 val 96.55% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  20 loss 0.1743 val 96.64% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  25 loss 0.1603 val 96.90% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  30 loss 0.1484 val 97.12% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  35 loss 0.1371 val 97.24% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  40 loss 0.1264 val 97.78% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  45 loss 0.1197 val 97.58% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  50 loss 0.1127 val 97.81% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  55 loss 0.1075 val 97.64% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  60 loss 0.1021 val 98.30% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  65 loss 0.0981 val 98.29% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  70 loss 0.0949 val 97.76% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  75 loss 0.0914 val 98.05% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  80 loss 0.0881 val 98.07% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  85 loss 0.0855 val 98.61% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  90 loss 0.0837 val 98.48% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep  95 loss 0.0812 val 98.50% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep 100 loss 0.0803 val 98.55% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep 105 loss 0.0788 val 98.23% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep 110 loss 0.0781 val 98.58% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep 115 loss 0.0776 val 98.57% dangerous->safe 0
+  [5, 16, 12, 4] seed 2 ep 120 loss 0.0773 val 98.53% dangerous->safe 0
+==> [5, 16, 12, 4] seed 2: best val {'accuracy_pct': 98.613, 'recall_pct': [96.57, 98.25, 99.17, 99.86], 'dangerous_called_safe': 0, 'under_calls': 276, 'n': 60000} at epoch 85  [208s]
+  [5, 16, 12, 4] seed 3 ep   5 loss 0.3343 val 94.01% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  10 loss 0.2071 val 95.19% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  15 loss 0.1700 val 96.42% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  20 loss 0.1375 val 96.79% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  25 loss 0.1160 val 97.99% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  30 loss 0.1015 val 98.45% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  35 loss 0.0904 val 98.03% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  40 loss 0.0838 val 98.73% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  45 loss 0.0763 val 98.71% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  50 loss 0.0709 val 98.36% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  55 loss 0.0657 val 98.83% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  60 loss 0.0592 val 99.17% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  65 loss 0.0551 val 99.09% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  70 loss 0.0517 val 99.18% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  75 loss 0.0485 val 99.37% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  80 loss 0.0462 val 99.49% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  85 loss 0.0449 val 99.23% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  90 loss 0.0426 val 99.34% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep  95 loss 0.0416 val 99.30% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep 100 loss 0.0403 val 99.34% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep 105 loss 0.0393 val 99.62% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep 110 loss 0.0388 val 99.52% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep 115 loss 0.0384 val 99.47% dangerous->safe 0
+  [5, 16, 12, 4] seed 3 ep 120 loss 0.0382 val 99.50% dangerous->safe 0
+==> [5, 16, 12, 4] seed 3: best val {'accuracy_pct': 99.618, 'recall_pct': [99.05, 99.45, 99.84, 99.96], 'dangerous_called_safe': 0, 'under_calls': 42, 'n': 60000} at epoch 105  [226s]
+{
+ "elapsed_s": 226,
+ "v1_network_only_field_like": {
+  "accuracy_pct": 73.399,
+  "recall_pct": [
+   100.0,
+   58.01,
+   54.97,
+   100.0
+  ],
+  "dangerous_called_safe": 8410,
+  "under_calls": 26601,
+  "n": 100000
+ },
+ "v1_network_only_boundary_dense": {
+  "accuracy_pct": 62.574,
+  "recall_pct": [
+   100.0,
+   50.82,
+   50.18,
+   100.0
+  ],
+  "dangerous_called_safe": 12333,
+  "under_calls": 37426,
+  "n": 100000
+ },
+ "v2_5x8x6x4_field_like": {
+  "accuracy_pct": 99.512,
+  "recall_pct": [
+   99.1,
+   99.24,
+   99.85,
+   99.98
+  ],
+  "dangerous_called_safe": 0,
+  "under_calls": 70,
+  "n": 100000
+ },
+ "v2_5x8x6x4_boundary_dense": {
+  "accuracy_pct": 98.545,
+  "recall_pct": [
+   94.53,
+   97.51,
+   99.58,
+   99.91
+  ],
+  "dangerous_called_safe": 0,
+  "under_calls": 211,
+  "n": 100000
+ },
+ "v2_5x16x12x4_field_like": {
+  "accuracy_pct": 99.774,
+  "recall_pct": [
+   99.56,
+   99.68,
+   99.93,
+   99.95
+  ],
+  "dangerous_called_safe": 0,
+  "under_calls": 37,
+  "n": 100000
+ },
+ "v2_5x16x12x4_boundary_dense": {
+  "accuracy_pct": 99.424,
+  "recall_pct": [
+   97.53,
+   99.22,
+   99.73,
+   99.9
+  ],
+  "dangerous_called_safe": 0,
+  "under_calls": 146,
+  "n": 100000
+ }
+}

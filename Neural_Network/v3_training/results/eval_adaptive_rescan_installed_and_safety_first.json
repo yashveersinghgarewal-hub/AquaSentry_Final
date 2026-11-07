@@ -1,0 +1,366 @@
+{
+ "realistic_water": {
+  "aquanet_v3_installed_balanced": {
+   "fixed_3_scans": {
+    "accuracy_pct": 93.442,
+    "dangerous_missed": 1759,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8183,
+    "avg_scans": 3.0,
+    "pct_readings_rescanned": 0.0
+   },
+   "fixed_6_scans": {
+    "accuracy_pct": 94.285,
+    "dangerous_missed": 1542,
+    "dangerous_called_safe": 0,
+    "false_alarms": 7234,
+    "avg_scans": 6.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "fixed_9_scans": {
+    "accuracy_pct": 94.619,
+    "dangerous_missed": 1467,
+    "dangerous_called_safe": 0,
+    "false_alarms": 6856,
+    "avg_scans": 9.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "adaptive_3to6_z1.0": {
+    "accuracy_pct": 94.175,
+    "dangerous_missed": 1664,
+    "dangerous_called_safe": 0,
+    "false_alarms": 7141,
+    "avg_scans": 3.387,
+    "pct_readings_rescanned": 12.91
+   },
+   "adaptive_3to9_z1.0": {
+    "accuracy_pct": 94.403,
+    "dangerous_missed": 1673,
+    "dangerous_called_safe": 0,
+    "false_alarms": 6754,
+    "avg_scans": 3.585,
+    "pct_readings_rescanned": 12.91
+   },
+   "adaptive_3to6_z1.5": {
+    "accuracy_pct": 94.213,
+    "dangerous_missed": 1604,
+    "dangerous_called_safe": 0,
+    "false_alarms": 7195,
+    "avg_scans": 3.608,
+    "pct_readings_rescanned": 20.26
+   },
+   "adaptive_3to9_z1.5": {
+    "accuracy_pct": 94.481,
+    "dangerous_missed": 1573,
+    "dangerous_called_safe": 0,
+    "false_alarms": 6820,
+    "avg_scans": 3.952,
+    "pct_readings_rescanned": 20.26
+   },
+   "adaptive_3to6_z2.0": {
+    "accuracy_pct": 94.255,
+    "dangerous_missed": 1564,
+    "dangerous_called_safe": 0,
+    "false_alarms": 7213,
+    "avg_scans": 3.862,
+    "pct_readings_rescanned": 28.73
+   },
+   "adaptive_3to9_z2.0": {
+    "accuracy_pct": 94.553,
+    "dangerous_missed": 1508,
+    "dangerous_called_safe": 0,
+    "false_alarms": 6836,
+    "avg_scans": 4.366,
+    "pct_readings_rescanned": 28.73
+   },
+   "adaptive_3to6_z2.5": {
+    "accuracy_pct": 94.273,
+    "dangerous_missed": 1548,
+    "dangerous_called_safe": 0,
+    "false_alarms": 7227,
+    "avg_scans": 4.136,
+    "pct_readings_rescanned": 37.88
+   },
+   "adaptive_3to9_z2.5": {
+    "accuracy_pct": 94.586,
+    "dangerous_missed": 1482,
+    "dangerous_called_safe": 0,
+    "false_alarms": 6855,
+    "avg_scans": 4.812,
+    "pct_readings_rescanned": 37.88
+   }
+  },
+  "aquanet_v3_safety_first": {
+   "fixed_3_scans": {
+    "accuracy_pct": 93.032,
+    "dangerous_missed": 1394,
+    "dangerous_called_safe": 0,
+    "false_alarms": 9913,
+    "avg_scans": 3.0,
+    "pct_readings_rescanned": 0.0
+   },
+   "fixed_6_scans": {
+    "accuracy_pct": 93.817,
+    "dangerous_missed": 1211,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8955,
+    "avg_scans": 6.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "fixed_9_scans": {
+    "accuracy_pct": 94.147,
+    "dangerous_missed": 1143,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8604,
+    "avg_scans": 9.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "adaptive_3to6_z1.0": {
+    "accuracy_pct": 93.739,
+    "dangerous_missed": 1386,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8803,
+    "avg_scans": 3.387,
+    "pct_readings_rescanned": 12.91
+   },
+   "adaptive_3to9_z1.0": {
+    "accuracy_pct": 93.999,
+    "dangerous_missed": 1399,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8397,
+    "avg_scans": 3.585,
+    "pct_readings_rescanned": 12.91
+   },
+   "adaptive_3to6_z1.5": {
+    "accuracy_pct": 93.768,
+    "dangerous_missed": 1305,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8872,
+    "avg_scans": 3.608,
+    "pct_readings_rescanned": 20.26
+   },
+   "adaptive_3to9_z1.5": {
+    "accuracy_pct": 94.073,
+    "dangerous_missed": 1283,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8453,
+    "avg_scans": 3.952,
+    "pct_readings_rescanned": 20.26
+   },
+   "adaptive_3to6_z2.0": {
+    "accuracy_pct": 93.797,
+    "dangerous_missed": 1257,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8898,
+    "avg_scans": 3.862,
+    "pct_readings_rescanned": 28.73
+   },
+   "adaptive_3to9_z2.0": {
+    "accuracy_pct": 94.111,
+    "dangerous_missed": 1206,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8518,
+    "avg_scans": 4.366,
+    "pct_readings_rescanned": 28.73
+   },
+   "adaptive_3to6_z2.5": {
+    "accuracy_pct": 93.817,
+    "dangerous_missed": 1233,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8914,
+    "avg_scans": 4.136,
+    "pct_readings_rescanned": 37.88
+   },
+   "adaptive_3to9_z2.5": {
+    "accuracy_pct": 94.136,
+    "dangerous_missed": 1171,
+    "dangerous_called_safe": 0,
+    "false_alarms": 8554,
+    "avg_scans": 4.812,
+    "pct_readings_rescanned": 37.88
+   }
+  }
+ },
+ "near_limits": {
+  "aquanet_v3_installed_balanced": {
+   "fixed_3_scans": {
+    "accuracy_pct": 88.424,
+    "dangerous_missed": 5150,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13917,
+    "avg_scans": 3.0,
+    "pct_readings_rescanned": 0.0
+   },
+   "fixed_6_scans": {
+    "accuracy_pct": 89.241,
+    "dangerous_missed": 4844,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13236,
+    "avg_scans": 6.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "fixed_9_scans": {
+    "accuracy_pct": 89.654,
+    "dangerous_missed": 4688,
+    "dangerous_called_safe": 0,
+    "false_alarms": 12864,
+    "avg_scans": 9.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "adaptive_3to6_z1.0": {
+    "accuracy_pct": 89.047,
+    "dangerous_missed": 5053,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13052,
+    "avg_scans": 3.556,
+    "pct_readings_rescanned": 18.55
+   },
+   "adaptive_3to9_z1.0": {
+    "accuracy_pct": 89.318,
+    "dangerous_missed": 5048,
+    "dangerous_called_safe": 0,
+    "false_alarms": 12603,
+    "avg_scans": 3.875,
+    "pct_readings_rescanned": 18.55
+   },
+   "adaptive_3to6_z1.5": {
+    "accuracy_pct": 89.142,
+    "dangerous_missed": 4919,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13166,
+    "avg_scans": 3.824,
+    "pct_readings_rescanned": 27.47
+   },
+   "adaptive_3to9_z1.5": {
+    "accuracy_pct": 89.462,
+    "dangerous_missed": 4854,
+    "dangerous_called_safe": 0,
+    "false_alarms": 12755,
+    "avg_scans": 4.359,
+    "pct_readings_rescanned": 27.47
+   },
+   "adaptive_3to6_z2.0": {
+    "accuracy_pct": 89.2,
+    "dangerous_missed": 4860,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13214,
+    "avg_scans": 4.094,
+    "pct_readings_rescanned": 36.46
+   },
+   "adaptive_3to9_z2.0": {
+    "accuracy_pct": 89.546,
+    "dangerous_missed": 4752,
+    "dangerous_called_safe": 0,
+    "false_alarms": 12841,
+    "avg_scans": 4.831,
+    "pct_readings_rescanned": 36.46
+   },
+   "adaptive_3to6_z2.5": {
+    "accuracy_pct": 89.224,
+    "dangerous_missed": 4845,
+    "dangerous_called_safe": 0,
+    "false_alarms": 13230,
+    "avg_scans": 4.368,
+    "pct_readings_rescanned": 45.59
+   },
+   "adaptive_3to9_z2.5": {
+    "accuracy_pct": 89.595,
+    "dangerous_missed": 4720,
+    "dangerous_called_safe": 0,
+    "false_alarms": 12866,
+    "avg_scans": 5.3,
+    "pct_readings_rescanned": 45.59
+   }
+  },
+  "aquanet_v3_safety_first": {
+   "fixed_3_scans": {
+    "accuracy_pct": 87.926,
+    "dangerous_missed": 4065,
+    "dangerous_called_safe": 0,
+    "false_alarms": 16569,
+    "avg_scans": 3.0,
+    "pct_readings_rescanned": 0.0
+   },
+   "fixed_6_scans": {
+    "accuracy_pct": 88.725,
+    "dangerous_missed": 3784,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15904,
+    "avg_scans": 6.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "fixed_9_scans": {
+    "accuracy_pct": 89.109,
+    "dangerous_missed": 3656,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15591,
+    "avg_scans": 9.0,
+    "pct_readings_rescanned": 100.0
+   },
+   "adaptive_3to6_z1.0": {
+    "accuracy_pct": 88.603,
+    "dangerous_missed": 4037,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15640,
+    "avg_scans": 3.556,
+    "pct_readings_rescanned": 18.55
+   },
+   "adaptive_3to9_z1.0": {
+    "accuracy_pct": 88.88,
+    "dangerous_missed": 4059,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15232,
+    "avg_scans": 3.875,
+    "pct_readings_rescanned": 18.55
+   },
+   "adaptive_3to6_z1.5": {
+    "accuracy_pct": 88.673,
+    "dangerous_missed": 3887,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15772,
+    "avg_scans": 3.824,
+    "pct_readings_rescanned": 27.47
+   },
+   "adaptive_3to9_z1.5": {
+    "accuracy_pct": 89.0,
+    "dangerous_missed": 3851,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15389,
+    "avg_scans": 4.359,
+    "pct_readings_rescanned": 27.47
+   },
+   "adaptive_3to6_z2.0": {
+    "accuracy_pct": 88.706,
+    "dangerous_missed": 3825,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15837,
+    "avg_scans": 4.094,
+    "pct_readings_rescanned": 36.46
+   },
+   "adaptive_3to9_z2.0": {
+    "accuracy_pct": 89.051,
+    "dangerous_missed": 3739,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15502,
+    "avg_scans": 4.831,
+    "pct_readings_rescanned": 36.46
+   },
+   "adaptive_3to6_z2.5": {
+    "accuracy_pct": 88.719,
+    "dangerous_missed": 3802,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15864,
+    "avg_scans": 4.368,
+    "pct_readings_rescanned": 45.59
+   },
+   "adaptive_3to9_z2.5": {
+    "accuracy_pct": 89.079,
+    "dangerous_missed": 3690,
+    "dangerous_called_safe": 0,
+    "false_alarms": 15548,
+    "avg_scans": 5.3,
+    "pct_readings_rescanned": 45.59
+   }
+  }
+ }
+}

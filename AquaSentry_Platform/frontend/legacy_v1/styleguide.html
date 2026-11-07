@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaSentry — UI Component Gallery &amp; Design System</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="sidebar.css">
+<style>
+  .guide-section {
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .guide-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary-ink);
+    margin-bottom: 8px;
+  }
+  .guide-desc {
+    font-size: 13px;
+    color: var(--color-secondary-text);
+    margin-bottom: 16px;
+  }
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .swatch-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface);
+  }
+  .swatch-color {
+    height: 60px;
+  }
+  .swatch-info {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .component-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap" style="padding-top: 24px;">
+
+  <header class="app-header">
+    <a href="index.html" class="header-brand">
+      <div class="brand-symbol">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+          <path d="M 5 21 A 13 13 0 1 1 27 21" stroke="#087E8B" stroke-width="1.75" stroke-linecap="round" stroke-opacity="0.4"/>
+          <path d="M 8.5 21 A 9.5 9.5 0 1 1 23.5 21" stroke="#087E8B" stroke-width="1.75" stroke-linecap="round" stroke-opacity="0.75"/>
+          <circle cx="23.5" cy="8.5" r="1.5" fill="#18AEB0"/>
+          <path d="M 16 7 C 16 7 11.5 13.5 11.5 17.5 A 4.5 4.5 0 0 0 20.5 17.5 C 20.5 13.5 16 7 16 7 Z" fill="#087E8B"/>
+          <path d="M 10 24.5 L 22 24.5" stroke="#087E8B" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Aqua<span class="teal">Sentry</span></span>
+        <span class="brand-sub">UI Component Gallery &amp; Style Guide</span>
+      </div>
+    </a>
+    <div class="header-controls">
+      <button class="btn-header" onclick="window.toggleTheme()">
+        <span id="headerThemeText">Toggle Theme</span>
+      </button>
+      <a href="index.html" class="btn btn-secondary btn-sm">&larr; Return to Monitor</a>
+    </div>
+  </header>
+
+  <!-- Color Palette -->
+  <section class="guide-section">
+    <h2 class="guide-title">1. Color Palette &amp; Tokens</h2>
+    <p class="guide-desc">Calibrated light neutral canvas (#F5F8FA) with restrained deep teal (#087E8B) and high-contrast ink.</p>
+    <div class="swatch-grid">
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #F5F8FA; border-bottom: 1px solid #DFE7EC;"></div>
+        <div class="swatch-info"><strong>Canvas</strong><br>#F5F8FA</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #FFFFFF; border-bottom: 1px solid #DFE7EC;"></div>
+        <div class="swatch-info"><strong>Surface</strong><br>#FFFFFF</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #142433;"></div>
+        <div class="swatch-info" style="color: #142433;"><strong>Primary Ink</strong><br>#142433</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #087E8B;"></div>
+        <div class="swatch-info"><strong>Deep Teal</strong><br>#087E8B</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #18AEB0;"></div>
+        <div class="swatch-info"><strong>Aqua Accent</strong><br>#18AEB0</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #E8F7F6; border-bottom: 1px solid #C2ECEB;"></div>
+        <div class="swatch-info"><strong>Pale Teal</strong><br>#E8F7F6</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #FFF4DA; border-bottom: 1px solid #FFE5A3;"></div>
+        <div class="swatch-info"><strong>Warning Surface</strong><br>#FFF4DA</div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background: #FDECEA; border-bottom: 1px solid #F8C3BD;"></div>
+        <div class="swatch-info"><strong>Danger Surface</strong><br>#FDECEA</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Buttons & Controls -->
+  <section class="guide-section">
+    <h2 class="guide-title">2. Buttons &amp; Interactive Controls</h2>
+    <p class="guide-desc">Interactive states: 150ms ease-out hover, 90ms press (scale 0.98), strong focus rings.</p>
+    <div class="component-row">
+      <button class="btn btn-primary">Primary Action</button>
+      <button class="btn btn-secondary">Secondary Action</button>
+      <button class="btn btn-demo">Demo Dataset Action</button>
+      <button class="btn btn-primary btn-sm">Small Primary</button>
+      <button class="btn btn-secondary btn-sm">Small Secondary</button>
+      <button class="btn btn-secondary" disabled style="opacity: 0.5; cursor: not-allowed;">Disabled State</button>
+    </div>
+  </section>
+
+  <!-- Status Badges & Assessment Tiers -->
+  <section class="guide-section">
+    <h2 class="guide-title">3. Scientific Status Badges &amp; Tiers</h2>
+    <p class="guide-desc">Explicit, non-simplistic severity levels with clear public-health semantics.</p>
+    <div class="component-row">
+      <span class="tier-badge below-lod">Below Sensor LOD (&lt;20 µg/L)</span>
+      <span class="tier-badge caution">Caution (Exceeds WHO 10 µg/L)</span>
+      <span class="tier-badge unsafe">Unsafe (Exceeds BIS 50 µg/L)</span>
+      <span class="tier-badge hazardous">Hazardous (Critical Toxicity)</span>
+      <span class="source-badge hardware">Physical Hardware</span>
+      <span class="source-badge demo">Synthetic Demo</span>
+      <span class="status-tag supported">Active Hardware</span>
+      <span class="status-tag planned">Planned Module</span>
+    </div>
+  </section>
+
+  <!-- Typography Scale -->
+  <section class="guide-section">
+    <h2 class="guide-title">4. Typography &amp; Tabular Numerals</h2>
+    <p class="guide-desc">Tabular numerals keep measurement values vertically aligned across rows.</p>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1>Heading 1 — Water Quality Overview</h1>
+      <h2>Heading 2 — Regulatory Benchmark Alignment</h2>
+      <div style="font-size: 15px; color: var(--color-primary-ink);">
+        Body Text: Dissolved inorganic arsenic determined via Anodic Stripping Voltammetry at -800 mV peak.
+      </div>
+      <div style="font-size: 28px; font-weight: 800;" class="tabular-nums">
+        0.0420 mg/L · 42.0 µg/L · ±0.005 mg/L
+      </div>
+      <div class="mono-trace">
+        Raw Trace Timestamp: 2026-10-18T10:00:00Z | ID: CAL-AS-2026-M1 | Lat: 18.5204 Lon: 73.8567
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="audio.js"></script>
+<script src="sidebar.js"></script>
+</body>
+</html>

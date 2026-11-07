@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaSentry — Autonomous Water Quality Surveillance &amp; AquaNet Neural Monitor</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="chat.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- Application Header -->
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 32 32" fill="none" role="img" aria-label="AquaSentry Water Mark">
+          <circle cx="16" cy="16" r="14" stroke="#4d8dff" stroke-width="1.4" opacity="0.4"/>
+          <circle cx="16" cy="16" r="9" stroke="#38d9c9" stroke-width="1.4" opacity="0.75"/>
+          <circle cx="16" cy="16" r="4" fill="#38d9c9"/>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-name">AquaSentry</span>
+        <span class="station-tag">/ AQUA-001</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="live-pill connected" id="connectionStatus" title="Catamaran Vessel Readiness">
+        <span class="live-dot"></span>
+        <span id="connectionStatusText">MINIBOT ONLINE</span>
+      </div>
+
+      <!-- Audio Toggle -->
+      <button id="audioToggleBtn" class="btn-header" onclick="window.AquaAudio && window.AquaAudio.toggleAudio()" aria-label="Toggle Audio Feedback" title="Toggle audio cues">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        <span id="audioStatusText">Sound</span>
+      </button>
+
+      <!-- Sidebar Toggle -->
+      <button class="btn-header" onclick="window.toggleSidebar(true)" aria-label="Open Navigation Rail" title="Open navigation drawer">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        <span>Nav</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sticky Smooth Scroll Navigation Bar -->
+  <nav class="page-nav" aria-label="Quick Page Destinations">
+    <a href="#section-hero" class="active">Live Status</a>
+    <a href="#section-simulator">Simulator</a>
+    <a href="#section-reading">Reading</a>
+    <a href="#section-action">Action Plan</a>
+    <a href="#section-voltammetry">Voltammetry</a>
+    <a href="#section-neural">AquaNet Neural</a>
+    <a href="#section-contaminants">Contaminants</a>
+    <a href="#section-treatment">Treatment</a>
+    <a href="#section-bot">Catamaran Bot</a>
+    <a href="#section-methods">Methods &amp; LOD</a>
+    <a href="#section-report">Reports</a>
+    <a href="#section-roi">District ROI</a>
+    <a href="#section-sales">Commercial Sales</a>
+    <a href="#section-competition">Benchmark Matrix</a>
+    <a href="#section-market">Market TAM</a>
+    <a href="sales-expansion.html" class="nav-highlight" target="_blank" title="Dedicated Commercial Strategy Page">Sales Portal &nearr;</a>
+    <a href="market-research.html" class="nav-highlight" target="_blank" title="Dedicated Market Feasibility Page">Market Feasibility &nearr;</a>
+  </nav>
+
+  <!-- =======================================================================
+       1. HERO RADAR & TELEMETRY SECTION
+       ======================================================================= -->
+  <section class="hero status-safe" id="section-hero">
+    <div class="eyebrow">AquaSentry Robot Status — Lake Survey Patrol</div>
+
+    <div class="ring-stage" role="img" aria-label="Concentric Stripping Current Radar Display">
+      <div class="ring r1"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+      <div class="core">
+        <div class="core-label">ARSENIC</div>
+        <div class="core-value" id="displayAsMgL">--</div>
+        <div class="core-unit" id="displayAsUnit">mg/L</div>
+      </div>
+    </div>
+
+    <h1 class="status-title" id="statusTitle">Awaiting <span class="hl">Reading</span></h1>
+    <p class="status-sub" id="statusSub">
+      Run a simulation below or connect the catamaran MAS-G1 sensor bridge to view real-time geotagged water surveillance.
+    </p>
+
+    <!-- Quick Action Buttons -->
+    <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; justify-content: center;">
+      <button class="btn" onclick="window.loadDemoDataset()" type="button">Run Live Demo Scan</button>
+      <button class="btn ghost" onclick="document.getElementById('section-simulator').scrollIntoView({behavior: 'smooth'})" type="button">Configure Simulator &darr;</button>
+    </div>
+
+    <!-- 6 Telemetry Cards Grid -->
+    <div class="grid">
+      <div class="card" id="card-ph">
+        <div class="card-label">pH Level</div>
+        <div class="card-val" id="val-ph">7.35</div>
+        <div class="card-sub" id="sub-ph">Optimal: 6.5–8.5</div>
+      </div>
+      <div class="card" id="card-cond">
+        <div class="card-label">Conductivity</div>
+        <div class="card-val" id="val-cond">412 <span class="card-unit">µS/cm</span></div>
+        <div class="card-sub" id="sub-cond">Salinity Proxy</div>
+      </div>
+      <div class="card" id="card-turb">
+        <div class="card-label">Turbidity</div>
+        <div class="card-val" id="val-turb">2.1 <span class="card-unit">NTU</span></div>
+        <div class="card-sub" id="sub-turb">Sediment Load</div>
+      </div>
+      <div class="card" id="card-temp">
+        <div class="card-label">Temperature</div>
+        <div class="card-val" id="val-temp">24.2 <span class="card-unit">°C</span></div>
+        <div class="card-sub" id="sub-temp">Kinetic Stripping Rate</div>
+      </div>
+      <div class="card" id="card-battery">
+        <div class="card-label">Battery Level</div>
+        <div class="card-val" id="val-battery">71%</div>
+        <div class="card-sub" id="sub-battery">Solar Buffered</div>
+      </div>
+      <div class="card" id="card-gps">
+        <div class="card-label">GPS Geotag</div>
+        <div class="card-val" id="val-gps" style="font-size: 16px;">25.61°N, 85.14°E</div>
+        <div class="card-sub" id="sub-gps">Patrol Waypoint #4</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       2. MAS-G1 DEVICE SIMULATOR PANEL
+       ======================================================================= -->
+  <section class="panel simulator-panel" id="section-simulator" aria-labelledby="simulatorTitle">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title" id="simulatorTitle">MAS-G1 Device Simulator</span>
+        <p class="panel-intro">Simulate safe, caution, and hazardous water profiles on the 3-electrode stripping strip.</p>
+      </div>
+      <span class="panel-meta" id="simulatorClock">READY</span>
+    </div>
+    <div class="simulator-screen">
+      <div class="simulator-status">
+        <div><span class="simulator-dot"></span><span id="simulatorStatus">SMART CHIP LOADED</span></div>
+        <span id="simulatorTime">10:20 UTC</span>
+      </div>
+      <div style="font-family: var(--font-mono); font-size: 11px; color: #38d9c9; margin-bottom: 6px;" id="simulatorAnalyte">ARSENIC (III) · STRIP AS-M003050</div>
+      <div class="simulator-readout">
+        <strong id="simulatorValue">0.042</strong>
+        <span id="simulatorUnit">mg/L</span>
+      </div>
+      <div class="simulator-flag safe" id="simulatorFlag">
+        <b id="simulatorFlagText">EVALUATED · CAUTION RANGE</b>
+      </div>
+      <div class="simulator-graph">
+        <div class="simulator-graph-label">
+          <span>VOLTAMMOGRAM (SWASV Stripping Peak)</span>
+          <span id="simulatorScanState">READY</span>
+        </div>
+        <svg viewBox="0 0 520 120" preserveAspectRatio="none" aria-label="MAS-G1 voltammogram" id="simulatorTraceSvg">
+          <path d="M 0 100 Q 200 95 300 25 Q 360 95 520 100" fill="none" stroke="#38d9c9" stroke-width="2.5"/>
+          <line x1="0" y1="100" x2="520" y2="100" stroke="#18233a" stroke-width="1" stroke-dasharray="4"/>
+          <circle cx="300" cy="25" r="4" fill="#00f2fe"/>
+        </svg>
+      </div>
+      <div class="simulator-metrics">
+        <div>PEAK POTENTIAL<strong id="simulatorPeakV">-800 mV</strong></div>
+        <div>NET CURRENT (µA)<strong id="simulatorNetI">0.048 µA</strong></div>
+        <div>CALIBRATION R²<strong id="simulatorR2">0.9967</strong></div>
+      </div>
+      <div class="simulator-actions">
+        <button class="btn" id="runSimulation" onclick="window.runSimulatedScan(0.045)" type="button">Run Scan (45 µg/L)</button>
+        <button class="btn ghost" onclick="window.runSimulatedScan(0.008)" type="button">Test Safe (8 µg/L)</button>
+        <button class="btn ghost" onclick="window.runSimulatedScan(0.120)" type="button">Test Toxic (120 µg/L)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       3. READING DETAIL PANEL
+       ======================================================================= -->
+  <div class="panel" id="section-reading">
+    <div class="panel-head">
+      <span class="panel-title">Reading Detail</span>
+      <span class="panel-meta" id="detectedMeta">LATEST PATROL TELEMETRY</span>
+    </div>
+    <div class="reading-grid">
+      <div class="reading-cell">
+        <div class="k" id="contaminantName">Arsenic (Total Dissolved)</div>
+        <div class="v warning" id="readingValue">0.042 mg/L</div>
+        <div class="thresh" id="safeLimit">WHO limit: 0.010 mg/L · BIS: 0.050 mg/L</div>
+      </div>
+      <div class="reading-cell">
+        <div class="k">Analytical Confidence</div>
+        <div class="v" id="confidenceValue">97.8%</div>
+        <div class="thresh" id="confirmationValue">Savitzky-Golay SNR = 8.4</div>
+      </div>
+      <div class="reading-cell">
+        <div class="k">Likely Source Hydrogeology</div>
+        <div class="v" style="font-size: 16px;" id="sourceValue">Deep Aquifer Holocene</div>
+        <div class="thresh" id="sourceNote">Redox-derived arsenic mobilization</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       4. ACTION PLAN PANEL
+       ======================================================================= -->
+  <div class="panel" id="section-action">
+    <div class="panel-head">
+      <span class="panel-title">What to Do If High Quantity of Arsenic is Detected</span>
+      <span class="panel-meta">PUBLIC HEALTH PROTOCOL</span>
+    </div>
+    <ul class="steps">
+      <li class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <div class="t">Stop drinking or cooking with this water</div>
+          <div class="d">Switch to certified bottled water or an alternate validated deep source until laboratory ICP-MS testing confirms safety.</div>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <div class="t">Boiling will not help</div>
+          <div class="d">Boiling evaporates pure water and actually concentrates dissolved heavy metals and arsenic. Never boil arsenic-contaminated water.</div>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <div class="t">Other household uses are still fine</div>
+          <div class="d">Cleaning, laundry, dishwashing, and flushing remain safe because arsenic does not readily penetrate unbroken skin.</div>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-num">4</span>
+        <div class="step-body">
+          <div class="t">Automated municipal dispatch report prepared</div>
+          <div class="d">Because geotagged contour readings show spatial elevation, an official contamination report is queued for local authorities below.</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- =======================================================================
+       5. VOLTAMMETRIC SIGNAL PROCESSING STAGE
+       ======================================================================= -->
+  <section class="panel" id="section-voltammetry" style="border-color: rgba(56, 217, 201, 0.3);">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">ASV Voltammetric Signal Processing Pipeline</span>
+        <p class="panel-intro">High-precision Stripping Voltammetry engine with 5-point Savitzky-Golay quadratic filter and capacitive baseline subtraction.</p>
+      </div>
+      <span class="panel-meta">ADS1115 16-BIT ADC</span>
+    </div>
+
+    <div style="background: #02050b; border: 1px solid #142a42; border-radius: var(--radius-md); padding: 16px; margin: 14px 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-family: var(--font-mono); font-size: 11px; color: #38d9c9;">Stripping Curve: Raw Currents vs. Savitzky-Golay Smoothed</span>
+        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);" id="voltammetrySnrText">SNR: 8.4 (Optimal)</span>
+      </div>
+      <svg id="voltammetryCurveSvg" viewBox="0 0 700 160" style="width: 100%; height: auto; display: block; border-radius: 4px; background: rgba(4,7,13,0.85);">
+        <!-- Baseline Reference -->
+        <line x1="40" y1="130" x2="660" y2="130" stroke="#18233a" stroke-width="1.5" stroke-dasharray="4"/>
+        <!-- Raw Signal -->
+        <path d="M 40 130 Q 250 125 350 35 T 660 130" fill="none" stroke="rgba(77, 141, 255, 0.35)" stroke-width="1.5"/>
+        <!-- Savitzky-Golay 5pt Quadratic Filter Peak Curve -->
+        <path d="M 40 130 Q 250 126 350 30 T 660 130" fill="none" stroke="#38d9c9" stroke-width="2.5"/>
+        <circle cx="350" cy="30" r="5" fill="#00f2fe" stroke="#ffffff" stroke-width="1.5"/>
+        <text x="365" y="35" fill="#38d9c9" font-family="'IBM Plex Mono', monospace" font-size="11">Peak: -800 mV (0.048 µA)</text>
+      </svg>
+    </div>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <button class="btn btn-sm" onclick="window.runSimulatedScan(0.045)">Process Current Trace</button>
+      <button class="btn btn-sm ghost" onclick="alert('QC Diagnostic: Baseline slope -0.00018 µA/mV, SNR 8.4, ADC saturation: False. Passed all calibration release gates.')">View QC Diagnostics</button>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       6. AQUANET-V1 NEURAL CLASSIFIER SECTION
+       ======================================================================= -->
+  <section class="panel neural-panel" id="section-neural">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">AquaNet-V1 Deep Neural Classifier</span>
+        <p class="panel-intro">Multimodal Feed-Forward Deep Neural Network (5 &rarr; 8 &rarr; 6 &rarr; 4 · 23 Nodes · 112 Synapses) with client-side &amp; backend API parity.</p>
+      </div>
+      <span class="panel-meta" style="color: #38d9c9;">99.70% VALIDATED ACCURACY</span>
+    </div>
+
+    <!-- Live SVG Topology Stage -->
+    <div class="neural-stage-wrap">
+      <svg id="neuralTopologySvg" viewBox="0 0 860 320" role="img" aria-label="AquaNet-V1 Neural Network Topology Visualizer">
+        <!-- SVG Synapses and Nodes rendered dynamically by neural.js -->
+      </svg>
+    </div>
+
+    <!-- Real-Time Inference Verdict Banner -->
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(14,22,38,0.7); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; margin-top: 10px;">
+      <div>
+        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Real-Time Verdict: </span>
+        <strong id="nnVerdictText" style="font-family: var(--font-mono); font-size: 13px; color: #38d9c9;">Caution (89.4%)</strong>
+      </div>
+      <span id="nnLatency" style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim);">0.8 ms · 112 synapses</span>
+    </div>
+
+    <!-- Real-Time Input Sliders -->
+    <div class="neural-controls-grid">
+      <div class="control-group">
+        <label><span>[As] Concentration</span><span class="val" id="nnValAs">0.045 mg/L</span></label>
+        <input type="range" id="nnSliderAs" min="0" max="0.30" step="0.005" value="0.045" oninput="window.AquaNet.updateInference()">
+      </div>
+      <div class="control-group">
+        <label><span>Water pH</span><span class="val" id="nnValPh">7.35</span></label>
+        <input type="range" id="nnSliderPh" min="5.5" max="9.5" step="0.05" value="7.35" oninput="window.AquaNet.updateInference()">
+      </div>
+      <div class="control-group">
+        <label><span>Conductivity (EC)</span><span class="val" id="nnValCond">412 µS/cm</span></label>
+        <input type="range" id="nnSliderCond" min="50" max="1500" step="10" value="412" oninput="window.AquaNet.updateInference()">
+      </div>
+      <div class="control-group">
+        <label><span>Turbidity</span><span class="val" id="nnValTurb">2.1 NTU</span></label>
+        <input type="range" id="nnSliderTurb" min="0.1" max="25" step="0.2" value="2.1" oninput="window.AquaNet.updateInference()">
+      </div>
+      <div class="control-group">
+        <label><span>Temperature</span><span class="val" id="nnValTemp">24.2 °C</span></label>
+        <input type="range" id="nnSliderTemp" min="5" max="40" step="0.5" value="24.2" oninput="window.AquaNet.updateInference()">
+      </div>
+    </div>
+
+    <!-- Hydrogeochemical Scenario Presets -->
+    <div style="margin-top: 14px;">
+      <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-right: 8px;">SCENARIO PRESETS:</span>
+      <div class="scenario-presets" style="display: inline-flex;">
+        <button class="btn-preset" onclick="window.AquaNet.setPreset(0.005, 7.8, 180, 0.8, 16.0)">Pristine Stream (0.005 mg/L)</button>
+        <button class="btn-preset" onclick="window.AquaNet.setPreset(0.045, 7.3, 420, 2.5, 25.0)">Ganges Tube Well (0.045 mg/L)</button>
+        <button class="btn-preset" onclick="window.AquaNet.setPreset(0.095, 6.4, 780, 8.2, 28.5)">Industrial Hotspot (0.095 mg/L)</button>
+        <button class="btn-preset" onclick="window.AquaNet.setPreset(0.220, 5.8, 1250, 18.0, 31.0)">Mining Tailings (0.220 mg/L)</button>
+      </div>
+    </div>
+
+    <!-- Softmax Output Probability Cards -->
+    <div class="output-bars-grid">
+      <div class="output-bar-card">
+        <div class="output-bar-label">WHO Safe (&le;10 µg/L)</div>
+        <div class="output-bar-pct" style="color: #10b981;" id="softmaxVal-0">2.1%</div>
+        <div class="output-bar-fill-wrap"><div class="output-bar-fill" id="softmaxFill-0" style="background: #10b981; width: 2.1%;"></div></div>
+      </div>
+      <div class="output-bar-card">
+        <div class="output-bar-label">BIS Caution (10–50 µg/L)</div>
+        <div class="output-bar-pct" style="color: #f59e0b;" id="softmaxVal-1">89.4%</div>
+        <div class="output-bar-fill-wrap"><div class="output-bar-fill" id="softmaxFill-1" style="background: #f59e0b; width: 89.4%;"></div></div>
+      </div>
+      <div class="output-bar-card">
+        <div class="output-bar-label">Unsafe (50–150 µg/L)</div>
+        <div class="output-bar-pct" style="color: #f97316;" id="softmaxVal-2">7.8%</div>
+        <div class="output-bar-fill-wrap"><div class="output-bar-fill" id="softmaxFill-2" style="background: #f97316; width: 7.8%;"></div></div>
+      </div>
+      <div class="output-bar-card">
+        <div class="output-bar-label">Toxic Hazard (&gt;150 µg/L)</div>
+        <div class="output-bar-pct" style="color: #f43f5e;" id="softmaxVal-3">0.7%</div>
+        <div class="output-bar-fill-wrap"><div class="output-bar-fill" id="softmaxFill-3" style="background: #f43f5e; width: 0.7%;"></div></div>
+      </div>
+    </div>
+
+    <p id="nnInferenceRationale" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 14px; line-height: 1.5;"></p>
+  </section>
+
+  <!-- =======================================================================
+       7. MULTI-CONTAMINANT CAPABILITIES & REGULATORY STANDARDS
+       ======================================================================= -->
+  <section class="panel" id="section-contaminants">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Multi-Contaminant Capability Registry</span>
+        <p class="panel-intro">Monitoring specifications, detection limits, and regulatory limits across 7 priority chemical species.</p>
+      </div>
+      <span class="panel-meta">WHO &amp; BIS 10500 COMPLIANT</span>
+    </div>
+
+    <div class="analytes-grid" id="analytesCatalogGrid">
+      <!-- Loaded dynamically via script.js from /api/analytes -->
+      <div class="analyte-card active-hardware">
+        <div class="analyte-head">
+          <div>
+            <div class="analyte-name">Arsenic (Total Dissolved)</div>
+            <div class="analyte-formula">As³⁺ / As⁵⁺</div>
+          </div>
+          <span class="status-tag supported">Active on Catamaran</span>
+        </div>
+        <div class="analyte-limits">
+          <div><strong>Method:</strong> ASV on MAS-G1 Strips</div>
+          <div><strong>LOD:</strong> 20.0 µg/L (0.020 mg/L)</div>
+          <div><strong>Standards:</strong> WHO 10.0 µg/L · BIS 50.0 µg/L</div>
+        </div>
+      </div>
+
+      <div class="analyte-card">
+        <div class="analyte-head">
+          <div>
+            <div class="analyte-name">Lead</div>
+            <div class="analyte-formula">Pb²⁺</div>
+          </div>
+          <span class="status-tag planned">Planned Module</span>
+        </div>
+        <div class="analyte-limits">
+          <div><strong>Method:</strong> Bismuth-Carbon ASV</div>
+          <div><strong>LOD:</strong> 5.0 µg/L</div>
+          <div><strong>Standards:</strong> WHO 10.0 µg/L · BIS 10.0 µg/L</div>
+        </div>
+      </div>
+
+      <div class="analyte-card">
+        <div class="analyte-head">
+          <div>
+            <div class="analyte-name">Cadmium</div>
+            <div class="analyte-formula">Cd²⁺</div>
+          </div>
+          <span class="status-tag planned">Planned Module</span>
+        </div>
+        <div class="analyte-limits">
+          <div><strong>Method:</strong> Bismuth-Carbon ASV</div>
+          <div><strong>LOD:</strong> 2.0 µg/L</div>
+          <div><strong>Standards:</strong> WHO 3.0 µg/L · BIS 3.0 µg/L</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       8. REMEDIATION & TREATMENT SOLUTIONS
+       ======================================================================= -->
+  <div class="panel" id="section-treatment">
+    <div class="panel-head">
+      <span class="panel-title">Treatment &amp; Filtration Technologies</span>
+      <span class="panel-meta">ENGINEERING METHODS</span>
+    </div>
+    <div class="remedy-grid">
+      <div class="remedy-card">
+        <span class="tag">Recommended</span>
+        <h4>Activated Alumina / Iron-Oxide Adsorption</h4>
+        <p>Purpose-built chemical adsorption specifically captures arsenite and arsenate ions, unlike generic carbon pitchers. Fits inline under community wells and domestic sinks.</p>
+      </div>
+      <div class="remedy-card">
+        <span class="tag">Higher Cost</span>
+        <h4>Reverse Osmosis Membrane Separation</h4>
+        <p>Highly effective (95–99% rejection) across arsenic, heavy metals, and total dissolved solids (TDS), at higher upfront electrical and membrane maintenance expenditure.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       9. AUTONOMOUS CATAMARAN VESSEL & BOT KNOWLEDGE
+       ======================================================================= -->
+  <div class="panel bot-panel" id="section-bot">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Catamaran Surface Robot Knowledge Base</span>
+        <p class="panel-intro">Autonomous twin-hull vessel airframe and non-immersion microfluidic sampling architecture.</p>
+      </div>
+      <span class="panel-meta">HARDWARE V1.3</span>
+    </div>
+
+    <!-- Catamaran Schematic Graphic -->
+    <div style="background: rgba(4,7,13,0.7); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; margin: 16px 0; text-align: center;">
+      <img src="prototype-catamaran.svg" alt="AquaSentry Twin-Hull Catamaran Schematic" style="max-width: 100%; height: auto; max-height: 240px; border-radius: 6px;">
+      <p style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-top: 10px;">Twin-Hull Autonomous Catamaran (1.05m length · 11.4kg displacement · Solar MPPT Harvester)</p>
+    </div>
+
+    <div class="remedy-grid" style="grid-template-columns: 1fr; gap: 14px;">
+      <div class="remedy-card">
+        <h4>Non-Immersion Microfluidic Sampling</h4>
+        <p>To avoid biofouling and current disruption, the electrochemical stripping sensor never directly touches open-water currents. A peristaltic pump draws a 15 mL sample into an enclosed, temperature-controlled microfluidic chamber for repeatable ASV quantification.</p>
+      </div>
+      <div class="remedy-card">
+        <h4>Long-Range LoRa &amp; Geotagged Contour Mapping</h4>
+        <p>Telemetry transmits over 915 MHz LoRa radio (2 km+ line-of-sight) directly to shore stations with zero recurring SIM fees. Every reading is synchronized with high-precision GPS coordinates to generate spatial contamination contour maps.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       10. SCIENTIFIC METHODS & LIMITATIONS
+       ======================================================================= -->
+  <section class="panel" id="section-methods" style="border-color: rgba(232, 162, 61, 0.3);">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Scientific Methods &amp; Regulatory Limitations</span>
+        <p class="panel-intro">Essential analytical disclosure and regulatory comparisons for researchers and water authorities.</p>
+      </div>
+      <span class="panel-meta" style="color: #e8a23d;">MANDATORY DISCLOSURE</span>
+    </div>
+
+    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6; display: flex; flex-direction: column; gap: 12px;">
+      <p>
+        <strong style="color: #ffffff;">Autonomous Screening Scope:</strong>
+        AquaSentry is an autonomous environmental screening and surveillance tool designed for rapid spatial prioritization. It is <em>not an ISO-17025 accredited certified laboratory instrument</em>.
+      </p>
+      <div style="background: rgba(232, 162, 61, 0.08); border-left: 3px solid #e8a23d; padding: 12px 14px; border-radius: 0 6px 6px 0;">
+        <strong style="color: #e8a23d;">Method Detection Limit (LOD) vs. WHO Guideline:</strong><br>
+        The sensor's analytical Limit of Detection (LOD) is <strong>0.020 mg/L (20 µg/L)</strong>, while the World Health Organization (WHO) provisional drinking water guideline is <strong>0.010 mg/L (10 µg/L)</strong>. Because the sensor LOD exceeds the WHO guideline, a reading below 20 µg/L <em>cannot mathematically rule out contamination between 10–20 µg/L</em>. Certified laboratory testing (e.g. ICP-MS) is mandatory before declaring water safe for human consumption.
+      </div>
+      <p>
+        <strong style="color: #ffffff;">Conservative Precedence Guardrail:</strong>
+        Deterministic public health thresholds strictly override model inference. AquaNet-V1 machine learning predictions can NEVER downgrade an analytical reading exceeding the India BIS 10500 limit (&gt; 50 µg/L) to "Safe".
+      </p>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       11. FIELD AUDIT REPORT & AUTHORITY DISPATCH
+       ======================================================================= -->
+  <div class="panel" id="section-report">
+    <div class="panel-head">
+      <span class="panel-title">Field Survey Report &amp; Local Authority Dispatch</span>
+      <span class="panel-meta">SURVEILLANCE DISPATCH</span>
+    </div>
+
+    <div class="authority-card">
+      <div class="authority-info">
+        <div class="name">Local Water &amp; Environmental Authority</div>
+        <div class="desc">Jal Jeevan Mission / Groundwater Resource Directorate</div>
+      </div>
+      <button class="btn" onclick="alert('Dispatch Action: Official geotagged incident package queued for municipal ground water authority.')">Dispatch Report</button>
+    </div>
+
+    <div class="report-box" id="reportBox">
+<span class="lbl">STATION</span>       <span class="val">AQUA-001 (Autonomous Catamaran)</span>
+<span class="lbl">CONTAMINANT</span>   <span class="val">Arsenic (Total Dissolved)</span>
+<span class="lbl">READING</span>       <span class="val">0.042 mg/L (42.0 µg/L)</span>
+<span class="lbl">GUIDELINES</span>    <span class="lbl">WHO: 10 µg/L · BIS 10500: 50 µg/L</span>
+<span class="lbl">TIER</span>          <span class="val" style="color: #e8a23d;">Caution (Exceeds WHO 10 µg/L)</span>
+<span class="lbl">METHOD</span>        <span class="val">SWASV on MAS-G1 Gold-Carbon Electrode</span>
+<span class="lbl">GEOTAG</span>        <span class="val">25.61°N, 85.14°E (Patrol Waypoint #4)</span>
+<span class="lbl">STATUS</span>        <span class="val" style="color: #38d9c9;">Ready for Authority Transmission</span>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+      <button class="btn ghost btn-sm" onclick="window.downloadCsvReport()">Export Survey CSV</button>
+      <button class="btn ghost btn-sm" onclick="window.print()">Print Official Audit PDF</button>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       12. INTERACTIVE DISTRICT ROI & PUBLIC HEALTH IMPACT CALCULATOR
+       ======================================================================= -->
+  <section class="panel" id="section-roi">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">District Deployment &amp; ROI Calculator</span>
+        <p class="panel-intro">Simulate fiscal taxpayer savings, hardware payback timeline, and citizen coverage across municipal and rural water jurisdictions.</p>
+      </div>
+      <span class="panel-meta">LIVE IMPACT ENGINE</span>
+    </div>
+
+    <div class="calculator-grid">
+      <!-- Left Controls -->
+      <div class="calc-box">
+        <div class="calc-control-group">
+          <div class="calc-control-header">
+            <label for="calcHabitations">Habitations / Water Sources Monitored</label>
+            <span class="calc-badge" id="calcHabitationsVal">250 Sources</span>
+          </div>
+          <input type="range" id="calcHabitations" class="calc-slider" min="20" max="2500" step="10" value="250" oninput="window.calculateROI()">
+          <div class="calc-slider-scale">
+            <span>20 (Local Pilot)</span>
+            <span>1,000 (Sub-District)</span>
+            <span>2,500+ (State Division)</span>
+          </div>
+        </div>
+
+        <div class="calc-control-group">
+          <div class="calc-control-header">
+            <label for="calcCourierCost">Traditional Lab Courier + NABL Fee per Test</label>
+            <span class="calc-badge" id="calcCourierCostVal">₹2,200 / test</span>
+          </div>
+          <input type="range" id="calcCourierCost" class="calc-slider" min="1000" max="4500" step="100" value="2200" oninput="window.calculateROI()">
+          <div class="calc-slider-scale">
+            <span>₹1,000 (Subsidized District Lab)</span>
+            <span>₹2,200 (Standard Cold-Chain)</span>
+            <span>₹4,500 (Remote Priority)</span>
+          </div>
+        </div>
+
+        <div class="calc-control-group">
+          <div class="calc-control-header">
+            <label>Surveillance &amp; Sampling Cadence</label>
+            <span class="calc-badge" id="calcFreqVal">Monthly (12x / yr)</span>
+          </div>
+          <div class="calc-frequency-tabs">
+            <button type="button" class="freq-tab" data-freq="4" onclick="window.setFrequency(4, this)">Quarterly (4x/yr)</button>
+            <button type="button" class="freq-tab active" data-freq="12" onclick="window.setFrequency(12, this)">Monthly (12x/yr)</button>
+            <button type="button" class="freq-tab" data-freq="26" onclick="window.setFrequency(26, this)">Bi-Weekly (26x/yr)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Output -->
+      <div class="calculator-results">
+        <div class="roi-summary-header">
+          <div class="roi-headline-label">Annual District Taxpayer Savings</div>
+          <div class="roi-headline-value" id="roiNetSavings">₹53.5 Lakhs</div>
+          <div class="roi-headline-sub" id="roiSavingsPct">81% Lower Than Centralized Laboratory Testing</div>
+        </div>
+
+        <div class="roi-metrics-grid">
+          <div class="roi-metric-item">
+            <div class="lbl">Traditional Lab Annual Cost</div>
+            <div class="val" id="roiTradCost" style="color: #ef5142;">₹66.0 L / yr</div>
+          </div>
+          <div class="roi-metric-item">
+            <div class="lbl">AquaSentry Fleet Total Opex</div>
+            <div class="val" id="roiFleetCost" style="color: #4d8dff;">₹12.5 L / yr</div>
+          </div>
+          <div class="roi-metric-item">
+            <div class="lbl">Hardware Breakeven Period</div>
+            <div class="val" id="roiPayback" style="color: #38d9c9;">2.3 Months</div>
+          </div>
+          <div class="roi-metric-item">
+            <div class="lbl">Citizens Continuously Protected</div>
+            <div class="val" id="roiLives" style="color: #38d9c9;">125,000</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-bottom: 4px;">
+            <span>Autonomous Fleet Cost</span>
+            <span>Taxpayer Capital Retained</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill-aqua" id="progressAqua" style="width: 19%;">₹12.5L Fleet</div>
+            <div class="progress-bar-fill-trad" id="progressTrad" style="width: 81%;">₹53.5L Saved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       13. COMMERCIAL STRATEGY & REVENUE MODEL
+       ======================================================================= -->
+  <section class="panel" id="section-sales">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Commercial Strategy &amp; Institutional Procurement</span>
+        <p class="panel-intro">Dual hardware sales, recurring Monitoring-as-a-Service (MaaS), and public sector tender channels.</p>
+      </div>
+      <span class="panel-meta">HARDWARE + SAAS</span>
+    </div>
+
+    <!-- 4 Key Commercial KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Catamaran Node Capex</div>
+        <div class="kpi-value" style="color: #38d9c9;">₹45,000</div>
+        <div class="kpi-sub">Turnkey solar-assisted autonomous ASV robot with LoRa</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cloud MaaS Platform</div>
+        <div class="kpi-value" style="color: #4d8dff;">₹18,000<span style="font-size: 13px; color: var(--text-dim);"> / yr</span></div>
+        <div class="kpi-sub">Continuous telemetry, spatial GIS mapping &amp; alert dispatch</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cartridge Consumables</div>
+        <div class="kpi-value" style="color: #e8a23d;">₹2,800<span style="font-size: 13px; color: var(--text-dim);"> / 50 pk</span></div>
+        <div class="kpi-sub">MAS-G1 micro-fabricated working electrode packs (₹56 / test)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Year 1 Net Projected</div>
+        <div class="kpi-value" style="color: #38d9c9;">₹12.32 Cr</div>
+        <div class="kpi-sub">Based on 47,500 active monitoring nodes in high-risk districts</div>
+      </div>
+    </div>
+
+    <!-- 3 Core Revenue Streams -->
+    <div class="stream-grid">
+      <div class="stream-card">
+        <div style="font-size: 24px;">🚢</div>
+        <h4>Autonomous Catamaran Fleet</h4>
+        <div class="stream-pricing">₹5,000 – ₹8,000 <span style="font-size: 12px; color: var(--text-dim);">/ unit COGS</span></div>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">Turnkey solar-assisted autonomous surface robot equipped with MAS-G1 stripping voltammetry potentiostat, GPS, LoRa, and non-immersion sampling cell.</p>
+        <ul class="stream-features">
+          <li>Gross margin: 40%–55% per robotic node</li>
+          <li>Localized assembly leveraging Indian manufacturing</li>
+          <li>1-year warranty with modular field-swappable subsystems</li>
+        </ul>
+      </div>
+
+      <div class="stream-card">
+        <div style="font-size: 24px;">📡</div>
+        <h4>Monitoring-as-a-Service (MaaS)</h4>
+        <div class="stream-pricing">₹99 / mo <span style="font-size: 12px; color: var(--text-dim);">(₹1,188 / yr)</span></div>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">Real-time cloud telemetry pipeline, automated 4-tier WHO/BIS safety classifications, contamination contour maps, and emergency alert SMS gateways.</p>
+        <ul class="stream-features">
+          <li>85%+ recurring gross software margin</li>
+          <li>District Water Board enterprise dashboard tier</li>
+          <li>Automated compliance reports for Jal Jeevan Mission</li>
+        </ul>
+      </div>
+
+      <div class="stream-card">
+        <div style="font-size: 24px;">🧪</div>
+        <h4>Electrode Strips &amp; Consumables</h4>
+        <div class="stream-pricing">₹150 – ₹300 <span style="font-size: 12px; color: var(--text-dim);">/ 50 tests</span></div>
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">Pre-calibrated screen-printed electrode strips (As-M003050) and multi-metal cartridges for Lead, Copper, Chromium, and Nickel.</p>
+        <ul class="stream-features">
+          <li>High-frequency recurring procurement model</li>
+          <li>Proprietary calibration curve validation</li>
+          <li>Bulk packaging for state groundwater departments</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Institutional Procurement Channels -->
+    <div style="margin-top: 20px; background: rgba(77, 141, 255, 0.05); border: 1px solid rgba(77, 141, 255, 0.2); border-radius: var(--radius-md); padding: 18px;">
+      <h4 style="font-family: var(--font-display); font-size: 15px; color: #ffffff; margin-bottom: 8px;">Institutional GTM Channels &amp; Government Procurement</h4>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px;">
+        AquaSentry accesses capital through targeted institutional mechanisms rather than fragmented direct-to-consumer sales:
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; font-size: 12.5px;">
+        <div style="background: var(--surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-soft);">
+          <strong style="color: #38d9c9;">Jal Jeevan Mission (JJM):</strong> Direct listing under the Ministry of Jal Shakti water-testing innovation fund for village water and sanitation committees (VWSC).
+        </div>
+        <div style="background: var(--surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-soft);">
+          <strong style="color: #4d8dff;">GeM Portal (Government e-Marketplace):</strong> Listed under category "Autonomous Environmental Surveillance &amp; Water Testing Devices" for single-click tender procurement.
+        </div>
+        <div style="background: var(--surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-soft);">
+          <strong style="color: #e8a23d;">CSR Environmental Mandates:</strong> Corporate social responsibility funding from industrial, energy, and mining conglomerates to fulfill clean water obligations in affected river basins.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       14. COMPETITIVE BENCHMARK MATRIX TABLE
+       ======================================================================= -->
+  <section class="panel" id="section-competition">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Competitive Benchmark Matrix</span>
+        <p class="panel-intro">Comparative evaluation of AquaSentry against existing field, benchtop, and chemical test methods.</p>
+      </div>
+      <span class="panel-meta">MARKET BENCHMARK</span>
+    </div>
+
+    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px;">
+      AquaSentry eliminates the trade-off between laboratory precision and rapid field availability by deploying an autonomous surface robot with ASV potentiostat intelligence directly to the water body:
+    </p>
+
+    <div class="comparison-table-wrap">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Analytical &amp; Operational Dimension</th>
+            <th>AquaSentry (Autonomous ASV)</th>
+            <th>AccuSense (R&amp;D Stage)</th>
+            <th>Certified Lab (ICP-MS)</th>
+            <th>Field Test Kits (Merck/Hach)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Deployment Mobility</strong></td>
+            <td class="highlight-green">Autonomous Twin-Hull Catamaran</td>
+            <td class="highlight-red">Stationary / Lab-bound</td>
+            <td class="highlight-red">Centralized Facility Only</td>
+            <td>Manual Human Technician</td>
+          </tr>
+          <tr>
+            <td><strong>Turnaround Time</strong></td>
+            <td class="highlight-green">&lt; 3 Minutes On-Site</td>
+            <td class="highlight-red">Pending Validation</td>
+            <td class="highlight-red">14 to 28 Days (Cold-Chain)</td>
+            <td>15–20 Minutes</td>
+          </tr>
+          <tr>
+            <td><strong>Cost per Sample</strong></td>
+            <td class="highlight-green">₹56 / test (electrode strip)</td>
+            <td class="highlight-red">High / Unclear</td>
+            <td class="highlight-red">₹2,200 – ₹4,500 / sample</td>
+            <td>₹180 – ₹350 / strip</td>
+          </tr>
+          <tr>
+            <td><strong>Hazardous Waste Generation</strong></td>
+            <td class="highlight-green">Zero Toxic Byproducts</td>
+            <td>Low</td>
+            <td>Acid Digest Reagents</td>
+            <td class="highlight-red">Toxic Arsine Gas (AsH3)</td>
+          </tr>
+          <tr>
+            <td><strong>Spatial Mapping &amp; GIS</strong></td>
+            <td class="highlight-green">Real-time GPS Heatmap Contours</td>
+            <td class="highlight-red">Single Static Point</td>
+            <td class="highlight-red">Point-in-Time Discrete</td>
+            <td class="highlight-red">Manual Notebook Log</td>
+          </tr>
+          <tr>
+            <td><strong>Machine Learning Intelligence</strong></td>
+            <td class="highlight-green">AquaNet-V1 (112 Synapses · Multi-Covariance)</td>
+            <td class="highlight-red">None (Naive Linear Fit)</td>
+            <td>Expert Chemist Interpretation</td>
+            <td class="highlight-red">Subjective Color Strip Matching</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 14px; padding: 14px 16px; background: rgba(56, 217, 201, 0.05); border-left: 3px solid #38d9c9; border-radius: 0 6px 6px 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+      <strong style="color: #38d9c9;">Architectural Superiority:</strong> Traditional laboratory ICP-MS provides parts-per-trillion precision but incurs weeks of courier transit lag, while disposable field strips generate lethal arsine gas without digital logging. AquaSentry bridges this chasm by delivering 20 µg/L detection limits and instant LoRa-connected spatial risk classifications on an autonomous solar vessel.
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       15. GLOBAL MARKET RESEARCH & TAM ANALYSIS
+       ======================================================================= -->
+  <section class="panel" id="section-market">
+    <div class="panel-head">
+      <div>
+        <span class="panel-title">Global Market Research &amp; TAM Analysis</span>
+        <p class="panel-intro">Total Addressable Market, macroeconomic drivers, and geographic priority corridors.</p>
+      </div>
+      <span class="panel-meta">GLOBAL TAM: $7.5B</span>
+    </div>
+
+    <!-- Market Overview Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+      <div style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 18px;">
+        <span style="font-family: var(--font-mono); font-size: 10px; color: #38d9c9; text-transform: uppercase; letter-spacing: 0.08em;">Total Addressable Market</span>
+        <div style="font-family: var(--font-display); font-size: 28px; font-weight: 800; color: #ffffff; margin: 4px 0;">$7.50 Billion</div>
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Global water quality monitoring market size by 2028, expanding at 6.5% CAGR under increasing municipal and industrial regulatory standards.</p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 18px;">
+        <span style="font-family: var(--font-mono); font-size: 10px; color: #4d8dff; text-transform: uppercase; letter-spacing: 0.08em;">Heavy Metals Screening TAM</span>
+        <div style="font-family: var(--font-display); font-size: 28px; font-weight: 800; color: #ffffff; margin: 4px 0;">$1.20 Billion</div>
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Dedicated segment for rapid heavy metal and trace contaminant detection in environmental and potable water sources.</p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 18px;">
+        <span style="font-family: var(--font-mono); font-size: 10px; color: #e8a23d; text-transform: uppercase; letter-spacing: 0.08em;">High-Risk At-Risk Population</span>
+        <div style="font-family: var(--font-display); font-size: 28px; font-weight: 800; color: #ffffff; margin: 4px 0;">220+ Million</div>
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">Vulnerable individuals drinking groundwater with naturally occurring or industrial arsenic concentrations exceeding safe guidelines.</p>
+      </div>
+    </div>
+
+    <!-- Geographic Arsenic Belts & Priority Corridors -->
+    <div style="background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;">
+      <h4 style="font-family: var(--font-display); font-size: 15px; color: #ffffff; margin-bottom: 8px;">Geographic Priority Deployment Corridors</h4>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 12px; font-size: 12.5px; color: var(--text-muted);">
+        <div style="padding: 12px; background: rgba(0, 0, 0, 0.25); border-radius: 6px; border-left: 3px solid #ef5142;">
+          <strong style="color: #ffffff;">Indo-Gangetic Alluvial Basin:</strong> West Bengal, Bihar, Uttar Pradesh, and Assam. Severe Holocene aquifer arsenic leaching affecting over 50 million rural villagers reliant on hand pumps.
+        </div>
+        <div style="padding: 12px; background: rgba(0, 0, 0, 0.25); border-radius: 6px; border-left: 3px solid #e8a23d;">
+          <strong style="color: #ffffff;">Southeast Asian Deltas:</strong> Mekong Delta (Vietnam/Cambodia) and Irrawaddy River (Myanmar). Elevated reducing aquifer environments where shallow boreholes extract hazardous arsenic-rich water.
+        </div>
+        <div style="padding: 12px; background: rgba(0, 0, 0, 0.25); border-radius: 6px; border-left: 3px solid #38d9c9;">
+          <strong style="color: #ffffff;">North American Arid Basins:</strong> Southwestern United States (Nevada, Arizona, California Central Valley) where thermal springs and mineralized bedrock exceed the 10 µg/L EPA threshold.
+        </div>
+      </div>
+    </div>
+
+    <!-- Macro Drivers -->
+    <div class="remedy-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+      <div class="remedy-card">
+        <h4>Stricter Global Regulations</h4>
+        <p>WHO strictly maintains provisional limit of 10 µg/L. Governments face mounting legal and civil scrutiny to eliminate toxic drinking sources with real-time verification.</p>
+      </div>
+      <div class="remedy-card">
+        <h4>Slashing High Technician Costs</h4>
+        <p>Sending physical field teams with manual sampling bottles into water bodies costs up to ₹3,500 per site visit. Autonomous surface robots slash sample acquisition costs by over 80%.</p>
+      </div>
+      <div class="remedy-card">
+        <h4>Groundwater Overdraft &amp; Drought</h4>
+        <p>Depleting water tables trigger geochemical redox shifts that release bound arsenic into active drinking aquifers, demanding continuous spatial monitoring rather than annual testing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- System Footer -->
+  <footer>
+    <div>
+      <span>MINIBOT · BATTERY 71% · SOLAR MPPT ACTIVE · 915 MHz LoRa</span>
+    </div>
+    <div style="display: flex; gap: 14px;">
+      <a href="sales-expansion.html">Commercial Sales &amp; Expansion &rarr;</a>
+      <a href="market-research.html">Market Research &rarr;</a>
+    </div>
+  </footer>
+
+</div><!-- /.wrap -->
+
+<!-- Floating AI Chatbot Widget -->
+<div id="chat-widget-container">
+  <button id="chat-toggle-btn" onclick="toggleChat()" aria-label="Toggle AI Water Quality Agent">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+  </button>
+  <div id="chat-window">
+    <div class="chat-header">
+      <h3>AquaSentry AI Agent</h3>
+      <button class="close-btn" onclick="toggleChat()">&times;</button>
+    </div>
+    <div id="chat-messages-container" class="chat-messages">
+      <div class="chat-message bot-msg">Hello! I am the AquaSentry AI Agent. Ask me anything about our catamaran robot, arsenic detection, or drinking water standards!</div>
+    </div>
+    <div class="chat-input-container">
+      <input type="text" id="chat-input-field" placeholder="Ask about water quality or the robot..." onkeypress="handleChatKeyPress(event)">
+      <button id="chat-send-btn" onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="audio.js"></script>
+<script src="neural.js"></script>
+<script src="sidebar.js"></script>
+<script src="script.js"></script>
+<script src="chat.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,2 @@
+# Extra packages for the desktop window (desktop_app.py)
+pywebview>=5.0

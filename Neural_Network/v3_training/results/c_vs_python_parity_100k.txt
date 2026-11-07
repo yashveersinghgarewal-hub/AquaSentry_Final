@@ -1,0 +1,7 @@
+{
+ "inputs": 100000,
+ "vote_mismatches": 0,
+ "final_verdict_mismatches": 0,
+ "max_probability_difference": 5e-05,
+ "examples": []
+}

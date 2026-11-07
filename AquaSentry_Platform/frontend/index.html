@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0F0F0F">
+  <title>AquaSentry — Water Safety Monitor</title>
+  <meta name="description" content="AquaSentry arsenic water safety dashboard with the AquaNet neural network, in English and Hindi.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <script>
+    // Carbon black (dark) is the default; a saved choice from the moon button wins. Applied before paint to avoid a flash.
+    var th = 'dark';
+    try { th = localStorage.getItem('aquasentry.theme') || 'dark'; } catch (e) {}
+    document.documentElement.setAttribute('data-theme', th);
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="nav.overview">Overview</a>
+
+  <aside class="rail" id="rail" aria-label="Main navigation">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C11 10 7 15 7 20a9 9 0 0 0 18 0c0-5-4-10-9-17Z" fill="currentColor"/><path d="M11.5 21.5a4.5 4.5 0 0 0 4.5 4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <div>
+        <div class="brand-name" data-i18n="app.title">AquaSentry</div>
+        <div class="brand-tag" data-i18n="app.tagline">Arsenic water safety monitor</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#overview" class="nav-link" data-section="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-3.5 5-6 8.5-6 11.5a6 6 0 0 0 12 0C18 11.5 15.5 8 12 3Z"/></svg><span data-i18n="nav.overview">Overview</span></a>
+      <a href="#test" class="nav-link" data-section="test"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/></svg><span data-i18n="nav.test">Test a sample</span></a>
+      <a href="#network" class="nav-link" data-section="network"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="7" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="19" cy="17" r="2"/><path d="M7 7.8l3.2 3M7 16.2l3.2-3M13.8 11l3.4-3M13.8 13l3.4 3"/></svg><span data-i18n="nav.network">AquaNet model</span></a>
+      <a href="#contaminants" class="nav-link" data-section="contaminants"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="14" cy="16" r="3.5"/></svg><span data-i18n="nav.contaminants">Contaminants</span></a>
+      <a href="#standards" class="nav-link" data-section="standards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span data-i18n="nav.standards">Standards</span></a>
+      <a href="#report" class="nav-link" data-section="report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span data-i18n="nav.report">Report</span></a>
+    </nav>
+    <div class="rail-foot">
+      <div class="rail-label" data-i18n="nav.more">Project pages</div>
+      <a href="market-research.html" class="rail-sub" data-i18n="nav.market">Market research</a>
+      <a href="sales-expansion.html" class="rail-sub" data-i18n="nav.sales">Expansion plan</a>
+    </div>
+  </aside>
+  <div class="rail-backdrop" id="railBackdrop" hidden></div>
+
+  <div class="shell">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" type="button" data-i18n-aria="menu.open" aria-label="Open menu" aria-controls="rail" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="conn" id="conn" data-state="checking">
+        <span class="conn-dot" aria-hidden="true"></span>
+        <span id="connText" data-i18n="conn.checking">Checking server…</span>
+      </div>
+      <div class="topbar-right">
+        <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
+          <button type="button" data-lang-choice="en" aria-pressed="true">English</button>
+          <button type="button" data-lang-choice="hi" aria-pressed="false" lang="hi">हिन्दी</button>
+        </div>
+        <button class="icon-btn" id="themeBtn" type="button" data-i18n-aria="theme.toggle" aria-label="Switch light or dark theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- OVERVIEW -->
+      <section class="section" id="overview" aria-labelledby="ovHeading">
+        <div class="section-head">
+          <h1 id="ovHeading" data-i18n="ov.heading">Is this water safe?</h1>
+          <p class="meta" id="ovMeta"></p>
+        </div>
+
+        <div class="verdict" id="verdict" data-tone="none" aria-live="polite">
+          <div class="verdict-text">
+            <div class="verdict-icon" id="verdictIcon" aria-hidden="true"></div>
+            <div>
+              <h2 class="verdict-title" id="verdictTitle" data-i18n="verdict.none.title">No reading yet</h2>
+              <p class="verdict-action" id="verdictAction" data-i18n="verdict.none.action">Load demo data or test a sample to see a result.</p>
+            </div>
+          </div>
+          <div class="verdict-figure">
+            <div class="fig-label" data-i18n="ov.arsenic">Arsenic</div>
+            <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
+            <div class="fig-sub" id="asMgl"></div>
+          </div>
+        </div>
+
+        <figure class="strip" aria-labelledby="stripCaption">
+          <div class="strip-track">
+            <div class="strip-seg seg-safe"><span data-i18n="class.Safe">Safe</span></div>
+            <div class="strip-seg seg-caution"><span data-i18n="class.Caution">Caution</span></div>
+            <div class="strip-seg seg-unsafe"><span data-i18n="class.Unsafe">Unsafe</span></div>
+            <div class="strip-seg seg-haz"><span data-i18n="class.Hazardous">Hazardous</span></div>
+            <div class="strip-pin" id="stripPin" hidden><span id="stripPinLabel"></span></div>
+          </div>
+          <div class="strip-ticks" aria-hidden="true">
+            <span style="left:0%">0</span>
+            <span style="left:20%" data-i18n="strip.who">WHO limit 10</span>
+            <span style="left:45%" data-i18n="strip.bis">India limit 50</span>
+            <span style="left:75%" data-i18n="strip.haz">Danger 150</span>
+            <span style="left:100%">300+</span>
+          </div>
+          <figcaption id="stripCaption" data-i18n="strip.caption">Arsenic in µg/L (parts per billion)</figcaption>
+        </figure>
+
+        <div class="ov-lower">
+          <div class="why" id="whyBox" hidden>
+            <h3 data-i18n="ov.why">Why this result</h3>
+            <ul id="whyList"></ul>
+            <p class="lab-note" id="labNote" hidden data-i18n="ov.labNote"></p>
+          </div>
+          <div class="ov-actions">
+            <button class="btn btn-primary" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
+            <div class="quick">
+              <span data-i18n="ov.quick">Try a sample:</span>
+              <button class="btn btn-quiet" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
+              <button class="btn btn-quiet" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
+              <button class="btn btn-quiet" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="readings" aria-labelledby="readHeading">
+          <h2 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h2>
+          <div class="readings-grid" id="readingsGrid"></div>
+          <p class="device-line" id="deviceLine"></p>
+        </div>
+      </section>
+
+      <!-- TEST A SAMPLE -->
+      <section class="section" id="test" aria-labelledby="testHeading">
+        <div class="section-head">
+          <h2 id="testHeading" data-i18n="test.heading">Test a sample</h2>
+          <p class="lede" data-i18n="test.intro"></p>
+        </div>
+        <div class="test-grid">
+          <div class="test-controls">
+            <h3 class="h-small" data-i18n="test.steps">What the device does</h3>
+            <ol class="steps">
+              <li data-i18n="test.step1"></li>
+              <li data-i18n="test.step2"></li>
+              <li data-i18n="test.step3"></li>
+              <li data-i18n="test.step4"></li>
+              <li data-i18n="test.step5"></li>
+            </ol>
+            <label class="field">
+              <span class="field-row"><span data-i18n="test.slider">Arsenic in the sample</span><output id="testAsOut">35 µg/L</output></span>
+              <input type="range" id="testAs" min="0" max="300" step="1" value="35">
+            </label>
+            <button class="btn btn-primary btn-wide" type="button" id="runTestBtn" data-i18n="test.run">Run test</button>
+            <p class="status-msg" id="testMsg" role="status"></p>
+          </div>
+          <div class="test-output">
+            <div class="chart-box">
+              <svg id="vgChart" viewBox="0 0 640 340" role="img" aria-label="Voltammogram"></svg>
+              <div class="legend">
+                <span class="lg lg-raw" data-i18n="test.chart.raw">Raw signal</span>
+                <span class="lg lg-smooth" data-i18n="test.chart.smooth">Smoothed</span>
+                <span class="lg lg-base" data-i18n="test.chart.base">Baseline</span>
+              </div>
+            </div>
+            <dl class="results" id="testResults">
+              <div><dt data-i18n="test.peak">Peak current</dt><dd id="trPeak">–</dd></div>
+              <div><dt data-i18n="test.position">Peak position</dt><dd id="trPos">–</dd></div>
+              <div><dt data-i18n="test.snr">Signal-to-noise</dt><dd id="trSnr">–</dd></div>
+              <div class="res-main"><dt data-i18n="test.result">Measured arsenic</dt><dd id="trAs">–</dd></div>
+            </dl>
+            <p class="formula" data-i18n="test.formula"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- AQUANET -->
+      <section class="section" id="network" aria-labelledby="nnHeading">
+        <div class="section-head">
+          <h2 id="nnHeading" data-i18n="nn.heading">AquaNet model</h2>
+          <p class="lede" data-i18n="nn.intro"></p>
+        </div>
+        <div class="nn-model">
+          <span class="nn-model-label" data-i18n="nn.model">Model</span>
+          <div class="seg" role="group" aria-label="Model">
+            <button type="button" data-model="v3" aria-pressed="true" data-i18n="nn.v3">V3 (trained)</button>
+            <button type="button" data-model="v1" aria-pressed="false" data-i18n="nn.v1">V1 (hand-built)</button>
+          </div>
+          <p class="nn-model-note" id="nnModelNote"></p>
+        </div>
+        <div class="nn-grid">
+          <div class="nn-inputs">
+            <label class="field"><span class="field-row"><span data-i18n="nn.as">Arsenic</span><output id="nnOutAs"></output></span><input type="range" id="nnAs" min="0" max="0.3" step="0.001" value="0.035"></label>
+            <label class="field"><span class="field-row"><span data-i18n="nn.ph">pH</span><output id="nnOutPh"></output></span><input type="range" id="nnPh" min="4.5" max="10.5" step="0.05" value="7.3"></label>
+            <label class="field"><span class="field-row"><span data-i18n="nn.ec">Conductivity</span><output id="nnOutEc"></output></span><input type="range" id="nnEc" min="50" max="3500" step="10" value="420"></label>
+            <label class="field"><span class="field-row"><span data-i18n="nn.turb">Turbidity</span><output id="nnOutTurb"></output></span><input type="range" id="nnTurb" min="0" max="25" step="0.1" value="2.5"></label>
+            <label class="field"><span class="field-row"><span data-i18n="nn.temp">Temperature</span><output id="nnOutTemp"></output></span><input type="range" id="nnTemp" min="5" max="45" step="0.5" value="25"></label>
+            <div class="presets">
+              <span data-i18n="nn.presets">Examples:</span>
+              <button class="chip" type="button" data-preset="0.005,7.8,180,0.8,16" data-i18n="nn.p.clean">Clean well</button>
+              <button class="chip" type="button" data-preset="0.045,7.3,420,2.5,25" data-i18n="nn.p.border">Borderline</button>
+              <button class="chip" type="button" data-preset="0.095,6.4,780,8.2,28.5" data-i18n="nn.p.farm">Farm runoff</button>
+              <button class="chip" type="button" data-preset="0.22,5.8,1250,18,31" data-i18n="nn.p.ind">Industrial runoff</button>
+            </div>
+          </div>
+          <div class="nn-picture">
+            <svg id="nnSvg" viewBox="0 0 720 420" role="img" aria-label="AquaNet network diagram"></svg>
+            <p class="nn-legend" data-i18n="nn.legend"></p>
+            <p class="nn-stats" id="nnStats"></p>
+          </div>
+        </div>
+        <div class="nn-result">
+          <div class="nn-verdicts">
+            <div><div class="k" data-i18n="nn.vote">Network's vote</div><div class="v" id="nnVote">–</div></div>
+            <div><div class="k" data-i18n="nn.final">Final verdict</div><div class="v" id="nnFinal">–</div></div>
+            <div><div class="k" data-i18n="nn.confidence">Confidence</div><div class="v" id="nnConf">–</div></div>
+            <div><div class="k" data-i18n="nn.uncertainty">Uncertainty</div><div class="v" id="nnEnt">–</div></div>
+          </div>
+          <div class="nn-probs">
+            <h3 class="h-small" data-i18n="nn.probs">Probability of each class</h3>
+            <div id="nnBars"></div>
+          </div>
+          <div class="nn-rules">
+            <p class="nn-rule-msg" id="nnRuleMsg"></p>
+            <ul id="nnReasons"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTAMINANTS -->
+      <section class="section" id="contaminants" aria-labelledby="conHeading">
+        <div class="section-head">
+          <h2 id="conHeading" data-i18n="con.heading">Contaminants</h2>
+          <p class="lede" data-i18n="con.intro"></p>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="conTable">
+            <thead><tr><th data-i18n="con.col.name">Contaminant</th><th data-i18n="con.col.status">Status</th><th data-i18n="con.lod">Detection limit</th><th data-i18n="con.bis">India limit (BIS)</th><th data-i18n="con.method">Method</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- STANDARDS -->
+      <section class="section" id="standards" aria-labelledby="stdHeading">
+        <div class="section-head">
+          <h2 id="stdHeading" data-i18n="std.heading">Standards used</h2>
+          <p class="lede" data-i18n="std.intro"></p>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th data-i18n="std.col.param">Reading</th><th data-i18n="std.col.limit">Limit</th><th data-i18n="std.col.effect">What happens</th></tr></thead>
+            <tbody>
+              <tr><td data-i18n="std.as.who"></td><td class="num">10 µg/L</td><td><span class="tag tone-caution" data-i18n="std.e.caution"></span></td></tr>
+              <tr><td data-i18n="std.as.bis"></td><td class="num">50 µg/L</td><td><span class="tag tone-unsafe" data-i18n="std.e.unsafe"></span></td></tr>
+              <tr><td data-i18n="std.as.haz"></td><td class="num">150 µg/L</td><td><span class="tag tone-haz" data-i18n="std.e.haz"></span></td></tr>
+              <tr><td data-i18n="std.lod"></td><td class="num">20 µg/L</td><td data-i18n="std.e.lod"></td></tr>
+              <tr><td data-i18n="std.ph"></td><td class="num">6.5 – 8.5</td><td data-i18n="std.e.ph"></td></tr>
+              <tr><td data-i18n="std.turb"></td><td class="num">5 NTU</td><td data-i18n="std.e.turb"></td></tr>
+              <tr><td data-i18n="std.ec"></td><td class="num">1500 µS/cm</td><td data-i18n="std.e.ec"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- REPORT -->
+      <section class="section" id="report" aria-labelledby="repHeading">
+        <div class="section-head">
+          <h2 id="repHeading" data-i18n="rep.heading">Report</h2>
+          <p class="lede" data-i18n="rep.intro"></p>
+        </div>
+        <div class="rep-actions">
+          <button class="btn btn-primary" type="button" id="csvBtn" data-i18n="rep.csv">Download CSV</button>
+          <button class="btn btn-quiet" type="button" id="printBtn" data-i18n="rep.print">Print</button>
+          <a class="btn btn-quiet" id="pdfBtn" aria-disabled="true" data-i18n="rep.pdfOff">PDF certificate needs the server</a>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="repTable">
+            <thead><tr><th data-i18n="rep.col.time">Time</th><th data-i18n="rep.col.as">Arsenic (µg/L)</th><th data-i18n="rep.col.verdict">Verdict</th><th data-i18n="rep.col.source">Source</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="disclaimer" data-i18n="rep.disclaimer"></p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>AquaSentry v1.3</span>
+      <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
+    </footer>
+  </div>
+
+  <!-- Assistant -->
+  <button class="chat-fab" id="chatFab" type="button" data-i18n-aria="chat.open" aria-label="Ask the water assistant" aria-controls="chatPanel" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
+  </button>
+  <div class="chat-panel" id="chatPanel" role="dialog" aria-labelledby="chatTitle" hidden>
+    <div class="chat-head">
+      <h2 id="chatTitle" data-i18n="chat.title">Water quality assistant</h2>
+      <button class="icon-btn" type="button" id="chatClose" data-i18n-aria="chat.close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="chat-log" id="chatLog" aria-live="polite"></div>
+    <form class="chat-form" id="chatForm">
+      <input type="text" id="chatInput" autocomplete="off" data-i18n-placeholder="chat.placeholder">
+      <button class="btn btn-primary" type="submit" data-i18n="chat.send">Send</button>
+    </form>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="neural.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
