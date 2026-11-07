@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#050708">
+  <meta name="theme-color" content="#F2F5F4">
   <title>AquaSentry — Water Safety Monitor</title>
   <meta name="description" content="AquaSentry arsenic water safety dashboard with the AquaNet neural network, in English and Hindi.">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="field.css">
   <script>
-    // Carbon black (dark) is the default; a saved choice from the moon button wins. Applied before paint to avoid a flash.
-    var th = 'dark';
-    try { th = localStorage.getItem('aquasentry.theme') || 'dark'; } catch (e) {}
+    // Light "field" theme is the default (readable outdoors); a saved choice from the moon button wins.
+    var th = 'light';
+    try { th = localStorage.getItem('aquasentry.theme') || 'light'; } catch (e) {}
     document.documentElement.setAttribute('data-theme', th);
   </script>
 </head>
@@ -28,6 +29,7 @@
       <div class="nav-label" id="navWater" data-i18n="nav.group.water">Water safety</div>
       <span class="nav-lime" aria-hidden="true"></span>
       <a href="#overview" class="nav-link" data-section="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-3.5 5-6 8.5-6 11.5a6 6 0 0 0 12 0C18 11.5 15.5 8 12 3Z"/></svg><span data-i18n="nav.overview">Overview</span></a>
+      <a href="#fleet" class="nav-link" data-section="fleet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-5 3 3 5-6"/></svg><span data-i18n="nav.fleet">Devices &amp; history</span></a>
       <a href="#action" class="nav-link" data-section="action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg><span data-i18n="nav.action">If arsenic is high</span></a>
       <a href="#authorities" class="nav-link" data-section="authorities"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg><span data-i18n="nav.authorities">Contact authorities</span></a>
       <a href="#test" class="nav-link" data-section="test"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/></svg><span data-i18n="nav.test">Test a sample</span></a>
@@ -44,7 +46,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5.1</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><b>AquaSentry v5.3</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -71,26 +73,21 @@
     <main id="main">
       <!-- ============ OVERVIEW ============ -->
       <section class="section" id="overview" aria-labelledby="ovHeading">
-        <div class="section-head" data-reveal>
-          <span class="eyebrow" data-i18n="ov.eyebrow">Live water check</span>
-          <h1 id="ovHeading"><span data-i18n="ov.heading">Is this water safe?</span></h1>
+        <header class="ov-head">
+          <h1 id="ovHeading" data-i18n="ov.heading">Is this water safe?</h1>
           <p class="meta" id="ovMeta"></p>
-        </div>
+        </header>
 
-        <div class="alert-banner" id="alertBanner" hidden role="status">
-          <div class="ab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg></div>
-          <div style="flex:1"><b id="alertTitle"></b><span id="alertText"></span></div>
-          <a class="btn btn-danger" href="#action" id="alertBtn1" data-i18n="alert.steps">What to do</a>
-          <a class="btn btn-quiet" href="#authorities" id="alertBtn2" data-i18n="alert.report">Alert authorities</a>
+        <!-- kept for app.js; the verdict panel below carries the same message -->
+        <div class="alert-banner" id="alertBanner" hidden>
+          <b id="alertTitle"></b><span id="alertText"></span>
         </div>
 
         <div class="hero">
-          <div class="verdict beam" id="verdict" data-tone="none" aria-live="polite" data-reveal data-depth="6">
-            <span class="beam-ring" aria-hidden="true"></span>
-            <canvas class="fx" id="heroFx" aria-hidden="true"></canvas>
+          <article class="verdict" id="verdict" data-tone="none" aria-live="polite">
             <div class="verdict-top">
               <span class="verdict-badge" id="verdictBadge" data-i18n="verdict.badge.none">Waiting</span>
-              <span class="meta mono" id="verdictTime"></span>
+              <span class="verdict-time" id="verdictTime"></span>
             </div>
             <div class="verdict-main">
               <div class="verdict-icon" id="verdictIcon" aria-hidden="true"></div>
@@ -99,88 +96,88 @@
                 <p class="verdict-action" id="verdictAction" data-i18n="verdict.none.action">Load demo data or test a sample to see a result.</p>
               </div>
             </div>
-            <div class="verdict-figure">
-              <div>
-                <div class="fig-label" data-i18n="ov.arsenic">Arsenic</div>
-                <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
-              </div>
-              <div class="fig-sub" id="asMgl"></div>
+            <div class="verdict-actions">
+              <a class="btn btn-on-paint" href="#action" id="alertBtn1" hidden data-i18n="alert.steps">What to do</a>
+              <a class="btn btn-on-paint ghost" href="#authorities" id="alertBtn2" hidden data-i18n="alert.report">Alert authorities</a>
             </div>
-          </div>
+          </article>
 
-          <div class="card gauge-card spot" data-reveal style="--d:120ms" data-depth="12">
-            <div class="ring" id="ring">
-              <svg viewBox="0 0 240 240" aria-hidden="true">
-                <defs><linearGradient id="ringGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#34D399"/><stop offset="45%" stop-color="#FBBF24"/><stop offset="75%" stop-color="#FB923C"/><stop offset="100%" stop-color="#F43F5E"/></linearGradient></defs>
-                <circle class="ring-pulse" cx="120" cy="120" r="92"/>
-                <g id="ringBands"></g>
-                <path class="ring-track" id="ringTrack"/>
-                <path class="ring-val" id="ringVal"/>
-                <g id="ringTicks"></g>
-                <g class="ring-orbit"><circle cx="120" cy="6" r="3.2"/><circle class="c2" cx="234" cy="120" r="2.2"/></g>
-                <g class="ring-orbit rev"><circle class="c2" cx="120" cy="232" r="2.6"/><circle cx="8" cy="120" r="1.8"/></g>
-              </svg>
-              <div class="ring-center"><div class="big mono" id="ringNum">–</div><div class="small" data-i18n="ring.unit">µg/L arsenic</div></div>
-            </div>
+          <aside class="reading-card" aria-labelledby="readCardLabel">
+            <div class="rc-label" id="readCardLabel" data-i18n="ov.arsenic">Arsenic</div>
+            <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
+            <div class="fig-sub" id="asMgl"></div>
             <button class="btn btn-primary btn-wide" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
-            <div class="quick" style="justify-content:center">
+            <div class="quick">
               <span data-i18n="ov.quick">Try a sample:</span>
               <button class="chip" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
               <button class="chip" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
               <button class="chip" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
             </div>
-          </div>
+          </aside>
         </div>
 
-        <figure class="strip card pad" aria-labelledby="stripCaption" data-reveal>
-          <div class="strip-track">
-            <div class="strip-seg seg-safe"><span data-i18n="class.Safe">Safe</span></div>
-            <div class="strip-seg seg-caution"><span data-i18n="class.Caution">Caution</span></div>
-            <div class="strip-seg seg-unsafe"><span data-i18n="class.Unsafe">Unsafe</span></div>
-            <div class="strip-seg seg-haz"><span data-i18n="class.Hazardous">Hazardous</span></div>
-            <div class="strip-pin" id="stripPin" hidden><span id="stripPinLabel"></span></div>
+        <!-- The colour chart: the same way a field test strip is read -->
+        <figure class="kit" aria-labelledby="stripCaption">
+          <figcaption class="kit-head">
+            <h2 class="kit-title" id="stripCaption" data-i18n="chart.title">Compare with the chart</h2>
+            <p class="kit-note" data-i18n="chart.note">Arsenic in µg/L. India and the WHO allow up to 10. The sensor can see from 20.</p>
+          </figcaption>
+          <div class="kit-body">
+            <div class="kit-marker" id="stripPin" hidden><span id="stripPinLabel"></span></div>
+            <ol class="kit-swatches" aria-hidden="true">
+              <li style="--c:#FAF6E4"><b>0</b></li>
+              <li style="--c:#F3E39B"><b>10</b></li>
+              <li style="--c:#E6C55A"><b>20</b></li>
+              <li style="--c:#D09A35"><b>50</b></li>
+              <li style="--c:#AC6A28" class="dark"><b>100</b></li>
+              <li style="--c:#864620" class="dark"><b>150</b></li>
+              <li style="--c:#57301A" class="dark"><b>300+</b></li>
+            </ol>
+            <div class="kit-bands">
+              <span class="band ok" data-i18n="chart.band.ok">Within limit</span>
+              <span class="band check" data-i18n="chart.band.check">Lab test</span>
+              <span class="band no" data-i18n="chart.band.no">Do not drink</span>
+              <span class="band danger" data-i18n="chart.band.danger">Danger</span>
+            </div>
           </div>
-          <div class="strip-ticks" aria-hidden="true">
-            <span style="left:0%">0</span>
-            <span style="left:20%" data-i18n="strip.who">WHO &amp; India limit 10</span>
-            <span style="left:35%" data-i18n="strip.bis">Detected 20</span>
-            <span style="left:75%" data-i18n="strip.haz">Danger 150</span>
-            <span style="left:100%">300+</span>
-          </div>
-          <figcaption id="stripCaption" data-i18n="strip.caption">Arsenic in µg/L (parts per billion)</figcaption>
         </figure>
 
-        <div class="marquee" aria-hidden="true">
-          <div class="marquee-track">
-            <span class="marquee-item" data-i18n-html="mq.1">WHO limit <b>10 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.2">India IS 10500 limit <b>10 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.3">Sensor detection limit <b>20 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.4">AquaNet-V3 · <b>352 weights</b> on the ESP32</span>
-            <span class="marquee-item" data-i18n-html="mq.5">Cost per test <b>₹56</b></span>
-            <span class="marquee-item" data-i18n-html="mq.6">Result in <b>~4 minutes</b></span>
-            <span class="marquee-item" data-i18n-html="mq.7"><b>220M+</b> people at risk worldwide</span>
-            <span class="marquee-item" data-i18n-html="mq.8">Boiling does <b>not</b> remove arsenic</span>
-            <span class="marquee-item" data-i18n-html="mq.1">WHO limit <b>10 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.2">India IS 10500 limit <b>10 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.3">Sensor detection limit <b>20 µg/L</b></span>
-            <span class="marquee-item" data-i18n-html="mq.4">AquaNet-V3 · <b>352 weights</b> on the ESP32</span>
-            <span class="marquee-item" data-i18n-html="mq.5">Cost per test <b>₹56</b></span>
-            <span class="marquee-item" data-i18n-html="mq.6">Result in <b>~4 minutes</b></span>
-            <span class="marquee-item" data-i18n-html="mq.7"><b>220M+</b> people at risk worldwide</span>
-            <span class="marquee-item" data-i18n-html="mq.8">Boiling does <b>not</b> remove arsenic</span>
-          </div>
-        </div>
-
         <div class="ov-lower">
-          <div class="card pad why spot" id="whyBox" data-reveal>
+          <div class="why" id="whyBox">
             <h3 data-i18n="ov.why">Why this result</h3>
             <ul id="whyList"><li data-i18n="ov.why.empty">Run a test to see the reasons behind the verdict.</li></ul>
             <p class="lab-note" id="labNote" hidden data-i18n="ov.labNote"></p>
           </div>
-          <div data-reveal style="--d:100ms">
-            <h2 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h2>
+          <div>
+            <h3 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h3>
             <div class="readings-grid" id="readingsGrid"></div>
             <p class="device-line" id="deviceLine"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ DEVICES & HISTORY ============ -->
+      <section class="section" id="fleet" aria-labelledby="fleetHeading">
+        <div class="section-head">
+          <h2 id="fleetHeading" data-i18n="fleet.heading">Devices and history</h2>
+          <p class="lede" data-i18n="fleet.intro">Every sensor that has sent a reading, and how arsenic has changed over time.</p>
+        </div>
+        <div class="fleet">
+          <div>
+            <h3 class="h-sub" data-i18n="fleet.devices">Devices</h3>
+            <ul class="device-list" id="deviceList"><li class="empty" data-i18n="fleet.empty">Start the server to see devices.</li></ul>
+          </div>
+          <div>
+            <div class="hist-head">
+              <h3 class="h-sub" data-i18n="fleet.history">Arsenic over time</h3>
+              <div class="seg" role="group" data-i18n-aria="fleet.range" aria-label="Time range">
+                <button type="button" data-hist="24" aria-pressed="false" data-i18n="fleet.r.day">24 h</button>
+                <button type="button" data-hist="168" aria-pressed="false" data-i18n="fleet.r.week">7 days</button>
+                <button type="button" data-hist="720" aria-pressed="true" data-i18n="fleet.r.month">30 days</button>
+              </div>
+            </div>
+            <div class="hist-wrap"><svg class="hist" id="historyChart" role="img" aria-labelledby="histDesc"></svg></div>
+            <p class="meta" id="histDesc"></p>
           </div>
         </div>
       </section>
@@ -492,19 +489,19 @@
             <span class="label-chip" data-i18n="imp.l1.k">Market research</span>
             <h3 data-i18n="imp.l1.t">Market size, competition and unit economics</h3>
             <div class="mini-chart" id="sparkMarket"></div>
-            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span></span>
           </a>
           <a class="card link-card spot tilt" href="sales-expansion.html" data-reveal style="--d:80ms">
             <span class="label-chip" data-i18n="imp.l2.k">Sales &amp; expansion</span>
             <h3 data-i18n="imp.l2.t">Revenue model, ROI calculator and 3-year roadmap</h3>
             <div class="mini-chart" id="sparkSales"></div>
-            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span></span>
           </a>
           <a class="card link-card spot tilt" href="device-simulator.html" data-reveal style="--d:160ms">
             <span class="label-chip" data-i18n="imp.l3.k">Device simulator</span>
             <h3 data-i18n="imp.l3.t">Try the handheld MAS-G1 screen and import real scans</h3>
             <div class="mini-chart" id="sparkDevice"></div>
-            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span></span>
           </a>
         </div>
       </section>
@@ -532,7 +529,7 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5.1 · AquaNet-V3</span>
+      <span>AquaSentry v5.3, AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>
@@ -556,7 +553,6 @@
   <script src="i18n.js"></script>
   <script src="i18n-v5.js"></script>
   <script src="shell.js"></script>
-  <script src="motion.js"></script>
   <script src="charts.js"></script>
   <script src="neural.js"></script>
   <script src="device3d-data.js" defer></script>

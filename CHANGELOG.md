@@ -1,5 +1,29 @@
 # Changelog
 
+## v5.3 — ESP32 hardening and the "field kit" dashboard
+**ESP32 firmware (5.3.0)**
+- **Offline buffer moved from NVS to LittleFS.** The old buffer promised 500 readings in NVS, but NVS is meant for small values (a blob costs 3+ entries), the default NVS partition is shared with Wi-Fi, and `putBytes` failures were never checked, so readings were silently lost after roughly a hundred. Now a fixed-size ring file (`/offline.bin`, 1,000 readings), formatted on first boot, with a RAM fallback if LittleFS cannot mount.
+- **ESP32-S3 and ESP32-C3 support.** Pin profiles per chip that avoid flash/PSRAM pins, strapping pins and ADC2 (which stops working with Wi-Fi). The measurement task is no longer pinned to core 1 on single-core chips, where task creation would fail and nothing would be measured.
+- **Setup without reflashing.** If Wi-Fi is not set or fails for 45 s, the board opens a WPA2 hotspot `AquaSentry-XXXX` (per-board password from the MAC, printed on Serial) with a setup page for Wi-Fi, server address, device name and API key, saved in flash. Measuring continues meanwhile. On the LAN the page needs the OTA login.
+- `/status.json` and a status page (firmware, board, Wi-Fi RSSI, buffered/dropped readings, last result, free heap). Firmware version is sent with each reading and shown on the dashboard.
+- `analogReadResolution(12)` set explicitly, long pump runs yield to other tasks, queue-full readings are counted instead of vanishing, `uint32_t` printf arguments cast for ESP-IDF 5 (where `uint32_t` is `unsigned long`), OTA needs an 8+ character password.
+- `Firmware/platformio.ini` (esp32dev, esp32-s3, esp32-c3) for PlatformIO users.
+- **Real ESP32 compile in CI**: new GitHub Actions job builds the sketch with Espressif's Arduino core for `esp32`, `esp32s3` and `esp32c3`. Locally, `Firmware/host_check/` stand-in headers let `python main.py --test` type-check the sketch for all three chips with `-Wall -Wextra -Werror` and link the C engines from C++.
+
+**Server**
+- `GET /api/devices`: every device with online / late / offline / demo status (from the hourly test interval), reading and unsafe counts, firmware version and latest result.
+- `GET /api/readings/history`: compact arsenic history for charts, per device or all, by time window.
+
+**Dashboard redesign ("field kit")**
+- The hero is now the way an arsenic test is actually read: a printed **colour chart** (0 / 10 / 20 / 50 / 100 / 150 / 300 µg/L in test-strip colours) with "your water" placed on it, and verdict bands whose edges sit exactly on the 10, 20 and 150 µg/L swatches. The marker shows the colour the strip would turn.
+- The verdict is a flat **painted panel** in the colours arsenic programmes paint on tube wells (green / ochre / red / maroon). "No arsenic detected" has its own blue-slate paint so it is never confused with a confirmed "safe".
+- New **Devices and history** section: device list (click one to filter) with status and firmware, demo and imported sources folded away, and a history chart whose vertical scale is the same colour chart.
+- Light paper theme is the default (readable outdoors on phones); the dark theme is restyled to match. Type: Anek (Ek Type, condensed widths, Latin + Devanagari, bundled offline) for headings and numbers, Mukta for body text. The ring gauge, scrolling facts strip, WebGL background, cursor effects and tilt are gone; the one animation left is the marker moving to the new reading (off with reduced motion). Contrast checked to WCAG AA for text on every paint.
+- Applies to every page through a new `frontend/field.css` layer on top of `app.css`.
+
+**Tests**: 167 (22 toolkit + 145 platform), including firmware type-checks for three chips, pin-safety rules, NVS name lengths, fleet/history API, every dashboard string present in English and Hindi, and the chart geometry.
+
+
 ## v5.2 — audit release: correct arsenic limit, honest verdicts, hardening
 **Public-health correctness**
 - **India's arsenic limit is 10 µg/L, not 50.** IS 10500:2012 originally allowed 0.05 mg/L "in the absence of an alternate source"; Amendment No. 1 (2015) removed that relaxation (CGWA's reply to the NGT in OA 538/2024 states the limit "was revised from 0.05 mg/L (50 ppb) to 0.01 mg/L (10 ppb) in the year 2015"). The whole stack used 50. Fixed in `standards.py`, `analytes.py`, the classification layer, all four AquaNet-V3 rule copies (server, `Neural_Network/`, browser `neural.js`, ESP32 `aquanet_v3.c` + its generator), PDF reports, the chat assistant's knowledge, the dashboard strip/gauge/standards table, and the docs.

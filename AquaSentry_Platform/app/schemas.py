@@ -49,6 +49,7 @@ class ReadingCreate(BaseModel):
     raw_payload: Optional[str] = Field(
         None, description="Original raw payload string received over Bluetooth/serial for audit lineage."
     )
+    firmware_version: Optional[str] = Field(None, max_length=32, description="Firmware version reported by the device")
 
     @field_validator("recorded_at", mode="after")
     @classmethod
@@ -162,6 +163,32 @@ class DeviceOut(BaseModel):
     status: Optional[str] = "online"
     first_seen: datetime
     last_seen: datetime
+
+
+class DeviceLatestOut(BaseModel):
+    arsenic_ppb: float
+    classification: str
+    recorded_at: datetime
+
+
+class DeviceStatusOut(BaseModel):
+    device_code: str
+    firmware_version: Optional[str] = None
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+    status: str                        # online | late | offline | demo
+    minutes_since_seen: Optional[float] = None
+    reading_count: int
+    unsafe_count: int
+    is_hardware: bool
+    latest: Optional[DeviceLatestOut] = None
+
+
+class HistoryPoint(BaseModel):
+    t: datetime
+    ppb: float
+    cls: str
+    device_code: Optional[str] = None
 
 
 class StatsOut(BaseModel):

@@ -16,6 +16,8 @@
 
   const state = {
     reading: null,       // {asMgL, ph, ec, turb, temp, battery, lat, lon, time, source, savedOnServer}
+    histHours: 720,
+    histDevice: null,    // null = all devices
     history: [],
     model: (window.AquaNet && window.AquaNet.hasV3) ? 'v3' : 'v1',
     lastTrace: null,
@@ -66,15 +68,23 @@
     syncNetworkInputs(r);
     renderReport();
     renderDispatch();
+    loadFleet();
   }
 
-  function stripPercent(u) {
-    // piecewise scale matching the verdict edges: 0-10 -> 0-20%, 10-20 (below LOD) -> 20-35%,
-    // 20-150 (detected = above IS 10500) -> 35-75%, 150-300 -> 75-100%
-    const seg = [[0, 10, 0, 20], [10, 20, 20, 35], [20, 150, 35, 75], [150, 300, 75, 100]];
+  // The colour chart: seven printed swatches like a field test kit. A value sits on the centre of its swatch
+  // and in between it moves linearly, so 10 / 20 / 150 µg/L (the verdict edges) line up with swatch centres.
+  const KIT = [0, 10, 20, 50, 100, 150, 300];
+  const KIT_RGB = [[250, 246, 228], [243, 227, 155], [230, 197, 90], [208, 154, 53], [172, 106, 40], [134, 70, 32], [87, 48, 26]];
+  function kitIndex(u) {   // fractional swatch index 0..6
     const v = Math.max(0, Math.min(300, u));
-    for (const [a, b, p, q] of seg) if (v <= b) return p + (v - a) / (b - a) * (q - p);
-    return 100;
+    for (let i = 1; i < KIT.length; i++) if (v <= KIT[i]) return i - 1 + (v - KIT[i - 1]) / (KIT[i] - KIT[i - 1]);
+    return KIT.length - 1;
+  }
+  function stripPercent(u) { return (kitIndex(u) + 0.5) / KIT.length * 100; }
+  function kitColour(u) {   // the colour a test strip would turn, interpolated between swatches
+    const f = kitIndex(u), i = Math.min(KIT.length - 2, Math.floor(f)), w = f - i;
+    const c = KIT_RGB[i].map((x, k) => Math.round(x + (KIT_RGB[i + 1][k] - x) * w));
+    return `rgb(${c.join(',')})`;
   }
 
   // ---------------- ring gauge ----------------
@@ -87,6 +97,7 @@
     return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${(b - a) > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
   }
   function initRing() {
+    if (!$('ringTrack')) return;   // v5.3 layout has no ring gauge
     const NS = 'http://www.w3.org/2000/svg';
     $('ringTrack').setAttribute('d', arcPath(0, 1));
     $('ringVal').setAttribute('d', arcPath(0, 1));
@@ -140,7 +151,7 @@
     }
     const res = evaluate(r);
     const vk = verdictKey(res);
-    v.dataset.tone = res.final;
+    v.dataset.tone = vk === 'Clear' ? 'Clear' : res.final;   // "not detected" gets its own paint, never the "safe" green
     $('verdictIcon').innerHTML = vk === 'Clear' ? ICONS.none : ICONS[res.final];
     $('verdictBadge').textContent = t('class.' + vk);
     const vt = t('verdict.' + vk + '.title');
@@ -150,9 +161,13 @@
     UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
     $('asMgl').textContent = t('ov.mgl', { v: r.asMgL.toFixed(4) });
     const pin = $('stripPin');
-    pin.hidden = false;
+    if (pin.hidden) { pin.style.left = stripPercent(0) + '%'; pin.hidden = false; void pin.offsetWidth; }   // first reading slides in from 0
     pin.style.left = stripPercent(ugl(r.asMgL)) + '%';
-    $('stripPinLabel').textContent = fmtUg(r.asMgL) + ' µg/L';
+    pin.style.setProperty('--sample', kitColour(ugl(r.asMgL)));
+    $('stripPinLabel').textContent = t('chart.you', { v: fmtUg(r.asMgL) + ' µg/L' });
+    // keep the label inside the chart near the ends (the marker itself stays exact)
+    const lab = $('stripPinLabel'), bodyW = pin.parentElement.clientWidth, x = stripPercent(ugl(r.asMgL)) / 100 * bodyW, half = lab.offsetWidth / 2;
+    pin.style.setProperty('--shift', (x - half < 0 ? half - x : x + half > bodyW ? bodyW - half - x : 0) + 'px');
     setRing(ugl(r.asMgL));
     if (state.fx) state.fx.setColor(TONE_HEX[res.final]);
     if (state.device) state.device.setRim(TONE_HEX[res.final]);
@@ -533,6 +548,111 @@
     const tr = synthTrace(0.06); window.AquaCharts.spark($('sparkDevice'), tr.C.map((c) => c + 0.2), 'var(--primary-2)');
   }
 
+
+  // ---------------- devices & history ----------------
+  const NS_SVG = 'http://www.w3.org/2000/svg';
+  const PAINT = { Safe: '--paint-safe', 'Below Sensor LOD': '--paint-safe', Caution: '--paint-caution', Unsafe: '--paint-unsafe', Hazardous: '--paint-haz' };
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function seenText(mins) {
+    if (mins == null) return '';
+    if (mins < 90) return t('fleet.seen.min', { n: Math.max(0, Math.round(mins)) });
+    if (mins < 48 * 60) return t('fleet.seen.h', { n: Math.round(mins / 60) });
+    return t('fleet.seen.d', { n: Math.round(mins / 1440) });
+  }
+  function deviceRow(d) {
+    const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${fmtUgNum(d.latest.arsenic_ppb)} µg/L</span>` : '<span></span>';
+    const count = d.reading_count === 1 ? t('fleet.count.one', { u: d.unsafe_count }) : t('fleet.count', { n: d.reading_count, u: d.unsafe_count });
+    const meta = [t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
+      .filter(Boolean).join(', ');
+    const sel = state.histDevice === d.device_code;
+    return `<li><button type="button" class="dv-row" data-device="${esc(d.device_code)}" aria-pressed="${sel}">` +
+      `<span class="dv-dot ${esc(d.status)}" aria-hidden="true"></span><span class="dv-name">${esc(d.device_code)}</span>${latest}` +
+      `<span class="dv-meta">${esc(meta)}</span></button></li>`;
+  }
+  function renderDevices(list) {
+    const ul = $('deviceList');
+    if (!ul) return;
+    if (list === null) { ul.innerHTML = `<li class="empty">${esc(t('fleet.empty'))}</li>`; return; }
+    if (!list.length) { ul.innerHTML = `<li class="empty">${esc(t('fleet.none'))}</li>`; return; }
+    const hw = list.filter((d) => d.is_hardware), demo = list.filter((d) => !d.is_hardware);
+    let html = `<li><button type="button" class="dv-row all" data-device="" aria-pressed="${!state.histDevice}"><span class="dv-name">${esc(t('fleet.all'))}</span></button></li>`;
+    html += hw.map(deviceRow).join('');
+    if (!hw.length) html += `<li class="empty">${esc(t('fleet.nohw'))}</li>`;
+    if (demo.length) {
+      const open = demo.some((d) => d.device_code === state.histDevice) ? ' open' : '';
+      html += `<li class="dv-demo"><details${open}><summary>${esc(t('fleet.demo', { n: demo.length }))}</summary><ul>${demo.map(deviceRow).join('')}</ul></details></li>`;
+    }
+    ul.innerHTML = html;
+    ul.querySelectorAll('[data-device]').forEach((btn) => btn.addEventListener('click', () => {
+      state.histDevice = btn.dataset.device || null;
+      loadFleet();
+    }));
+  }
+  function drawHistory(points, local) {
+    const svg = $('historyChart');
+    if (!svg) return;
+    const W = 720, H = 300, L = 62, R = 12, T = 12, B = 30;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = '';
+    const add = (tag, attrs, text) => { const e = document.createElementNS(NS_SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
+    // y uses the same scale as the colour chart: swatch centres from bottom (0) to top (300)
+    const Y = (u) => T + (H - T - B) * (1 - kitIndex(u) / (KIT.length - 1));
+    [[0, 10, '--paint-safe'], [10, 20, '--paint-caution'], [20, 150, '--paint-unsafe'], [150, 300, '--paint-haz']].forEach(([a, b, v]) => {
+      add('rect', { class: 'h-band', x: L, y: Y(b), width: W - L - R, height: Y(a) - Y(b), fill: cssVar(v) });
+    });
+    KIT.forEach((u, i) => {   // the chart's own swatches down the left edge
+      add('rect', { class: 'h-swatch', x: 1, y: Y(u) - 9, width: 14, height: 18, rx: 2, fill: `rgb(${KIT_RGB[i].join(',')})` });
+      add('text', { class: 'h-tick', x: 54, y: Y(u) + 4, 'text-anchor': 'end' }, u === 300 ? '300+' : String(u));
+    });
+    [[10, ''], [20, ' lod'], [150, '']].forEach(([u, c]) => add('line', { class: 'h-edge' + c, x1: L, x2: W - R, y1: Y(u), y2: Y(u) }));
+    if (!points.length) {
+      add('text', { class: 'h-empty', x: (L + W - R) / 2, y: H / 2, 'text-anchor': 'middle' }, t('hist.empty'));
+      $('histDesc').textContent = local ? t('hist.local') : '';
+      return;
+    }
+    const ts = points.map((p) => p.t.getTime());
+    let t0 = Math.min(...ts), t1 = Math.max(...ts);
+    if (t1 - t0 < 3600e3) { t0 -= 1800e3; t1 += 1800e3; }
+    const X = (x) => L + 8 + (W - L - R - 16) * (x - t0) / (t1 - t0);
+    const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
+    const span = t1 - t0;
+    const fmt = (d) => span > 2 * 86400e3 ? d.toLocaleDateString(lang, { day: 'numeric', month: 'short' }) : d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+    for (let i = 0; i <= 4; i++) {
+      const x = t0 + span * i / 4;
+      add('text', { class: 'h-tick', x: X(x), y: H - 8, 'text-anchor': i === 0 ? 'start' : i === 4 ? 'end' : 'middle' }, fmt(new Date(x)));
+    }
+    const byDevice = {};
+    points.forEach((p) => { (byDevice[p.device_code || ''] = byDevice[p.device_code || ''] || []).push(p); });
+    Object.values(byDevice).forEach((pts) => {
+      if (pts.length > 1) add('polyline', { class: 'h-line', points: pts.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
+    });
+    points.forEach((p) => {
+      const c = add('circle', { class: 'h-pt', cx: X(p.t.getTime()), cy: Y(p.ppb), r: points.length > 120 ? 3 : 5, fill: cssVar(PAINT[p.cls] || '--ink-3') });
+      const tt = document.createElementNS(NS_SVG, 'title');
+      tt.textContent = `${fmtUgNum(p.ppb)} µg/L, ${t('class.' + (p.cls === 'Below Sensor LOD' ? 'Clear' : p.cls))}, ${fmtDateTime(p.t)}${p.device_code ? ', ' + p.device_code : ''}`;
+      c.appendChild(tt);
+    });
+    const max = Math.max(...points.map((p) => p.ppb));
+    $('histDesc').textContent = (local ? t('hist.local') + ' ' : '') +
+      t('hist.desc', { n: points.length, a: fmtDateTime(new Date(t0)), b: fmtDateTime(new Date(t1)), max: fmtUgNum(max) });
+  }
+  async function loadFleet() {
+    if (!online()) {
+      renderDevices(null);
+      const since = Date.now() - state.histHours * 3600e3;
+      const pts = state.history.filter((h) => h.time.getTime() >= since).map((h) => ({ t: h.time, ppb: ugl(h.asMgL), cls: h.verdict })).reverse();
+      drawHistory(pts, true);
+      return;
+    }
+    try {
+      const dev = state.histDevice ? `&device_code=${encodeURIComponent(state.histDevice)}` : '';
+      const [devs, hist] = await Promise.all([api('/api/devices'), api(`/api/readings/history?hours=${state.histHours}&limit=1000${dev}`)]);
+      renderDevices(devs);
+      drawHistory(hist.map((p) => ({ t: new Date(p.t), ppb: p.ppb, cls: p.cls, device_code: p.device_code })), false);
+    } catch (e) { renderDevices(null); }
+  }
+
   function rerenderAll() {
     renderOverview();
     updateNetwork();
@@ -541,6 +661,7 @@
     renderDispatch();
     drawChart();
     drawSparks();
+    loadFleet();
     $('testAsOut').textContent = $('testAs').value + ' µg/L';
     if (!$('runTestBtn').disabled) $('runTestBtn').textContent = t('test.run');
     if (state.device) { state.device.setLabels(deviceLabels()); $('explodeBtn').textContent = t(state.device.exploded ? 'dev.assemble' : 'dev.explode'); }
@@ -575,8 +696,14 @@
     $('dirCallLocal').addEventListener('click', () => { if ($('dirCallLocal').getAttribute('href') === '#contactsBox') $('contactsBox').open = true; });
     $('dirEmailLocal').addEventListener('click', () => { if ($('dirEmailLocal').getAttribute('href') === '#contactsBox') $('contactsBox').open = true; });
     document.addEventListener('aquasentry:lang', rerenderAll);
-    document.addEventListener('aquasentry:theme', () => { drawChart(); drawSparks(); });
-    document.addEventListener('aquasentry:online', (e) => { renderReport(); if (e.detail.online) loadLatestFromServer(); });
+    document.addEventListener('aquasentry:theme', () => { drawChart(); drawSparks(); loadFleet(); });
+    document.addEventListener('aquasentry:online', (e) => { renderReport(); loadFleet(); if (e.detail.online) loadLatestFromServer(); });
+    document.querySelectorAll('[data-hist]').forEach((b) => b.addEventListener('click', () => {
+      state.histHours = Number(b.dataset.hist);
+      document.querySelectorAll('[data-hist]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      loadFleet();
+    }));
+    setInterval(() => { if (online() && !document.hidden) loadFleet(); }, 60000);
 
     const canvas = $('heroFx');
     if (canvas && UI().WaterFX) { state.fx = new (UI().WaterFX)(canvas); if (!state.fx.ok) state.fx = null; }

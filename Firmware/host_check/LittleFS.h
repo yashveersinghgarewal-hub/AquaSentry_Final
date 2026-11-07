@@ -1,0 +1,5 @@
+#pragma once
+#include "FS.h"
+class LittleFSFS { public: bool begin(bool formatOnFail = false, const char* basePath = "/littlefs", uint8_t maxOpenFiles = 10, const char* label = "spiffs");
+  File open(const char* path, const char* mode = "r", bool create = false); };
+extern LittleFSFS LittleFS;

@@ -436,7 +436,7 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
 # Device Helpers
 # ---------------------------------------------------------------------------
 
-def _get_or_create_device(db: Session, device_code: str) -> models.Device:
+def _get_or_create_device(db: Session, device_code: str, firmware_version: Optional[str] = None) -> models.Device:
     device = db.query(models.Device).filter_by(device_code=device_code).first()
     ts = now_utc()
     if device is None:
@@ -445,14 +445,23 @@ def _get_or_create_device(db: Session, device_code: str) -> models.Device:
             first_seen=ts,
             last_seen=ts,
             status="online",
+            firmware_version=firmware_version or None,
         )
         db.add(device)
         db.commit()
         db.refresh(device)
     else:
         device.last_seen = ts
+        if firmware_version:
+            device.firmware_version = firmware_version
         db.commit()
     return device
+
+
+def _utc(d: Optional[datetime]) -> Optional[datetime]:
+    if d is None:
+        return None
+    return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d.astimezone(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -512,7 +521,7 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    device = _get_or_create_device(db, payload.device_code)
+    device = _get_or_create_device(db, payload.device_code, payload.firmware_version)
     is_sim = payload.source_type != "hardware"
     ts = now_utc()
 
@@ -597,6 +606,61 @@ def latest_reading(device_code: Optional[str] = Query(None), db: Session = Depen
     if reading is None:
         raise HTTPException(status_code=404, detail="No readings found yet.")
     return reading
+
+
+@app.get("/api/readings/history", response_model=List[schemas.HistoryPoint], tags=["Readings"])
+def reading_history(
+    device_code: Optional[str] = Query(None, description="One device, or all devices if omitted"),
+    hours: float = Query(24 * 30, gt=0, le=24 * 366, description="How far back to look"),
+    limit: int = Query(500, ge=1, le=5000),
+    db: Session = Depends(get_db),
+):
+    """Compact arsenic history for trend charts, oldest first."""
+    since = (now_utc() - timedelta(hours=hours)).replace(tzinfo=None)
+    q = db.query(models.Reading, models.Device.device_code).join(models.Device).filter(models.Reading.recorded_at >= since)
+    if device_code:
+        q = q.filter(models.Device.device_code == device_code)
+    rows = q.order_by(models.Reading.recorded_at.desc()).limit(limit).all()
+    return [schemas.HistoryPoint(t=_utc(r.recorded_at), ppb=round(r.arsenic_ppb, 2), cls=r.classification, device_code=code)
+            for r, code in reversed(rows)]
+
+
+# Hardware nodes test once an hour (SAMPLE_INTERVAL_MS in the firmware); a full test with re-scans takes up to ~11 min.
+DEVICE_EXPECTED_INTERVAL_MIN = float(os.getenv("DEVICE_EXPECTED_INTERVAL_MIN", "60"))
+
+
+@app.get("/api/devices", response_model=List[schemas.DeviceStatusOut], tags=["Devices"])
+def list_devices(db: Session = Depends(get_db)):
+    """Every device that has sent data, with online / late / offline status and its latest result."""
+    out = []
+    counts = dict(db.query(models.Reading.device_id, func.count(models.Reading.id)).group_by(models.Reading.device_id).all())
+    unsafe = dict(db.query(models.Reading.device_id, func.count(models.Reading.id))
+                  .filter(models.Reading.classification.in_(["Unsafe", "Hazardous"]))
+                  .group_by(models.Reading.device_id).all())
+    for d in db.query(models.Device).all():
+        latest = (db.query(models.Reading).filter(models.Reading.device_id == d.id)
+                  .order_by(models.Reading.recorded_at.desc()).first())
+        hardware = bool(latest is not None and latest.source_type == "hardware")
+        seen = _utc(d.last_seen)
+        mins = round((now_utc() - seen).total_seconds() / 60.0, 1) if seen else None
+        if not hardware:
+            status_ = "demo"
+        elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 1.5:
+            status_ = "online"
+        elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 3:
+            status_ = "late"
+        else:
+            status_ = "offline"
+        out.append(schemas.DeviceStatusOut(
+            device_code=d.device_code, firmware_version=d.firmware_version if hardware else None,
+            first_seen=_utc(d.first_seen), last_seen=seen, status=status_, minutes_since_seen=mins,
+            reading_count=int(counts.get(d.id, 0)), unsafe_count=int(unsafe.get(d.id, 0)), is_hardware=hardware,
+            latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
+                                           recorded_at=_utc(latest.recorded_at)) if latest else None,
+        ))
+    rank = {"online": 0, "late": 1, "offline": 2, "demo": 3}
+    out.sort(key=lambda x: (rank[x.status], -(x.last_seen.timestamp() if x.last_seen else 0)))
+    return out
 
 
 # ---------------------------------------------------------------------------

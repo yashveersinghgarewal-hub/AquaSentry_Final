@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#050708">
+  <meta name="theme-color" content="#F2F5F4">
   <title>AquaSentry — MAS-G1 Device Simulator</title>
   <meta name="description" content="Simulator of the handheld MAS-G1 arsenic meter screen.">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="field.css">
   <script>
-    var th = 'dark';
-    try { th = localStorage.getItem('aquasentry.theme') || 'dark'; } catch (e) {}
+    var th = 'light';
+    try { th = localStorage.getItem('aquasentry.theme') || 'light'; } catch (e) {}
     document.documentElement.setAttribute('data-theme', th);
   </script>
 </head>
@@ -36,7 +37,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5.1</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><b>AquaSentry v5.3</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
   <div class="shell">
@@ -105,7 +106,6 @@
   <script src="i18n-v5.js"></script>
   <script src="i18n-pages.js"></script>
   <script src="shell.js"></script>
-  <script src="motion.js"></script>
   <script src="pages.js"></script>
 </body>
 </html>

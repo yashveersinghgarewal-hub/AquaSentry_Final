@@ -53,3 +53,35 @@ jobs:
       - name: Run neural toolkit + platform tests (incl. Python / JS / C rule parity)
         run: |
           python main.py --test
+
+  firmware:
+    # Real compile of the ESP32 sketch with Espressif's Arduino core, for every supported chip.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fqbn:
+          - esp32:esp32:esp32        # ESP32-WROOM-32 DevKit (default pins)
+          - esp32:esp32:esp32s3      # ESP32-S3
+          - esp32:esp32:esp32c3      # ESP32-C3 (single core)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space (the ESP32 toolchains are large)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Compile esp32_firmware.ino
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.fqbn }}
+          sketch-paths: |
+            - Firmware/esp32_firmware
+          platforms: |
+            - name: esp32:esp32
+              source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          enable-warnings-report: true
+          cli-compile-flags: |
+            - --warnings
+            - default

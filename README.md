@@ -10,6 +10,11 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
 
+## What changed in v5.3
+
+- **ESP32:** offline buffer moved to LittleFS (the NVS one silently overflowed), ESP32-S3 and ESP32-C3 support, a setup hotspot so Wi-Fi and the server address can be changed without reflashing, a `/status.json` page, and a CI job that compiles the firmware with Espressif's core for all three chips.
+- **Dashboard:** redesigned around the arsenic test-kit colour chart, painted verdict panel, and a new Devices and history section backed by `/api/devices` and `/api/readings/history`. Details in `CHANGELOG.md`.
+
 ## What changed in v5.2 (audit release)
 
 - **Arsenic limit corrected.** India's IS 10500 arsenic limit has been 10 µg/L with *no relaxation* since Amendment No. 1 (2015); the old 50 µg/L "permissible" value was withdrawn. Every engine (server, browser, ESP32 C, Neural_Network copy) now treats any arsenic the sensor detects (≥ 20 µg/L LOD) as at least **Unsafe**, 10–20 µg/L as **Caution** (unconfirmed, lab test), and > 150 µg/L as **Hazardous**. Alerts fire on every Unsafe/Hazardous verdict.
@@ -35,7 +40,7 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 The first run creates a `.venv` folder and installs packages (needs internet). Full steps: **`WHATS_NEW_AND_HOW_TO_RUN.md`**.
 
-Run all tests: `python main.py --test` (139 tests: 22 neural toolkit + 117 platform).
+Run all tests: `python main.py --test` (167 tests: 22 neural toolkit + 145 platform).
 
 **With an ESP32:** start the server with **`Start AquaSentry for ESP32.bat`** (or `python main.py --serve --host 0.0.0.0 --port 8000`), then open `Firmware/esp32_firmware/esp32_firmware.ino` in the Arduino IDE, fill in Wi-Fi and server address, and upload. See `Firmware/README.md`.
 
