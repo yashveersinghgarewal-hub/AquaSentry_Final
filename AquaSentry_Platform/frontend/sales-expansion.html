@@ -2,1730 +2,252 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AquaSentry — Commercial Sales &amp; Expansion Strategy</title>
-  <link rel="icon" href="data:,">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="sidebar.css">
-  <link rel="stylesheet" href="chat.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg-deep: #04070d;
-      --bg-canvas: #04070d;
-      --bg-surface: #0a0f1c;
-      --bg-surface-elevated: #0e1626;
-      --bg-card: #0a0f1c;
-      --border-subtle: #18233a;
-      --border-medium: #20304d;
-      --border-glow: rgba(0, 242, 254, 0.3);
-      --text-primary: #eaf5f4;
-      --text-secondary: #8aa7a5;
-      --text-muted: #5c7876;
-      --text-dim: #5c7876;
-      --accent-cyan: #00f2fe;
-      --accent-cyan-dim: #087E8B;
-      --accent-safe: #38d9c9;
-      --accent-warning: #e8a23d;
-      --accent-danger: #ef5142;
-      --font-display: 'Space Grotesk', -apple-system, sans-serif;
-      --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
-      --font-mono: 'IBM Plex Mono', monospace;
-    }
-
-    [data-theme="dark"] {
-      --bg-deep: #0F1722;
-      --bg-canvas: #0F1722;
-      --bg-surface: #182433;
-      --bg-surface-elevated: #24354A;
-      --bg-card: #182433;
-      --border-subtle: #2B3D52;
-      --border-medium: #2B3D52;
-      --border-glow: rgba(29, 182, 198, 0.3);
-      --text-primary: #F1F5F9;
-      --text-secondary: #94A3B8;
-      --text-muted: #64748B;
-      --text-dim: #64748B;
-      --accent-cyan: #1DB6C6;
-      --accent-cyan-dim: #1DB6C6;
-      --accent-safe: #34D399;
-      --accent-warning: #FBBF24;
-      --accent-danger: #F87171;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-
-    body {
-      min-height: 100vh;
-      background-color: var(--bg-deep);
-      color: var(--text-primary);
-      font-family: var(--font-body);
-      font-size: 15px;
-      line-height: 1.6;
-      padding-bottom: 90px;
-    }
-
-    /* Ambient Tech Grid Overlay */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .wrap {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    /* Header & Navigation */
-    header.top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px 0 20px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-    }
-
-    .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: rgba(0, 242, 254, 0.08);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      box-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .brand-mark img {
-      width: 26px;
-      height: 26px;
-      border-radius: 4px;
-      object-fit: cover;
-    }
-
-    .brand-name {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text-primary);
-      letter-spacing: -0.4px;
-    }
-
-    .station-tag {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--accent-cyan);
-      letter-spacing: 0.5px;
-      margin-left: 6px;
-    }
-
-    .live-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--accent-safe);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 9999px;
-      letter-spacing: 0.8px;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
-    }
-
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-safe);
-      box-shadow: 0 0 8px var(--accent-safe);
-      animation: pulse-dot 2s infinite ease-in-out;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    /* Page Navigation Bar */
-    .page-nav {
-      display: flex;
-      gap: 10px;
-      margin: 20px 0 32px;
-      overflow-x: auto;
-      padding-bottom: 6px;
-      scrollbar-width: none;
-    }
-    .page-nav::-webkit-scrollbar { display: none; }
-
-    .page-nav a {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-decoration: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-subtle);
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-
-    .page-nav a:hover, .page-nav a.active {
-      color: #ffffff;
-      background: rgba(0, 242, 254, 0.1);
-      border-color: rgba(0, 242, 254, 0.4);
-      box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
-    }
-
-    .page-nav a.nav-back {
-      color: var(--accent-cyan);
-      border-color: rgba(0, 242, 254, 0.3);
-      margin-right: auto;
-    }
-
-    .page-nav a.nav-highlight {
-      background: rgba(56, 189, 248, 0.12);
-      border-color: rgba(56, 189, 248, 0.4);
-      color: #38bdf8;
-    }
-
-    /* Hero Section */
-    .hero-banner {
-      background: linear-gradient(135deg, rgba(13, 22, 41, 0.85) 0%, rgba(18, 32, 60, 0.65) 100%);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(0, 242, 254, 0.25);
-      border-radius: 18px;
-      padding: 40px;
-      box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.6), 0 0 30px -5px rgba(0, 242, 254, 0.15);
-      margin-bottom: 36px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-banner::after {
-      content: '';
-      position: absolute;
-      top: -120px;
-      right: -100px;
-      width: 320px;
-      height: 320px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(0, 242, 254, 0.12) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent-cyan);
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      padding: 4px 12px;
-      border-radius: 9999px;
-      margin-bottom: 16px;
-      letter-spacing: 0.8px;
-    }
-
-    .hero-title {
-      font-family: var(--font-display);
-      font-size: 36px;
-      font-weight: 800;
-      line-height: 1.2;
-      color: #ffffff;
-      margin-bottom: 14px;
-      letter-spacing: -0.8px;
-    }
-
-    .hero-title .gradient-text {
-      background: linear-gradient(90deg, #00f2fe 0%, #38bdf8 50%, #10b981 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero-desc {
-      font-size: 16px;
-      color: var(--text-secondary);
-      max-width: 820px;
-      line-height: 1.65;
-    }
-
-    /* Linked Resource Notice Pill */
-    .link-resource-box {
-      margin-top: 24px;
-      padding: 14px 20px;
-      background: rgba(56, 189, 248, 0.08);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      border-radius: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .link-resource-text {
-      font-size: 13.5px;
-      color: var(--text-secondary);
-    }
-
-    .link-resource-text strong {
-      color: #38bdf8;
-    }
-
-    .link-btn {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #040914;
-      background: linear-gradient(135deg, #00f2fe, #38bdf8);
-      padding: 8px 18px;
-      border-radius: 6px;
-      text-decoration: none;
-      box-shadow: 0 4px 12px rgba(0, 242, 254, 0.3);
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-
-    .link-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(0, 242, 254, 0.5);
-    }
-
-    /* Content Panels */
-    .panel {
-      background: var(--bg-surface);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border-medium);
-      border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 28px;
-      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
-      scroll-margin-top: 80px;
-    }
-
-    .panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 16px;
-    }
-
-    .panel-title {
-      font-family: var(--font-display);
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.3px;
-    }
-
-    .panel-intro {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .panel-meta {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent-cyan);
-      background: rgba(0, 242, 254, 0.08);
-      border: 1px solid rgba(0, 242, 254, 0.25);
-      padding: 4px 10px;
-      border-radius: 6px;
-    }
-
-    /* Key Numbers Grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .kpi-card {
-      background: rgba(15, 25, 48, 0.7);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 20px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.25s ease;
-    }
-
-    .kpi-card:hover {
-      border-color: rgba(0, 242, 254, 0.35);
-      transform: translateY(-2px);
-    }
-
-    .kpi-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 3px;
-    }
-
-    .kpi-1::before { background: var(--accent-cyan); }
-    .kpi-2::before { background: var(--accent-safe); }
-    .kpi-3::before { background: var(--accent-warning); }
-    .kpi-4::before { background: #38bdf8; }
-
-    .kpi-label {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      color: var(--text-muted);
-      letter-spacing: 0.8px;
-      margin-bottom: 6px;
-    }
-
-    .kpi-value {
-      font-family: var(--font-display);
-      font-size: 26px;
-      font-weight: 800;
-      color: #ffffff;
-      margin-bottom: 4px;
-    }
-
-    .kpi-sub {
-      font-size: 12px;
-      color: var(--text-dim);
-    }
-
-    /* Revenue Stream Cards Grid */
-    .stream-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .stream-card {
-      background: rgba(15, 25, 48, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      transition: all 0.25s ease;
-    }
-
-    .stream-card:hover {
-      border-color: rgba(0, 242, 254, 0.3);
-      transform: translateY(-2px);
-    }
-
-    .stream-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
-
-    .stream-card h4 {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .stream-pricing {
-      font-family: var(--font-mono);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--accent-cyan);
-    }
-
-    .stream-desc {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.55;
-    }
-
-    .stream-features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 0;
-    }
-
-    .stream-features li {
-      font-size: 12px;
-      color: var(--text-muted);
-      position: relative;
-      padding-left: 18px;
-    }
-
-    .stream-features li::before {
-      content: '✓';
-      position: absolute;
-      left: 0;
-      color: var(--accent-safe);
-      font-weight: bold;
-    }
-
-    /* Charts Container */
-    .chart-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-top: 24px;
-    }
-
-    .chart-box {
-      background: rgba(10, 17, 34, 0.7);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chart-box h4 {
-      font-family: var(--font-display);
-      font-size: 14px;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 4px;
-    }
-
-    .chart-box p {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 16px;
-    }
-
-    .canvas-wrapper {
-      position: relative;
-      height: 280px;
-      width: 100%;
-    }
-
-    /* Route / Go-To-Market Cards */
-    .channel-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .channel-card {
-      background: rgba(15, 25, 48, 0.65);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      border-left: 3px solid var(--accent-cyan);
-    }
-
-    .channel-card.jal-jeevan {
-      border-left-color: var(--accent-safe);
-    }
-
-    .channel-card.urban {
-      border-left-color: var(--accent-warning);
-    }
-
-    .channel-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      display: inline-block;
-      width: fit-content;
-    }
-
-    .badge-b2g { background: rgba(16, 185, 129, 0.15); color: var(--accent-safe); border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-b2b { background: rgba(0, 242, 254, 0.15); color: var(--accent-cyan); border: 1px solid rgba(0, 242, 254, 0.3); }
-    .badge-ngo { background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); border: 1px solid rgba(245, 158, 11, 0.3); }
-
-    .channel-card h4 {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .channel-card p {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    .channel-stat {
-      font-family: var(--font-mono);
-      font-size: 12.5px;
-      color: var(--accent-cyan);
-      background: rgba(0, 242, 254, 0.05);
-      border: 1px solid rgba(0, 242, 254, 0.2);
-      border-radius: 6px;
-      padding: 8px 12px;
-    }
-
-    /* Roadmap Timeline */
-    .timeline {
-      position: relative;
-      margin-top: 30px;
-      padding-left: 30px;
-    }
-
-    .timeline::before {
-      content: '';
-      position: absolute;
-      top: 0; bottom: 0; left: 10px;
-      width: 2px;
-      background: linear-gradient(180deg, var(--accent-cyan) 0%, #38bdf8 50%, var(--accent-safe) 100%);
-      box-shadow: 0 0 10px var(--accent-cyan);
-    }
-
-    .timeline-step {
-      position: relative;
-      margin-bottom: 30px;
-    }
-
-    .timeline-step:last-child { margin-bottom: 0; }
-
-    .timeline-marker {
-      position: absolute;
-      left: -29px;
-      top: 4px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--bg-deep);
-      border: 2px solid var(--accent-cyan);
-      box-shadow: 0 0 10px var(--accent-cyan);
-    }
-
-    .timeline-content {
-      background: rgba(15, 25, 48, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .timeline-phase {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent-cyan);
-      letter-spacing: 0.8px;
-      margin-bottom: 4px;
-    }
-
-    .timeline-title {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 8px;
-    }
-
-    .timeline-desc {
-      font-size: 13.5px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: 12px;
-    }
-
-    .timeline-tags {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .tag-pill {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      color: var(--text-muted);
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-subtle);
-      padding: 3px 10px;
-      border-radius: 4px;
-    }
-
-    /* Future Modular Scope */
-    .future-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .future-card {
-      background: rgba(15, 25, 48, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .future-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--accent-cyan);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      background: rgba(0, 242, 254, 0.08);
-      padding: 3px 8px;
-      border-radius: 4px;
-      width: fit-content;
-    }
-
-    .future-card h4 {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .future-card p {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    .future-cost {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--accent-safe);
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-top: auto;
-    }
-
-    /* =========================================================================
-       Audio Toggle Button
-       ========================================================================= */
-    .audio-toggle-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: rgba(15, 25, 48, 0.7);
-      border: 1px solid var(--border-medium);
-      color: var(--text-secondary);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 13px;
-      border-radius: 9999px;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
-    }
-    .audio-toggle-btn:hover {
-      background: rgba(0, 242, 254, 0.12);
-      border-color: rgba(0, 242, 254, 0.4);
-      color: #ffffff;
-      box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
-    }
-    .audio-toggle-btn.muted {
-      color: var(--text-dim);
-      border-color: rgba(255, 255, 255, 0.08);
-      background: rgba(12, 20, 39, 0.5);
-    }
-
-    /* =========================================================================
-       Interactive ROI & Impact Calculator
-       ========================================================================= */
-    .calculator-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      margin-top: 20px;
-    }
-
-    .calculator-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
-      background: rgba(12, 20, 39, 0.6);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 24px;
-    }
-
-    .calc-control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .calc-control-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .calc-control-header label {
-      font-family: var(--font-display);
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .calc-badge {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent-cyan);
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.25);
-      padding: 3px 9px;
-      border-radius: 6px;
-    }
-
-    .calc-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.1);
-      outline: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin: 8px 0 4px;
-    }
-
-    .calc-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent-cyan);
-      cursor: pointer;
-      box-shadow: 0 0 12px var(--accent-cyan);
-      transition: transform 0.15s ease;
-    }
-
-    .calc-slider::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-
-    .calc-slider-scale {
-      display: flex;
-      justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      color: var(--text-dim);
-    }
-
-    .calc-frequency-tabs {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 6px;
-    }
-
-    .freq-tab {
-      background: rgba(15, 25, 48, 0.7);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s ease;
-    }
-
-    .freq-tab:hover {
-      border-color: rgba(0, 242, 254, 0.3);
-      color: #ffffff;
-    }
-
-    .freq-tab.active {
-      background: rgba(0, 242, 254, 0.12);
-      border-color: var(--accent-cyan);
-      color: var(--accent-cyan);
-      font-weight: 700;
-      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-    }
-
-    /* Calculator Results Column */
-    .calculator-results {
-      background: rgba(10, 17, 33, 0.85);
-      border: 1px solid rgba(0, 242, 254, 0.25);
-      border-radius: 14px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
-    }
-
-    .roi-summary-header {
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 12px;
-      padding: 16px 20px;
-      text-align: center;
-    }
-
-    .roi-headline-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent-safe);
-      letter-spacing: 0.8px;
-    }
-
-    .roi-headline-val {
-      font-family: var(--font-display);
-      font-size: 34px;
-      font-weight: 800;
-      color: #ffffff;
-      margin: 4px 0;
-      letter-spacing: -0.5px;
-    }
-
-    .roi-headline-pct {
-      font-size: 12.5px;
-      color: var(--accent-safe);
-      font-weight: 500;
-    }
-
-    .roi-metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .roi-metric-card {
-      background: rgba(15, 25, 48, 0.7);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .roi-metric-card .metric-k {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-dim);
-      letter-spacing: 0.6px;
-    }
-
-    .roi-metric-card .metric-v {
-      font-family: var(--font-display);
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .roi-metric-card .metric-v.text-danger { color: var(--accent-danger); }
-    .roi-metric-card .metric-v.text-cyan { color: var(--accent-cyan); }
-    .roi-metric-card .metric-v.text-safe { color: var(--accent-safe); }
-    .roi-metric-card .metric-v.text-highlight { color: #38bdf8; }
-
-    .roi-metric-card .metric-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    /* Comparison Bar */
-    .comparison-bar-wrap {
-      margin-top: auto;
-      padding-top: 14px;
-      border-top: 1px solid var(--border-subtle);
-    }
-
-    .comparison-labels {
-      display: flex;
-      justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .comparison-progress {
-      height: 24px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      overflow: hidden;
-      display: flex;
-      border: 1px solid var(--border-subtle);
-    }
-
-    .progress-fill {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      white-space: nowrap;
-      transition: width 0.35s ease;
-      padding: 0 8px;
-    }
-
-    .progress-fill.aqua {
-      background: linear-gradient(90deg, #00f2fe, #0ea5e9);
-      color: #040711;
-    }
-
-    .progress-fill.trad {
-      background: rgba(244, 63, 94, 0.25);
-      color: #fca5a5;
-      border-left: 1px solid rgba(244, 63, 94, 0.4);
-    }
-
-    /* Footer */
-    footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 32px;
-      margin-top: 40px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-dim);
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .stream-grid, .future-grid { grid-template-columns: 1fr; }
-      .chart-layout { grid-template-columns: 1fr; }
-      .channel-grid { grid-template-columns: 1fr; }
-      .calculator-container { grid-template-columns: 1fr; }
-      .roi-metrics-grid { grid-template-columns: 1fr 1fr; }
-      .hero-banner { padding: 24px; }
-      .hero-title { font-size: 26px; }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050708">
+  <title>AquaSentry — Sales &amp; Expansion Strategy</title>
+  <meta name="description" content="Revenue model, ROI calculator and expansion roadmap for AquaSentry.">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <script>
+    var th = 'dark';
+    try { th = localStorage.getItem('aquasentry.theme') || 'dark'; } catch (e) {}
+    document.documentElement.setAttribute('data-theme', th);
+  </script>
 </head>
 <body>
-
-<div class="wrap">
-
-  <!-- Header -->
-  <header class="top">
-    <a href="index.html" class="brand">
-      <div class="brand-mark">
-        <img src="aquasentry-logo.jpg" alt="AquaSentry Emblem" />
-      </div>
-      <div>
-        <span class="brand-name">AquaSentry</span>
-        <span class="station-tag">/ SALES &amp; EXPANSION</span>
-      </div>
+  <a class="skip" href="#main" data-i18n="nav.skip">Skip to content</a>
+  <aside class="rail" id="rail" aria-label="Main navigation">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C11 10 7 15 7 20a9 9 0 0 0 18 0c0-5-4-10-9-17Z" fill="currentColor"/><path d="M11.5 21.5a4.5 4.5 0 0 0 4.5 4" stroke="#0b1418" stroke-opacity=".55" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
+      <span><span class="brand-name" data-i18n="app.title">AquaSentry</span><br><span class="brand-tag" data-i18n="app.tagline">Arsenic water safety monitor</span></span>
     </a>
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <button id="audioToggleBtn" class="audio-toggle-btn" onclick="AquaAudio.toggleMute()" aria-label="Toggle Audio Feedback" title="Toggle Sonar & Audio Feedback">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-        <span>Sound: ON</span>
-      </button>
-      <button class="sidebar-toggle-btn" onclick="toggleSidebar(true)" aria-label="Open Navigation Sidebar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-        <span>Sidebar</span>
-      </button>
-      <div class="live-pill">
-        <span class="live-dot"></span>
-        COMMERCIAL PIPELINE ACTIVE
+    <nav class="nav-group" aria-labelledby="navThis">
+      <div class="nav-label" id="navThis" data-i18n="nav.onpage">On this page</div>
+      <span class="nav-lime" aria-hidden="true"></span>
+      <a href="#top" class="nav-link" data-section="top"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.top">Overview</span></a>
+      <a href="#revenue" class="nav-link" data-section="revenue"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.rev">Revenue model</span></a>
+      <a href="#projections" class="nav-link" data-section="projections"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.proj">Projections</span></a>
+      <a href="#roi" class="nav-link" data-section="roi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.roi">ROI calculator</span></a>
+      <a href="#channels" class="nav-link" data-section="channels"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.ch">Go-to-market</span></a>
+      <a href="#roadmap" class="nav-link" data-section="roadmap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.road">Roadmap</span></a>
+      <a href="#future" class="nav-link" data-section="future"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/></svg><span data-i18n="sl.nav.fut">Future hardware</span></a>
+    </nav>
+    <nav class="nav-group" aria-labelledby="navPages">
+      <div class="nav-label" id="navPages" data-i18n="nav.pages">Pages</div>
+      <span class="nav-lime" aria-hidden="true"></span>
+      <a href="index.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-3.5 5-6 8.5-6 11.5a6 6 0 0 0 12 0C18 11.5 15.5 8 12 3Z"/></svg><span data-i18n="nav.dashboard">Live dashboard</span></a>
+      <a href="market-research.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span data-i18n="nav.market">Market research</span></a>
+      <a href="sales-expansion.html" class="nav-link" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
+      <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
+    </nav>
+    <div class="rail-foot"><b>AquaSentry v5</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+  </aside>
+  <div class="rail-backdrop" id="railBackdrop" hidden></div>
+  <div class="shell">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" type="button" data-i18n-aria="menu.open" aria-label="Open menu" aria-controls="rail" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="conn" id="conn" data-state="checking"><span class="conn-dot" aria-hidden="true"></span><span id="connText" data-i18n="conn.checking">Checking server…</span></div>
+      <span class="topbar-title" data-i18n="pg.sales.top">Sales &amp; expansion</span>
+      <div class="topbar-right">
+        <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
+          <button type="button" data-lang-choice="en" aria-pressed="true">English</button>
+          <button type="button" data-lang-choice="hi" aria-pressed="false" lang="hi">हिन्दी</button>
+        </div>
+        <button class="icon-btn" id="themeBtn" type="button" data-i18n-aria="theme.toggle" aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></button>
       </div>
-    </div>
-  </header>
+    </header>
+    <main id="main">
+      <section class="page-hero" id="top">
+        <div data-reveal>
+          <span class="eyebrow" data-i18n="sl.eyebrow">Commercialization strategy · 2026–2029</span>
+          <h1 style="margin-top:14px"><span data-i18n="sl.h1a">Sales channels &amp;</span> <span class="grad-text" data-i18n="sl.h1b">expansion roadmap</span></h1>
+          <p class="lede" data-i18n="sl.lede">Taking autonomous water screening from validated prototypes to districts, villages and homes — through local manufacturing, government procurement and a recurring Monitoring-as-a-Service model.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="#roi" data-i18n="sl.cta.roi">Try the ROI calculator</a>
+            <a class="btn btn-quiet" href="market-research.html" data-i18n="sl.cta.market">Market &amp; economic research →</a>
+          </div>
+        </div>
+        <figure class="render card tilt beam" data-reveal style="--d:150ms;aspect-ratio:4/3;border-radius:var(--radius-xl)">
+          <span class="beam-ring" aria-hidden="true"></span>
+          <img src="catamaran_prototype_render.jpg" alt="AquaSentry catamaran prototype">
+          <figcaption data-i18n="sl.fig">Autonomous catamaran node — ₹5,000–8,000 per unit</figcaption>
+        </figure>
+      </section>
 
-  <!-- Navigation -->
-  <nav class="page-nav">
-    <a href="index.html" class="nav-back">← Live Monitor</a>
-    <a href="#section-model" class="active">Sales Model</a>
-    <a href="#section-revenue">Projections</a>
-    <a href="#section-roi" style="color: #00f2fe; border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.08);">⚡ ROI Calculator</a>
-    <a href="#section-channels">GTM Channels</a>
-    <a href="#section-roadmap">Expansion Roadmap</a>
-    <a href="#section-modular">Future Hardware</a>
-    <a href="market-research.html" class="nav-highlight">Economic Research ↗</a>
-  </nav>
-
-  <!-- Hero Header Banner -->
-  <section class="hero-banner">
-    <span class="hero-badge">COMMERCIALIZATION STRATEGY · 2026–2029</span>
-    <h1 class="hero-title">
-      Sales Channels &amp; <span class="gradient-text">Expansion Roadmap</span>
-    </h1>
-    <p class="hero-desc">
-      Transitioning autonomous water screening from validated prototypes into distributed municipal, rural, and domestic adoption. Powered by localized Indian manufacturing, B2G procurement under national programs, and high-margin Monitoring-as-a-Service (MaaS).
-    </p>
-
-    <!-- Cross Link to Existing Website -->
-    <div class="link-resource-box">
-      <div class="link-resource-text">
-        <strong>Looking for financial unit economics &amp; addressable market analysis?</strong>
-        <span>Detailed TAM/SAM figures and AccuSense competitive tear-downs are available in our Market Research portal.</span>
+      <div class="kpis" data-reveal>
+        <div class="card kpi accent spot"><div class="kpi-k" data-i18n="sl.k1">Unit retail price</div><div class="kpi-v">₹5,000–8,000</div><div class="kpi-s" data-i18n="sl.k1s">build cost ₹2,800 ($29)</div></div>
+        <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.k2">Jal Jeevan SOM (3 yr)</div><div class="kpi-v">₹21–32 Cr</div><div class="kpi-s" data-i18n="sl.k2s">1.0–1.5% of SAM captured</div></div>
+        <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.k3">SaaS subscription</div><div class="kpi-v">₹99<small style="font-size:.5em;color:var(--ink-3)"> /mo</small></div><div class="kpi-s" data-i18n="sl.k3s">real-time alerts &amp; cloud maps</div></div>
+        <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.k4">3-year deployment target</div><div class="kpi-v"><span data-count="47500" data-suf="+">0</span></div><div class="kpi-s" data-i18n="sl.k4s">rural sources + urban tanks</div></div>
+        <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.k5">Edge AI</div><div class="kpi-v" style="font-size:1.45rem">AquaNet-V3</div><div class="kpi-s" data-i18n="sl.k5s">98.6% on exact test data (simulated)</div></div>
       </div>
-      <a href="market-research.html" class="link-btn">View Market &amp; Economic Research ↗</a>
-    </div>
-  </section>
 
-  <!-- Key Performance Metrics (KPIs) -->
-  <div class="kpi-grid">
-    <div class="kpi-card kpi-1">
-      <div class="kpi-label">UNIT RETAIL PRICE</div>
-      <div class="kpi-value">₹5,000–8,000</div>
-      <div class="kpi-sub">Build cost: ₹2,800 ($29)</div>
-    </div>
-    <div class="kpi-card kpi-2">
-      <div class="kpi-label">JAL JEEVAN SOM (3-YR)</div>
-      <div class="kpi-value">₹21–32 Cr</div>
-      <div class="kpi-sub">1.0%–1.5% of SAM capture</div>
-    </div>
-    <div class="kpi-card kpi-3">
-      <div class="kpi-label">SAAS SUBSCRIPTION</div>
-      <div class="kpi-value">₹99 / mo</div>
-      <div class="kpi-sub">Real-time alerts &amp; cloud maps</div>
-    </div>
-    <div class="kpi-card kpi-4">
-      <div class="kpi-label">3-YEAR DEPLOYMENT TARGET</div>
-      <div class="kpi-value">47,500+</div>
-      <div class="kpi-sub">Rural sources + Urban tanks</div>
-    </div>
-    <div class="kpi-card kpi-5" style="border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.06);">
-      <div class="kpi-label" style="color: var(--accent-cyan);">EDGE AI INFERENCE</div>
-      <div class="kpi-value" style="color: var(--accent-cyan);">99.70% Accuracy</div>
-      <div class="kpi-sub">AquaNet-V1 (112 Synapses · Synthetic Benchmark)</div>
-    </div>
+      <section class="section" id="revenue" aria-labelledby="slRevH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.r.eyebrow">01 · Hardware + SaaS</span>
+          <h2 id="slRevH" data-i18n="sl.r.h">The revenue architecture</h2>
+          <p class="lede" data-i18n="sl.r.lede">Hardware sold at an accessible price point, with steady high-margin software and consumable revenue on top.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card feature spot tilt" data-reveal>
+            <div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M2 17h20l-3 4H5Z"/><path d="M12 3v14M12 4l6 8h-6"/></svg></div>
+            <h3 data-i18n="sl.f1.h">Autonomous catamaran fleet</h3><div class="price">₹5,000 – ₹8,000 <small class="muted" style="font-size:.6em" data-i18n="sl.unit">/ unit</small></div>
+            <p data-i18n="sl.f1.d">Solar-assisted surface robot with the MAS-G1 stripping-voltammetry potentiostat, GPS, LoRa and a non-immersion sampling cell.</p>
+            <ul><li data-i18n="sl.f1.l1">Gross margin 40–55% (₹2,200–5,000 per node)</li><li data-i18n="sl.f1.l2">Local assembly at Indian wage rates</li><li data-i18n="sl.f1.l3">1-year warranty, field-swappable modules</li></ul>
+          </article>
+          <article class="card feature spot tilt" data-reveal style="--d:80ms">
+            <div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.5"/><path d="M12 13.5V21"/></svg></div>
+            <h3 data-i18n="sl.f2.h">Monitoring-as-a-Service</h3><div class="price">₹99 <small class="muted" style="font-size:.6em" data-i18n="sl.f2.p">/ month (₹1,188 / yr)</small></div>
+            <p data-i18n="sl.f2.d">Cloud telemetry, automatic 4-tier WHO/BIS classification, contamination contour maps and emergency SMS alerts.</p>
+            <ul><li data-i18n="sl.f2.l1">85%+ recurring software margin</li><li data-i18n="sl.f2.l2">District water-board dashboard tier</li><li data-i18n="sl.f2.l3">Automatic compliance reports</li></ul>
+          </article>
+          <article class="card feature spot tilt" data-reveal style="--d:160ms">
+            <div class="feature-ico"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 6h4M10 18h4M12 9v6"/></svg></div>
+            <h3 data-i18n="sl.f3.h">Electrode strips &amp; consumables</h3><div class="price">₹150 – ₹300 <small class="muted" style="font-size:.6em" data-i18n="sl.f3.p">/ 50 tests</small></div>
+            <p data-i18n="sl.f3.d">Pre-calibrated screen-printed strips (As-M003050) and future cartridges for lead, copper, chromium, nickel and zinc.</p>
+            <ul><li data-i18n="sl.f3.l1">High-frequency repeat purchase</li><li data-i18n="sl.f3.l2">Calibration curve validated per batch</li><li data-i18n="sl.f3.l3">Bulk packs for rural testing missions</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="projections" aria-labelledby="slProjH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.p.eyebrow">02 · 3-year forecast</span>
+          <h2 id="slProjH" data-i18n="sl.p.h">Financial growth and deployment projections</h2>
+          <p class="lede" data-i18n="sl.p.lede">From regional Maharashtra pilots to pan-India procurement.</p>
+        </div>
+        <div class="grid-2">
+          <div class="card chart" data-reveal><h3 data-i18n="sl.c1.h">Revenue by stream (₹ Cr)</h3><p class="sub" data-i18n="sl.c1.s">Hardware fleet sales plus compounding SaaS and consumables.</p><div id="chartRevenue"></div></div>
+          <div class="card chart" data-reveal style="--d:120ms"><h3 data-i18n="sl.c2.h">Deployed node fleet</h3><p class="sub" data-i18n="sl.c2.s">Rural community sources and urban housing-society tanks.</p><div id="chartFleet"></div></div>
+        </div>
+      </section>
+
+      <section class="section" id="roi" aria-labelledby="slRoiH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.roi.eyebrow">03 · Live impact engine</span>
+          <h2 id="slRoiH" data-i18n="sl.roi.h">District deployment and ROI calculator</h2>
+          <p class="lede" data-i18n="sl.roi.lede">Model the savings, payback time and people covered for a district or municipal water utility.</p>
+        </div>
+        <div class="roi">
+          <div class="card roi-controls spot" data-reveal>
+            <label class="field"><span class="field-row"><span data-i18n="sl.roi.sources">Water sources monitored</span><output id="roiSrcOut">250</output></span>
+              <input type="range" id="roiSrc" min="20" max="2500" step="10" value="250"></label>
+            <div class="field-row" style="font-size:.82rem;color:var(--ink-3);margin-top:-6px"><span data-i18n="sl.roi.s1">20 · local pilot</span><span data-i18n="sl.roi.s2">2,500+ · state division</span></div>
+            <label class="field"><span class="field-row"><span data-i18n="sl.roi.lab">Lab courier + test fee per sample</span><output id="roiLabOut">₹2,200</output></span>
+              <input type="range" id="roiLab" min="1000" max="4500" step="100" value="2200"></label>
+            <div class="field-row" style="font-size:.82rem;color:var(--ink-3);margin-top:-6px"><span data-i18n="sl.roi.l1">₹1,000 · subsidised</span><span data-i18n="sl.roi.l2">₹4,500 · remote express</span></div>
+            <div class="field"><span class="field-row"><span data-i18n="sl.roi.freq">Testing frequency</span></span>
+              <div class="seg" role="group" style="width:100%">
+                <button type="button" data-freq="4" aria-pressed="false" style="flex:1" data-i18n="sl.roi.q">Quarterly</button>
+                <button type="button" data-freq="12" aria-pressed="true" style="flex:1" data-i18n="sl.roi.m">Monthly</button>
+                <button type="button" data-freq="26" aria-pressed="false" style="flex:1" data-i18n="sl.roi.b">Bi-weekly</button>
+              </div>
+            </div>
+            <p class="muted" style="font-size:.86rem" data-i18n="sl.roi.note">Assumes one node per 5 sources (₹6,500 each), ₹5 consumables per test, ₹1,188/yr SaaS per node and ~500 residents per source.</p>
+          </div>
+          <div class="roi-out" data-reveal style="--d:120ms">
+            <div class="card kpi roi-hero spot"><div class="kpi-k" data-i18n="sl.roi.save">Annual savings for the district</div><div class="kpi-v grad-text" id="roiSave">–</div><div class="kpi-s" id="roiPct"></div></div>
+            <div class="grid-2" style="gap:14px">
+              <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.roi.trad">Traditional lab cost</div><div class="kpi-v" id="roiTrad">–</div><div class="kpi-s" data-i18n="sl.roi.trads">sample transport + ICP-MS fees</div></div>
+              <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.roi.fleet">AquaSentry fleet cost</div><div class="kpi-v" id="roiFleet">–</div><div class="kpi-s" id="roiNodes"></div></div>
+              <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.roi.pay">Hardware payback</div><div class="kpi-v" id="roiPay">–</div><div class="kpi-s" data-i18n="sl.roi.pays">full capex recovered</div></div>
+              <div class="card kpi spot"><div class="kpi-k" data-i18n="sl.roi.people">People covered</div><div class="kpi-v" id="roiPeople">–</div><div class="kpi-s" data-i18n="sl.roi.peoples">~500 residents per source</div></div>
+            </div>
+            <div class="roi-bar" aria-hidden="true"><span class="a" id="roiBarA"></span><span class="b" id="roiBarB"></span></div>
+            <div class="chart-legend"><span><i style="background:var(--primary)"></i><span id="roiLegA"></span></span><span><i style="background:var(--ink-3)"></i><span id="roiLegB"></span></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="channels" aria-labelledby="slChH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.ch.eyebrow">04 · Distribution channels</span>
+          <h2 id="slChH" data-i18n="sl.ch.h">Go-to-market and customer acquisition</h2>
+          <p class="lede" data-i18n="sl.ch.lede">A multi-tier strategy aligned with government water-quality programmes and institutional buyers.</p>
+        </div>
+        <div class="grid-2">
+          <article class="card feature spot" data-reveal><span class="label-chip" data-i18n="sl.g1.k">Government / B2G</span><h3 data-i18n="sl.g1.h">Jal Jeevan Mission (Har Ghar Jal)</h3><p data-i18n="sl.g1.d">The Ministry of Jal Shakti funds water-quality monitoring and field-test upgrades across rural supply schemes, with the mission extended to 2028. Objective, logged electronic results replace subjective colour strips.</p><div class="target" data-i18n="sl.g1.t">Target: 1.0–1.5% of the serviceable market — ₹21–32 Cr in node deployments.</div></article>
+          <article class="card feature spot" data-reveal style="--d:80ms"><span class="label-chip" data-i18n="sl.g2.k">Commercial / B2B</span><h3 data-i18n="sl.g2.h">Aquaculture, bottling &amp; industrial intake</h3><p data-i18n="sl.g2.d">Fish hatcheries, shrimp farms and food plants lose yield to unmonitored heavy metals. Nodes give 24/7 intake monitoring for a fraction of lab-contractor fees.</p><div class="target" data-i18n="sl.g2.t">Target: ₹18,000–24,000 annual service contracts per facility.</div></article>
+          <article class="card feature spot" data-reveal><span class="label-chip" data-i18n="sl.g3.k">Urban housing</span><h3 data-i18n="sl.g3.h">Housing societies &amp; municipal storage</h3><p data-i18n="sl.g3.d">Apartment complexes around Pune, Mumbai and Delhi NCR draw borewell water with unverified arsenic. AquaSentry Mini watches the overhead tank.</p><div class="target" data-i18n="sl.g3.t">Target: 25,000 urban nodes by year 3 (5 per society × 5,000 complexes).</div></article>
+          <article class="card feature spot" data-reveal style="--d:80ms"><span class="label-chip" data-i18n="sl.g4.k">NGO &amp; philanthropic</span><h3 data-i18n="sl.g4.h">Water NGOs &amp; impact grants</h3><p data-i18n="sl.g4.d">Partnerships with water NGOs to deploy screening boats in the Bengal basin (West Bengal and Bangladesh), where arsenic exposure affects tens of millions.</p><div class="target" data-i18n="sl.g4.t">Target: grant-funded bulk deployments with open data.</div></article>
+        </div>
+        <div class="grid-2" style="margin-top:20px">
+          <div class="card pad spot" data-reveal>
+            <h3 class="h-small" data-i18n="sl.proc.h">Institutional procurement routes</h3>
+            <ul class="big-list">
+              <li data-i18n-html="sl.proc.1"><b>Jal Jeevan Mission:</b> water-testing innovation listing for Village Water &amp; Sanitation Committees.</li>
+              <li data-i18n-html="sl.proc.2"><b>GeM (Government e-Marketplace):</b> listing as an environmental water-testing device for direct tender purchase.</li>
+              <li data-i18n-html="sl.proc.3"><b>CSR funds:</b> industry, energy and mining companies meeting clean-water obligations in affected basins.</li>
+            </ul>
+          </div>
+          <div class="card pad spot beam" data-reveal style="--d:100ms">
+            <span class="beam-ring" aria-hidden="true"></span>
+            <span class="label-chip" data-i18n="sl.moat.k">Technology moat</span>
+            <h3 style="margin:6px 0 10px" data-i18n="sl.moat.h">AquaNet-V3 edge neural network</h3>
+            <p class="muted" data-i18n="sl.moat.d">Field kits suffer from chemical cross-interference and subjective colour reading. AquaSentry reads five sensors and runs a trained 5-16-12-4 network on the ESP32 for every scan, then applies fixed BIS/WHO safety rules that can only make a verdict stricter.</p>
+            <div class="pills">
+              <span class="tag active" data-i18n="sl.moat.p1">352 weights · 1.4 KB</span>
+              <span class="tag" data-i18n="sl.moat.p2">&lt;1 ms on the ESP32</span>
+              <span class="tag" data-i18n="sl.moat.p3">98.6% on exact test data</span>
+              <span class="tag" data-i18n="sl.moat.p4">94.6% end-to-end with re-scanning</span>
+              <span class="tag" data-i18n="sl.moat.p5">As · pH · EC · turbidity · temp</span>
+            </div>
+            <p class="muted" style="font-size:.86rem;margin-top:10px" data-i18n="sl.moat.n">All accuracy figures are from simulated data; field validation against lab results is still needed.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="roadmap" aria-labelledby="slRoadH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.rd.eyebrow">05 · Strategic phases</span>
+          <h2 id="slRoadH" data-i18n="sl.rd.h">Multi-phase expansion roadmap (2026–2029)</h2>
+          <p class="lede" data-i18n="sl.rd.lede">From local pilot validation to nationwide coverage and Southeast Asian export.</p>
+        </div>
+        <div class="timeline">
+          <article class="card tl-item spot" data-reveal><div class="tl-when" data-i18n="sl.ph1.w">PHASE 1 · MONTHS 1–12</div><h3 data-i18n="sl.ph1.h">Regional validation and district pilots</h3><p data-i18n="sl.ph1.d">Deploy 100 catamaran nodes on 10 high-risk water bodies in Maharashtra and the Ganga–Brahmaputra belt. Compare every reading with ICP-MS lab results to earn State Water &amp; Sanitation Mission screening accreditation.</p><div class="pills"><span class="tag" data-i18n="sl.ph1.p1">100 pilot nodes</span><span class="tag" data-i18n="sl.ph1.p2">State SWSM validation</span><span class="tag" data-i18n="sl.ph1.p3">LoRa shore gateways</span><span class="tag active" data-i18n="sl.ph1.p4">Revenue ₹1.2 Cr</span></div></article>
+          <article class="card tl-item spot" data-reveal><div class="tl-when" data-i18n="sl.ph2.w">PHASE 2 · MONTHS 12–24</div><h3 data-i18n="sl.ph2.h">Local production and state fleet procurement</h3><p data-i18n="sl.ph2.d">Set up micro-manufacturing hubs with trained local workers, bringing build cost down to ₹2,800. Scale to 10,000+ units in 5 states and connect telemetry to the Jal Jeevan Mission portal.</p><div class="pills"><span class="tag" data-i18n="sl.ph2.p1">10,000 units</span><span class="tag" data-i18n="sl.ph2.p2">Local manufacturing</span><span class="tag" data-i18n="sl.ph2.p3">National portal API</span><span class="tag active" data-i18n="sl.ph2.p4">Revenue ₹12.32 Cr</span></div></article>
+          <article class="card tl-item spot" data-reveal><div class="tl-when" data-i18n="sl.ph3.w">PHASE 3 · MONTHS 24–36+</div><h3 data-i18n="sl.ph3.h">Pan-India scale and Southeast Asian export</h3><p data-i18n="sl.ph3.d">Grow to 47,500+ units and begin exports to Bangladesh, Nepal, Cambodia and Vietnam, where the Mekong and Red River basins have documented arsenic problems. Launch the household in-tank line.</p><div class="pills"><span class="tag" data-i18n="sl.ph3.p1">47,500+ fleet</span><span class="tag" data-i18n="sl.ph3.p2">Bangladesh &amp; Mekong export</span><span class="tag" data-i18n="sl.ph3.p3">Household in-tank launch</span><span class="tag active" data-i18n="sl.ph3.p4">Target net profit ₹35+ Cr</span></div></article>
+        </div>
+      </section>
+
+      <section class="section" id="future" aria-labelledby="slFutH">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="sl.fu.eyebrow">06 · Product roadmap</span>
+          <h2 id="slFutH" data-i18n="sl.fu.h">Modular expansion and future scope</h2>
+          <p class="lede" data-i18n="sl.fu.lede">The electrode, potentiostat, microfluidics and radio work independently, so new capabilities do not need a new vessel.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card feature spot tilt" data-reveal>
+            <figure class="render" style="margin:-22px -22px 6px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;aspect-ratio:16/10"><img src="personal_tank_prototype_render.jpg" alt="" loading="lazy"></figure>
+            <span class="label-chip" data-i18n="sl.m1.k">Consumer line</span><h3 data-i18n="sl.m1.h">Household in-tank version (AquaSentry Mini)</h3><p data-i18n="sl.m1.d">The same sensing chain in a compact pod that hangs inside an overhead tank or sump and sends phone alerts before contaminated water is used.</p><div class="target" data-i18n="sl.m1.t">Build ₹2,800 ($29) · Retail ₹4,000 ($42)</div>
+          </article>
+          <article class="card feature spot tilt" data-reveal style="--d:80ms">
+            <div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M12 2v20M8 6l4-4 4 4M8 18l4 4 4-4"/><path d="M4 12h4M16 12h4"/></svg></div>
+            <span class="label-chip" data-i18n="sl.m2.k">Deep hydrology</span><h3 data-i18n="sl.m2.h">Lead-screw depth profiling</h3><p data-i18n="sl.m2.d">A motorised syringe takes in water to sink the node to 10 m, then pushes it out to resurface — mapping how arsenic changes with depth near bottom sediments.</p><div class="target" data-i18n="sl.m2.t">Firmware + mechanical add-on module</div>
+          </article>
+          <article class="card feature spot tilt" data-reveal style="--d:160ms">
+            <div class="feature-ico"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="14" cy="16" r="3.5"/></svg></div>
+            <span class="label-chip" data-i18n="sl.m3.k">Multi-pollutant</span><h3 data-i18n="sl.m3.h">Swap strips for other heavy metals</h3><p data-i18n="sl.m3.d">The LM358 potentiostat and ADS1115 ADC can run the voltage ramps for lead, copper, chromium, nickel and zinc. Insert an analyte-specific strip — no circuit changes.</p><div class="target" data-i18n="sl.m3.t">Firmware update + consumable cartridge</div>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer class="foot">
+      <span data-i18n="pg.footer">AquaSentry Technologies · 2026</span>
+      <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
+    </footer>
   </div>
-
-  <!-- Section 1: Business & Revenue Model -->
-  <section class="panel" id="section-model">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">1. The Revenue Architecture</span>
-        <p class="panel-intro">Dual hardware sales and recurring Monitoring-as-a-Service (MaaS) streams.</p>
-      </div>
-      <span class="panel-meta">HARDWARE + SAAS</span>
-    </div>
-
-    <p style="color: var(--text-secondary); margin-bottom: 20px;">
-      AquaSentry eliminates the cost bottleneck of traditional laboratory testing by selling the hardware at a razor-sharp, accessible price point while capturing steady, high-margin software and consumable revenue:
-    </p>
-
-    <div class="stream-grid">
-      <div class="stream-card">
-        <div class="stream-icon">🚢</div>
-        <h4>Autonomous Catamaran Fleet</h4>
-        <div class="stream-pricing">₹5,000 – ₹8,000 <span style="font-size: 12px; color: var(--text-dim);">/ unit</span></div>
-        <p class="stream-desc">Turnkey solar-assisted autonomous surface robot equipped with MAS-G1 stripping voltammetry potentiostat, GPS, LoRa, and non-immersion sampling cell.</p>
-        <ul class="stream-features">
-          <li>Gross margin: 40%–55% (₹2,200–₹5,000 / node)</li>
-          <li>Localized assembly at Indian wage rates</li>
-          <li>1-year warranty with modular field replacement</li>
-        </ul>
-      </div>
-
-      <div class="stream-card">
-        <div class="stream-icon">📡</div>
-        <h4>Monitoring-as-a-Service (MaaS)</h4>
-        <div class="stream-pricing">₹99 / mo <span style="font-size: 12px; color: var(--text-dim);">(₹1,188 / yr)</span></div>
-        <p class="stream-desc">Cloud telemetry pipeline, automated 4-tier WHO/BIS safety classifications, contamination contour maps, and emergency alert SMS gateways.</p>
-        <ul class="stream-features">
-          <li>85%+ recurring gross software margin</li>
-          <li>District Water Board enterprise dashboard tier</li>
-          <li>Automated regulatory compliance reporting</li>
-        </ul>
-      </div>
-
-      <div class="stream-card">
-        <div class="stream-icon">🧪</div>
-        <h4>Electrode Strips &amp; Consumables</h4>
-        <div class="stream-pricing">₹150 – ₹300 <span style="font-size: 12px; color: var(--text-dim);">/ 50 tests</span></div>
-        <p class="stream-desc">Pre-calibrated screen-printed electrode strips (As-M003050) and future heavy-metal cartridges (Lead, Copper, Chromium, Nickel, Zinc).</p>
-        <ul class="stream-features">
-          <li>High-frequency recurring procurement</li>
-          <li>Proprietary calibration curve validation</li>
-          <li>Bulk packs for rural water testing missions</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 2: Projections & Financial Model -->
-  <section class="panel" id="section-revenue">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">2. Financial Growth &amp; Deployment Projections</span>
-        <p class="panel-intro">3-Year financial trajectory scaling from regional Maharashtra pilots to pan-India procurement.</p>
-      </div>
-      <span class="panel-meta">3-YEAR FORECAST</span>
-    </div>
-
-    <div class="chart-layout">
-      <div class="chart-box">
-        <h4>Cumulative Revenue by Stream (₹ Crores)</h4>
-        <p>Hardware fleet revenue coupled with compounding SaaS and consumables recurring revenue.</p>
-        <div class="canvas-wrapper">
-          <canvas id="salesRevenueChart"></canvas>
-        </div>
-      </div>
-
-      <div class="chart-box">
-        <h4>Deployed Node Fleet Growth</h4>
-        <p>Rapid deployment across rural community sources and urban overhead housing societies.</p>
-        <div class="canvas-wrapper">
-          <canvas id="deploymentFleetChart"></canvas>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 3: Interactive District Deployment & ROI Calculator -->
-  <section class="panel" id="section-roi">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">3. Interactive District Deployment &amp; ROI Calculator</span>
-        <p class="panel-intro">Model cost savings, payback timelines, and lives protected for your state, district, or municipal water utility.</p>
-      </div>
-      <span class="panel-meta">LIVE IMPACT ENGINE</span>
-    </div>
-
-    <!-- Calculator Grid: Controls + Live Metrics -->
-    <div class="calculator-container">
-      <div class="calculator-controls">
-        <div class="calc-control-group">
-          <div class="calc-control-header">
-            <label for="calcHabitations">Habitations / Water Sources Monitored</label>
-            <span class="calc-badge" id="calcHabitationsVal">250 Sources</span>
-          </div>
-          <input type="range" id="calcHabitations" class="calc-slider" min="20" max="2500" step="10" value="250" oninput="calculateROI()">
-          <div class="calc-slider-scale">
-            <span>20 (Local Pilot)</span>
-            <span>1,000 (Sub-District)</span>
-            <span>2,500+ (Full State Division)</span>
-          </div>
-        </div>
-
-        <div class="calc-control-group">
-          <div class="calc-control-header">
-            <label for="calcCourierCost">Traditional Lab Courier + Testing Fee per Sample</label>
-            <span class="calc-badge" id="calcCourierCostVal">₹2,200 / test</span>
-          </div>
-          <input type="range" id="calcCourierCost" class="calc-slider" min="1000" max="4500" step="100" value="2200" oninput="calculateROI()">
-          <div class="calc-slider-scale">
-            <span>₹1,000 (Subsidized District Lab)</span>
-            <span>₹2,200 (Standard NABL + Cold-chain)</span>
-            <span>₹4,500 (Remote Expedited)</span>
-          </div>
-        </div>
-
-        <div class="calc-control-group">
-          <div class="calc-control-header">
-            <label>Testing &amp; Surveillance Frequency</label>
-            <span class="calc-badge" id="calcFreqVal">Monthly (12x / yr)</span>
-          </div>
-          <div class="calc-frequency-tabs">
-            <button type="button" class="freq-tab" data-freq="4" onclick="setFrequency(4, this)">Quarterly (4x/yr)</button>
-            <button type="button" class="freq-tab active" data-freq="12" onclick="setFrequency(12, this)">Monthly (12x/yr)</button>
-            <button type="button" class="freq-tab" data-freq="26" onclick="setFrequency(26, this)">Bi-Weekly (26x/yr)</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="calculator-results">
-        <div class="roi-summary-header">
-          <span class="roi-headline-label">ANNUAL DISTRICT TAXPAYER SAVINGS</span>
-          <div class="roi-headline-val" id="roiNetSavings">₹53.5 Lakhs</div>
-          <span class="roi-headline-pct" id="roiSavingsPct">81% Lower Than Centralized Laboratory Testing</span>
-        </div>
-
-        <div class="roi-metrics-grid">
-          <div class="roi-metric-card">
-            <span class="metric-k">TRADITIONAL LAB COST</span>
-            <span class="metric-v text-danger" id="roiTradCost">₹66.0 L / yr</span>
-            <span class="metric-sub">Sample transit &amp; ICP-MS fees</span>
-          </div>
-          <div class="roi-metric-card">
-            <span class="metric-k">AQUASENTRY TOTAL FLEET</span>
-            <span class="metric-v text-cyan" id="roiFleetCost">₹12.5 L / yr</span>
-            <span class="metric-sub">50 Patrol Nodes + Consumables</span>
-          </div>
-          <div class="roi-metric-card">
-            <span class="metric-k">BREAKEVEN TIMELINE</span>
-            <span class="metric-v text-safe" id="roiPayback">2.3 Months</span>
-            <span class="metric-sub">Full hardware Capex recovery</span>
-          </div>
-          <div class="roi-metric-card">
-            <span class="metric-k">EST. POPULATION MONITORED</span>
-            <span class="metric-v text-highlight" id="roiLives">125,000</span>
-            <span class="metric-sub">~500 residents / monitored source</span>
-          </div>
-        </div>
-
-        <!-- Comparative visual bar -->
-        <div class="comparison-bar-wrap">
-          <div class="comparison-labels">
-            <span>AquaSentry Autonomous Fleet Capex &amp; Opex</span>
-            <span>Traditional Courier &amp; Lab Delay (21-Day Lag)</span>
-          </div>
-          <div class="comparison-progress">
-            <div class="progress-fill aqua" id="progressAqua" style="width: 19%;">₹12.5L Fleet</div>
-            <div class="progress-fill trad" id="progressTrad" style="width: 81%;">₹53.5L Saved</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 4: Go-to-Market & Sales Channels -->
-  <section class="panel" id="section-channels">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">4. Go-to-Market &amp; Customer Acquisition Channels</span>
-        <p class="panel-intro">Multi-tiered strategy aligning with government water quality mandates and institutional buyers.</p>
-      </div>
-      <span class="panel-meta">DISTRIBUTION CHANNELS</span>
-    </div>
-
-    <div class="channel-grid">
-      <div class="channel-card jal-jeevan">
-        <span class="channel-badge badge-b2g">GOVERNMENT / B2G</span>
-        <h4>National Jal Jeevan Mission (Har Ghar Jal)</h4>
-        <p>The Ministry of Jal Shakti has allocated over <strong>₹67,000 Crores</strong>, extended through 2028, specifically focusing on water quality monitoring, field test kit upgrades, and surveillance across rural water supply schemes. The mission mandates eliminating subjective human error in colorimetric test strips—a mandate directly fulfilled by AquaSentry's <strong>AquaNet-V1 Edge Neural Network (99.7% Accuracy)</strong>.</p>
-        <div class="channel-stat">
-          <strong>Target:</strong> Capture 1.0%–1.5% of the Serviceable Available Market (SAM), delivering <strong>₹21–32 Crores</strong> in node deployments.
-        </div>
-      </div>
-
-      <div class="channel-card">
-        <span class="channel-badge badge-b2b">COMMERCIAL / B2B</span>
-        <h4>Aquaculture, Bottling &amp; Industrial Intake</h4>
-        <p>Fish hatcheries, shrimp farms, and food processing plants suffer severe yield loss from unmonitored heavy metals. AquaSentry nodes provide 24/7 autonomous intake monitoring at a fraction of laboratory contractor fees.</p>
-        <div class="channel-stat">
-          <strong>Target:</strong> ₹18,000–₹24,000 annual service contracts per facility with real-time intake cutoff integration.
-        </div>
-      </div>
-
-      <div class="channel-card urban">
-        <span class="channel-badge badge-b2b">URBAN HOUSING / HOAs</span>
-        <h4>Housing Societies &amp; Municipal Storage</h4>
-        <p>Urban apartment complexes in high-groundwater regions (Pune, Mumbai outskirts, Delhi NCR) pull from borewells with unverified arsenic concentrations. AquaSentry Mini provides overhead tank assurance.</p>
-        <div class="channel-stat">
-          <strong>Target:</strong> 25,000 urban residential nodes by Year 3 (5 nodes/society across 5,000 target complexes).
-        </div>
-      </div>
-
-      <div class="channel-card">
-        <span class="channel-badge badge-ngo">NGO &amp; PHILANTHROPIC</span>
-        <h4>Global Water NGOs &amp; Impact Grants</h4>
-        <p>Partnering with organizations like WaterAid, UNICEF, and Jal Seva to deploy autonomous screening boats in the Bengal Basin (West Bengal &amp; Bangladesh) where arsenicosis affects over 50 million people.</p>
-        <div class="channel-stat">
-          <strong>Target:</strong> Grant-funded bulk deployments mapping contiguous river basins with open data access.
-        </div>
-      </div>
-
-      <div class="channel-card edge-ai" style="grid-column: 1 / -1; border-left-color: var(--accent-cyan); background: rgba(0, 242, 254, 0.04);">
-        <span class="channel-badge badge-b2b" style="background: rgba(0, 242, 254, 0.15); color: var(--accent-cyan); border-color: rgba(0, 242, 254, 0.4);">TECHNOLOGICAL MOAT &amp; DEFENSIVE IP</span>
-        <h4>AquaNet-V1 Edge Neural Network (112 Synapses · 99.70% Benchmark)</h4>
-        <p>A fatal vulnerability of standard water testing field kits is <em>chemical cross-interference</em>: high phosphates, high TDS, and alkaline pH trigger high false-positive or false-negative strip discoloration. AquaSentry eliminates human subjective bias entirely by embedding an onboard <strong>5-8-6-4 Dense Feed-Forward Neural Network (23 Nodes, 112 Synapses)</strong> running microsecond edge inference on every ASV scan. With <strong>99.70% cross-validated accuracy</strong> across 8,000 augmented synthetic geochemical profiles, this neural intelligence forms our primary defensive software and IP moat against commoditized sensors and uncalibrated manual test kits.</p>
-        <div class="channel-stat" style="display: flex; gap: 16px; flex-wrap: wrap;">
-          <span><strong>Inference Latency:</strong> &lt;1.5 ms on edge MCU</span>
-          <span><strong>Topology:</strong> 5→8→6→4 (23 Nodes, 112 Synapses)</span>
-          <span><strong>Benchmark Validation:</strong> 99.70% across 8,000 profiles</span>
-          <span><strong>Multi-Covariance:</strong> As³⁺, pH, Cond, Turb, Temp</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 5: Multi-Phase Expansion Roadmap -->
-  <section class="panel" id="section-roadmap">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">5. Multi-Phase Expansion Roadmap (2026–2029)</span>
-        <p class="panel-intro">From localized pilot validation to nationwide saturation and Southeast Asian export.</p>
-      </div>
-      <span class="panel-meta">STRATEGIC PHASES</span>
-    </div>
-
-    <div class="timeline">
-      
-      <!-- Phase 1 -->
-      <div class="timeline-step">
-        <div class="timeline-marker"></div>
-        <div class="timeline-content">
-          <div class="timeline-phase">PHASE 1 · MONTHS 1–12</div>
-          <div class="timeline-title">Regional Validation &amp; District Agency Pilots</div>
-          <p class="timeline-desc">
-            Deploy 100 autonomous catamaran nodes across 10 high-risk water bodies and community lakes in Maharashtra and the Ganga-Brahmaputra belt. Correlate all voltammetric data against ICP-MS laboratory gold standards to achieve State Water and Sanitation Mission (SWSM) screening accreditation.
-          </p>
-          <div class="timeline-tags">
-            <span class="tag-pill">100 Pilot Nodes</span>
-            <span class="tag-pill">State SWSM Validation</span>
-            <span class="tag-pill">LoRa Shore Gateways</span>
-            <span class="tag-pill">Initial Revenue: ₹1.2 Cr</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Phase 2 -->
-      <div class="timeline-step">
-        <div class="timeline-marker"></div>
-        <div class="timeline-content">
-          <div class="timeline-phase">PHASE 2 · MONTHS 12–24</div>
-          <div class="timeline-title">Decentralized Production &amp; State Fleet Procurement</div>
-          <p class="timeline-desc">
-            Establish micro-manufacturing hubs employing local vocational workers at minimum wage standards, driving node build costs down to ₹2,800 ($29). Scale deployments to 10,000+ units across 5 states, directly integrating telemetry into the National Jal Jeevan Mission API.
-          </p>
-          <div class="timeline-tags">
-            <span class="tag-pill">10,000 Deployed Units</span>
-            <span class="tag-pill">Localized Manufacturing</span>
-            <span class="tag-pill">National Portal API</span>
-            <span class="tag-pill">Revenue: ₹12.32 Cr</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Phase 3 -->
-      <div class="timeline-step">
-        <div class="timeline-marker"></div>
-        <div class="timeline-content">
-          <div class="timeline-phase">PHASE 3 · MONTHS 24–36+</div>
-          <div class="timeline-title">Pan-India Saturation &amp; Southeast Asian Cross-Border Export</div>
-          <p class="timeline-desc">
-            Scale to 47,500+ active units. Begin cross-border commercial exports into Bangladesh, Nepal, Cambodia, and Vietnam—the Mekong and Red River basins face acute, documented groundwater arsenic poisoning. Launch domestic overhead in-tank consumer line.
-          </p>
-          <div class="timeline-tags">
-            <span class="tag-pill">47,500+ Fleet</span>
-            <span class="tag-pill">Bangladesh &amp; Mekong Export</span>
-            <span class="tag-pill">Household In-Tank Launch</span>
-            <span class="tag-pill">Target Net Profit: ₹35+ Cr</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Section 6: Modular Hardware & Future Expansion Scope -->
-  <section class="panel" id="section-modular">
-    <div class="panel-head">
-      <div>
-        <span class="panel-title">6. Modular Expansion &amp; Future Scope</span>
-        <p class="panel-intro">Three product directions mapped directly onto the existing MAS-G1 hardware platform.</p>
-      </div>
-      <span class="panel-meta">PRODUCT ROADMAP</span>
-    </div>
-
-    <p style="color: var(--text-secondary); margin-bottom: 20px;">
-      The AquaSentry platform is intentionally modular: the electrode, potentiostat, microfluidics, and radio stack operate independently. Extending capabilities does not require re-engineering the base vessel:
-    </p>
-
-    <div class="future-grid">
-      <div class="future-card">
-        <span class="future-badge">CONSUMER LINE</span>
-        <h4>Household In-Tank Version (AquaSentry Mini)</h4>
-        <p>The exact same voltammetric sensing chain scaled down into an ultra-compact immersion pod that hangs inside domestic overhead tanks and kitchen sumps. Provides real-time smartphone alerts before contaminated water is consumed.</p>
-        <div class="future-cost">
-          Build: ₹2,800 ($29) · Retail: ₹4,000 ($42)
-        </div>
-      </div>
-
-      <div class="future-card">
-        <span class="future-badge">DEEP HYDROLOGY</span>
-        <h4>Autonomous Lead-Screw Depth Profiling</h4>
-        <p>A motorized syringe driven by a precision lead screw draws water in to ballast and submerge the node down to 10m thermocline depths, pushing water out to resurface. Maps 3D vertical stratification of arsenic leaching from bottom sediments.</p>
-        <div class="future-cost">
-          Firmware &amp; Mechanical Add-On Module
-        </div>
-      </div>
-
-      <div class="future-card">
-        <span class="future-badge">MULTI-POLLUTANT</span>
-        <h4>Multi-Heavy-Metal Strip Swapping</h4>
-        <p>The LM358 potentiostat + ADS1115 ADC circuitry supports voltage ramps for Lead (Pb), Copper (Cu), Chromium (Cr), Nickel (Ni), and Zinc (Zn). Simply insert an analyte-specific strip into the existing chamber with zero circuit changes.</p>
-        <div class="future-cost">
-          Firmware Update + Consumable Cartridge
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <span>AQUASENTRY TECHNOLOGIES · COMMERCIAL EXPANSION STRATEGY</span>
-    <span>CONFIDENTIAL &amp; PROPRIETARY · 2026</span>
-  </footer>
-
-</div>
-
-<!-- Interactive Chart Scripts -->
-<script>
-  Chart.defaults.color = '#94a3b8';
-  Chart.defaults.font.family = "'Inter', sans-serif";
-
-  // 1. Sales & Revenue Projection Chart
-  const revCtx = document.getElementById('salesRevenueChart').getContext('2d');
-  new Chart(revCtx, {
-    type: 'bar',
-    data: {
-      labels: ['Year 1 (Pilot)', 'Year 2 (State)', 'Year 3 (Pan-India)'],
-      datasets: [
-        {
-          label: 'Hardware Fleet Sales (₹ Cr)',
-          data: [1.8, 14.5, 28.5],
-          backgroundColor: 'rgba(0, 242, 254, 0.8)',
-          borderRadius: 4
-        },
-        {
-          label: 'Monitoring SaaS (₹ Cr)',
-          data: [0.3, 3.2, 8.4],
-          backgroundColor: 'rgba(16, 185, 129, 0.85)',
-          borderRadius: 4
-        },
-        {
-          label: 'Consumables & Strips (₹ Cr)',
-          data: [0.1, 1.4, 4.2],
-          backgroundColor: 'rgba(245, 158, 11, 0.8)',
-          borderRadius: 4
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
-        y: { 
-          stacked: true, 
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { callback: v => '₹' + v + ' Cr' }
-        }
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } },
-        tooltip: {
-          callbacks: {
-            label: c => `${c.dataset.label}: ₹${c.raw} Crores`
-          }
-        }
-      }
-    }
-  });
-
-  // 2. Fleet Deployment Growth Chart
-  const fleetCtx = document.getElementById('deploymentFleetChart').getContext('2d');
-  new Chart(fleetCtx, {
-    type: 'line',
-    data: {
-      labels: ['Q1', 'Q2', 'Q3', 'Q4 (Y1)', 'Q6', 'Q8 (Y2)', 'Q10', 'Q12 (Y3)'],
-      datasets: [
-        {
-          label: 'Rural Water Nodes',
-          data: [25, 75, 250, 800, 3500, 10000, 16000, 22500],
-          borderColor: '#00f2fe',
-          backgroundColor: 'rgba(0, 242, 254, 0.1)',
-          fill: true,
-          tension: 0.35,
-          borderWidth: 2,
-          pointRadius: 3
-        },
-        {
-          label: 'Urban Housing Nodes',
-          data: [10, 40, 150, 500, 2500, 8000, 16000, 25000],
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          fill: true,
-          tension: 0.35,
-          borderWidth: 2,
-          pointRadius: 3
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } },
-        y: { 
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { callback: v => v.toLocaleString() + ' units' }
-        }
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
-      }
-    }
-  });
-</script>
-
-<script src="audio.js"></script>
-<script>
-  // Interactive District ROI & Impact Calculation Engine
-  let currentFreq = 12; // monthly tests per year per source
-
-  window.setFrequency = function(freq, btn) {
-    currentFreq = freq;
-    document.querySelectorAll('.freq-tab').forEach(t => t.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    const labels = { 4: 'Quarterly (4x/yr)', 12: 'Monthly (12x/yr)', 26: 'Bi-Weekly (26x/yr)' };
-    const badge = document.getElementById('calcFreqVal');
-    if (badge) badge.textContent = labels[freq] || `${freq}x / yr`;
-    if (window.AquaAudio) window.AquaAudio.playClick();
-    calculateROI();
-  };
-
-  window.calculateROI = function() {
-    const habitationsInput = document.getElementById('calcHabitations');
-    const courierCostInput = document.getElementById('calcCourierCost');
-    if (!habitationsInput || !courierCostInput) return;
-
-    const habitations = parseInt(habitationsInput.value, 10) || 250;
-    const courierCost = parseInt(courierCostInput.value, 10) || 2200;
-
-    const habBadge = document.getElementById('calcHabitationsVal');
-    if (habBadge) habBadge.textContent = `${habitations.toLocaleString()} Sources`;
-
-    const courierBadge = document.getElementById('calcCourierCostVal');
-    if (courierBadge) courierBadge.textContent = `₹${courierCost.toLocaleString()} / test`;
-
-    // 1. Traditional Centralized Lab Testing Cost:
-    const totalTradCost = habitations * currentFreq * courierCost;
-
-    // 2. AquaSentry Autonomous Patrol Fleet:
-    // 1 catamaran node patrols 5 contiguous sources on average
-    const nodesNeeded = Math.max(1, Math.ceil(habitations / 5));
-    // Average node Capex: ₹6,500
-    const nodeCapex = nodesNeeded * 6500;
-    // Consumable electrode strips: ₹5 per test (₹250/pack of 50)
-    const consumablesCost = habitations * currentFreq * 5;
-    // Cloud SaaS & monitoring telemetry: ₹99/mo (₹1,188/yr per node)
-    const saasCost = nodesNeeded * 1188;
-    const totalAquaCost = nodeCapex + consumablesCost + saasCost;
-
-    // 3. Financial Savings & Payback:
-    const netSavings = Math.max(0, totalTradCost - totalAquaCost);
-    const savingsPct = Math.round((netSavings / totalTradCost) * 100);
-
-    const monthlyTrad = totalTradCost / 12;
-    const monthlyAquaOpex = (consumablesCost + saasCost) / 12;
-    const monthlySavings = Math.max(1, monthlyTrad - monthlyAquaOpex);
-    const paybackMonths = (nodeCapex / monthlySavings).toFixed(1);
-
-    // 4. Community Health Impact:
-    const livesProtected = habitations * 500;
-
-    function fmtInr(val) {
-      if (val >= 10000000) {
-        return `₹${(val / 10000000).toFixed(2)} Cr`;
-      }
-      return `₹${(val / 100000).toFixed(1)} Lakhs`;
-    }
-
-    const netSavingsEl = document.getElementById('roiNetSavings');
-    if (netSavingsEl) netSavingsEl.textContent = fmtInr(netSavings);
-
-    const savingsPctEl = document.getElementById('roiSavingsPct');
-    if (savingsPctEl) savingsPctEl.textContent = `${savingsPct}% Lower Than Centralized Laboratory Testing`;
-
-    const tradCostEl = document.getElementById('roiTradCost');
-    if (tradCostEl) tradCostEl.textContent = `${fmtInr(totalTradCost)} / yr`;
-
-    const fleetCostEl = document.getElementById('roiFleetCost');
-    if (fleetCostEl) fleetCostEl.textContent = `${fmtInr(totalAquaCost)} / yr`;
-
-    const paybackEl = document.getElementById('roiPayback');
-    if (paybackEl) paybackEl.textContent = `${paybackMonths} Months`;
-
-    const livesEl = document.getElementById('roiLives');
-    if (livesEl) livesEl.textContent = livesProtected.toLocaleString();
-
-    // Visual Comparison Progress Fill:
-    const aquaPct = Math.min(95, Math.max(8, Math.round((totalAquaCost / totalTradCost) * 100)));
-    const tradPct = 100 - aquaPct;
-    const aquaBar = document.getElementById('progressAqua');
-    const tradBar = document.getElementById('progressTrad');
-    if (aquaBar && tradBar) {
-      aquaBar.style.width = `${aquaPct}%`;
-      aquaBar.textContent = `${fmtInr(totalAquaCost)} Fleet`;
-      tradBar.style.width = `${tradPct}%`;
-      tradBar.textContent = `${fmtInr(netSavings)} Saved`;
-    }
-  };
-
-  // Run on page load
-  document.addEventListener('DOMContentLoaded', function() {
-    calculateROI();
-  });
-</script>
-<!-- AI Agent Chat Widget -->
-<div id="chat-widget-container">
-    <button id="chat-toggle-btn" onclick="toggleChat()">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path>
-        </svg>
-    </button>
-    <div id="chat-window">
-        <div class="chat-header">
-            <h3>AquaSentry AI</h3>
-            <button class="close-btn" onclick="toggleChat()">&times;</button>
-        </div>
-        <div id="chat-messages-container" class="chat-messages">
-            <div class="chat-message bot-msg">Hello! I am the AquaSentry AI Agent. Ask me anything about our robot or water safety!</div>
-        </div>
-        <div class="chat-input-container">
-            <input type="text" id="chat-input-field" placeholder="Ask a question..." onkeypress="handleChatKeyPress(event)">
-            <button id="chat-send-btn" onclick="sendChatMessage()">Send</button>
-        </div>
-    </div>
-</div>
-<script src="chat.js"></script>
-<script src="sidebar.js"></script>
-
+  <button class="chat-fab" id="chatFab" type="button" data-i18n-aria="chat.open" aria-label="Ask the water assistant" aria-controls="chatPanel" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg></button>
+  <div class="chat-panel" id="chatPanel" role="dialog" aria-labelledby="chatTitle" hidden>
+    <div class="chat-head"><h2 id="chatTitle" data-i18n="chat.title">Water quality assistant</h2><button class="icon-btn" type="button" id="chatClose" data-i18n-aria="chat.close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="chat-log" id="chatLog" aria-live="polite"></div>
+    <form class="chat-form" id="chatForm"><input type="text" id="chatInput" autocomplete="off" data-i18n-placeholder="chat.placeholder"><button class="btn btn-primary" type="submit" data-i18n="chat.send">Send</button></form>
+  </div>
+  <script src="i18n.js"></script>
+  <script src="i18n-v5.js"></script>
+  <script src="i18n-pages.js"></script>
+  <script src="shell.js"></script>
+  <script src="charts.js"></script>
+  <script src="pages.js"></script>
 </body>
 </html>

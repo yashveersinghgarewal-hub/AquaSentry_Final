@@ -180,6 +180,7 @@
         if (last) { fillOp = res.probs[i]; cls += ' n-out n-' + CLASSES[i]; }
         else if (li === 0) { fillOp = 0.15 + 0.5 * Math.min(1, Math.abs(acts[i]) / 2); }
         else { fillOp = m ? Math.min(1, acts[i] / m) : 0; }
+        g.appendChild(el('circle', { cx: p.x, cy: p.y, r: last ? 14 : r(li), class: 'n-bg' }));
         const c = el('circle', { cx: p.x, cy: p.y, r: last ? 14 : r(li), class: cls, 'fill-opacity': fillOp.toFixed(2) });
         const title = el('title', {}, last ? `${t('class.' + CLASSES[i])}: ${(res.probs[i] * 100).toFixed(1)}%` : `${acts[i].toFixed(3)}`);
         c.appendChild(title);

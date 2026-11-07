@@ -93,14 +93,18 @@ This is the brain of the web platform. Requests come in through `main.py`, get v
 
 | File | What it does |
 | --- | --- |
-| `index.html` | The single-page dashboard: hero status card, simulator, voltammetry panel, neural-network panel, contaminants, methods, ROI calculator, sales and market sections. |
-| `script.js` | Main controller. Polls `/api/dashboard/latest` and `/api/stats`, renders the status card, loads the analyte catalogue, runs a simulated scan (asks the API for a synthetic trace then processes it), exports CSV, and runs the ROI calculator in rupees. |
-| `neural.js` | **AquaNet-V1 in JavaScript.** Runs the same network in the browser, draws the 23 nodes and their connections as an SVG, lights up neurons by activation strength, and lets you drag sliders or pick presets. Same file as `Neural_Network/aquanet_neural.js`. |
-| `chat.js`, `chat.css` | The chat bubble; sends your message to `/api/chat`. |
-| `sidebar.js`, `sidebar.css` | Navigation rail, mobile drawer, light/dark theme toggle. |
-| `audio.js` | Optional gentle sounds (off by default) made with the Web Audio API. |
-| `style.css`, `styleguide.html`, `manifest.json` | Styling, a colour/type reference page, and the installable-app (PWA) manifest. |
-| `market-research.html`, `sales-expansion.html` | Business pages; no project logic. |
+| `index.html` | Live dashboard (v5): verdict with water-caustics effect and arsenic gauge, "what to do if arsenic is high", contact local authorities (incident report + directory), test a sample, AquaNet panel, 3D device viewer, contaminants, standards and methods, impact, report. |
+| `app.js` | Dashboard controller: readings, voltammetry maths (same as the server), AquaNet panel, incident report (email / copy / share / print) and saved local contacts, 3D viewer, CSV export. |
+| `shell.js` | Shared by every page: theme, mobile menu, sliding nav highlight, server connection pill, chat assistant, scroll reveal, cursor spotlight, 3D tilt, number counters, WebGL water shader. |
+| `app.css` | The one design system for all pages (carbon black + light theme, glass cards, gradients, animations). |
+| `neural.js` | AquaNet V1 and V3 in JavaScript; draws the network as SVG. |
+| `i18n.js`, `i18n-v5.js`, `i18n-pages.js` | English and Hindi text for the dashboard, new sections and project pages. |
+| `charts.js` | Small offline SVG chart library (bar, line, donut, sparkline). |
+| `device3d.js`, `device3d-data.js` | WebGL viewer of the real enclosure STL files (shell, lid, sample well, strainer) with an exploded view. |
+| `globe.js` | Rotating dotted globe with priority arsenic regions (market page). |
+| `market-research.html`, `sales-expansion.html`, `pages.js` | Market research (charts, competitor table, globe) and sales & expansion (revenue charts, ROI calculator, roadmap). |
+| `device-simulator.html`, `mas-g1-display.html` | Handheld MAS-G1 meter screen simulator (import real CSV scans and calibration). |
+| `legacy_v1/` | The original v1 dashboard, kept for reference. |
 
 ### Hardware link — `AquaSentry_Platform/bridge/` and `Firmware/`
 

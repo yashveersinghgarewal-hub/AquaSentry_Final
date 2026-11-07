@@ -450,6 +450,7 @@
   function apply(root) {
     const scope = root || document;
     scope.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
+    scope.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
     scope.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder'))); });
     scope.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
     scope.querySelectorAll('[data-i18n-title]').forEach((el) => { el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
@@ -467,7 +468,10 @@
     document.dispatchEvent(new CustomEvent('aquasentry:lang', { detail: { lang } }));
   }
 
-  window.I18N = { t, apply, setLang, get lang() { return current; }, languages: Object.keys(STRINGS) };
+  /** Add or override strings (used by i18n-v5.js and the project pages). */
+  function extend(lang, dict) { STRINGS[lang] = Object.assign(STRINGS[lang] || {}, dict); }
+
+  window.I18N = { t, apply, setLang, extend, get lang() { return current; }, languages: Object.keys(STRINGS) };
 
   document.addEventListener('DOMContentLoaded', () => {
     apply();

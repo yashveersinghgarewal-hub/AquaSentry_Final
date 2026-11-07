@@ -1,5 +1,14 @@
 # Changelog
 
+## v5 — new UI across every page
+- **One design system for every page** (`frontend/app.css` + `frontend/shell.js`): carbon-black glass UI with aqua gradients, light theme, English/Hindi on every page, same sidebar, top bar and assistant everywhere.
+- **Brought back from the original UI:** "What to do if arsenic is high" (4-step public-health protocol, filter options, health note), **Contact local authorities** (auto-filled incident report you can email, copy, share or print; directory: Gram Panchayat/VWSC, district water department, Jal Jeevan Mission Citizen Corner, CPGRAMS, 108/112; local contacts saved on the device), catamaran robot knowledge base, scientific disclosure, impact numbers, **market research graphs**, **sales graphs**, **ROI calculator**, competitor comparison, roadmap and the **device simulator**.
+- **Effects:** WebGL water-caustics hero that changes colour with the verdict, animated gauge, glowing nav highlight, cursor spotlight cards, 3D tilt, number counters, scroll reveal, drawn-in charts, rotating dotted globe, and an **interactive 3D model of the real enclosure** (from `models_3d/*.stl`) with an exploded view. All offline, and turned down for users who prefer reduced motion.
+- `market-research.html` and `sales-expansion.html` were broken (their style files no longer existed); both rebuilt. Chart.js from the internet replaced by a small offline chart library (`charts.js`).
+- The device simulator (`website`, a file with no extension that the server downloaded instead of showing) is now `device-simulator.html`.
+- Fixed: "Load demo data" with the server running looked for the wrong device and fell back to local demo data.
+- AquaNet, firmware, server API and tests unchanged (110 tests pass).
+
 ## v4.1 — adaptive re-scanning on the ESP32
 - The ESP32 takes 3 scans, then 3 more (up to 9) only while the arsenic reading is within 2 standard errors of 10 / 50 / 150 µg/L. Simulated overall accuracy 93.4% → 94.6%; dangerous samples missed 1,755 → 1,508 (out of 200,000); about 1.5× the average scan time instead of 3× for always doing 9 scans.
 - 2 new tests check the firmware rule against the training code (110 tests).

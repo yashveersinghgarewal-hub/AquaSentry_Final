@@ -4,11 +4,19 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 | Part | Folder | What it does |
 | --- | --- | --- |
-| Web platform + dashboard | `AquaSentry_Platform/` | FastAPI server, SQLite database, dashboard in English and Hindi (carbon-black or light theme), PDF screening reports |
+| Web platform + dashboard | `AquaSentry_Platform/` | FastAPI server, SQLite database, PDF screening reports, and the v5 UI: live dashboard (what to do if arsenic is high, contact local authorities, 3D device model), market research, sales & ROI calculator and a device simulator — English/Hindi, carbon-black or light, works offline |
 | ESP32 firmware | `Firmware/esp32_firmware/` | Runs the voltammetry scan (3 scans, up to 9 when a reading is close to a limit), runs AquaNet-V3 on the chip, sends readings to the server over Wi-Fi |
 | Neural network | `Neural_Network/` | AquaNet-V1 (original), V2 and V3 (current) + training code in `v3_training/` |
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
+
+## Screenshots
+
+| Live dashboard | Contact local authorities |
+| --- | --- |
+| ![Dashboard](Docs/screenshots/dashboard.jpg) | ![Authorities](Docs/screenshots/authorities.jpg) |
+| **3D device model** | **Market research** |
+| ![3D device](Docs/screenshots/device-3d.jpg) | ![Market research](Docs/screenshots/market.jpg) |
 
 ## Quick start
 

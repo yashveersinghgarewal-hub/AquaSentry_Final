@@ -1,6 +1,6 @@
-# AquaSentry v4.1 — what's new and how to run it
+# AquaSentry v5 — what's new and how to run it
 
-This package replaces `AquaSentry.zip`, `AquaSentry_v2.zip`, `AquaSentry_v3.zip`, `AquaSentry_v3.1.zip` and `AquaSentry_v4.zip`. Use this one. What changed in each version: **`CHANGELOG.md`**. The v3 error fixes, with file and line: **`FIXES_v3.md`**.
+This package replaces `AquaSentry.zip`, `AquaSentry_v2.zip`, `AquaSentry_v3.zip`, `AquaSentry_v3.1.zip`, `AquaSentry_v4.zip` and `AquaSentry_v4.1.zip`. Use this one. What changed in each version: **`CHANGELOG.md`**. The v3 error fixes, with file and line: **`FIXES_v3.md`**.
 
 ## How to run the desktop app (Windows)
 
@@ -27,6 +27,20 @@ If the window doesn't open (for example, Microsoft Edge WebView2 is missing), ru
    - **AquaSentry: Desktop app** — its own window
    - **AquaSentry: Open in browser**
    - **AquaSentry: Server only (port 8000)** — then open http://localhost:8000
+
+## What changed in v5 (compared with v4.1) — the new UI
+
+| Page | What you get |
+| --- | --- |
+| Live dashboard (`index.html`) | Verdict card with a live water effect that changes colour, arsenic gauge, alert banner, **what to do if arsenic is high**, **contact local authorities** (ready-made incident report: email / copy / share / print, plus who to contact), test a sample, AquaNet, **3D model of the device** (drag to rotate, "Explode view"), contaminants, standards and methods, impact numbers, report. |
+| Market research | Market-size globe, unit economics, Year-1 profit chart, competitor table (AquaSentry vs AccuSense vs lab vs field kits), market-size donut, trends, priority regions. |
+| Sales & expansion | Revenue model, revenue and fleet charts, **ROI calculator**, go-to-market channels, technology moat, 3-phase roadmap, future hardware. |
+| Device simulator | The MAS-G1 meter screen; import real CSV scans and calibration. |
+
+Every page has the same sidebar, theme switch (carbon black / light), English–हिन्दी switch and assistant, and works offline. Your local water-department phone and email can be saved under *Contact authorities → Your local contacts*; they stay on that device only.
+
+**Files:** new `shell.js`, `charts.js`, `device3d.js`, `device3d-data.js`, `globe.js`, `pages.js`, `i18n-v5.js`, `i18n-pages.js`, `device-simulator.html`, `mas-g1-display.html`, fonts Sora + JetBrains Mono; rewritten `index.html`, `app.js`, `app.css`, `market-research.html`, `sales-expansion.html`; small additions to `i18n.js` and `neural.js`; removed `website` (now `device-simulator.html`); new `scripts/stl_to_js.py`.
+**Not changed:** AquaNet weights, firmware, server API, database, tests.
 
 ## What changed in v4.1 (compared with v4)
 

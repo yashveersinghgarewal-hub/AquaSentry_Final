@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0F0F0F">
+  <meta name="theme-color" content="#050708">
   <title>AquaSentry — Water Safety Monitor</title>
   <meta name="description" content="AquaSentry arsenic water safety dashboard with the AquaNet neural network, in English and Hindi.">
   <link rel="manifest" href="manifest.json">
@@ -17,29 +17,34 @@
   </script>
 </head>
 <body>
-  <a class="skip" href="#main" data-i18n="nav.overview">Overview</a>
+  <a class="skip" href="#main" data-i18n="nav.skip">Skip to content</a>
 
   <aside class="rail" id="rail" aria-label="Main navigation">
-    <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C11 10 7 15 7 20a9 9 0 0 0 18 0c0-5-4-10-9-17Z" fill="currentColor"/><path d="M11.5 21.5a4.5 4.5 0 0 0 4.5 4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-      <div>
-        <div class="brand-name" data-i18n="app.title">AquaSentry</div>
-        <div class="brand-tag" data-i18n="app.tagline">Arsenic water safety monitor</div>
-      </div>
-    </div>
-    <nav class="nav">
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C11 10 7 15 7 20a9 9 0 0 0 18 0c0-5-4-10-9-17Z" fill="currentColor"/><path d="M11.5 21.5a4.5 4.5 0 0 0 4.5 4" stroke="#0b1418" stroke-opacity=".55" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
+      <span><span class="brand-name" data-i18n="app.title">AquaSentry</span><br><span class="brand-tag" data-i18n="app.tagline">Arsenic water safety monitor</span></span>
+    </a>
+    <nav class="nav-group" aria-labelledby="navWater">
+      <div class="nav-label" id="navWater" data-i18n="nav.group.water">Water safety</div>
+      <span class="nav-lime" aria-hidden="true"></span>
       <a href="#overview" class="nav-link" data-section="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-3.5 5-6 8.5-6 11.5a6 6 0 0 0 12 0C18 11.5 15.5 8 12 3Z"/></svg><span data-i18n="nav.overview">Overview</span></a>
+      <a href="#action" class="nav-link" data-section="action"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg><span data-i18n="nav.action">If arsenic is high</span></a>
+      <a href="#authorities" class="nav-link" data-section="authorities"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg><span data-i18n="nav.authorities">Contact authorities</span></a>
       <a href="#test" class="nav-link" data-section="test"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/></svg><span data-i18n="nav.test">Test a sample</span></a>
       <a href="#network" class="nav-link" data-section="network"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="7" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="19" cy="17" r="2"/><path d="M7 7.8l3.2 3M7 16.2l3.2-3M13.8 11l3.4-3M13.8 13l3.4 3"/></svg><span data-i18n="nav.network">AquaNet model</span></a>
+      <a href="#device" class="nav-link" data-section="device"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span data-i18n="nav.device">Device &amp; robot</span></a>
       <a href="#contaminants" class="nav-link" data-section="contaminants"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="14" cy="16" r="3.5"/></svg><span data-i18n="nav.contaminants">Contaminants</span></a>
-      <a href="#standards" class="nav-link" data-section="standards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span data-i18n="nav.standards">Standards</span></a>
+      <a href="#standards" class="nav-link" data-section="standards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span data-i18n="nav.standards">Standards &amp; methods</span></a>
+      <a href="#impact" class="nav-link" data-section="impact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span data-i18n="nav.impact">Impact &amp; market</span></a>
       <a href="#report" class="nav-link" data-section="report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span data-i18n="nav.report">Report</span></a>
     </nav>
-    <div class="rail-foot">
-      <div class="rail-label" data-i18n="nav.more">Project pages</div>
-      <a href="market-research.html" class="rail-sub" data-i18n="nav.market">Market research</a>
-      <a href="sales-expansion.html" class="rail-sub" data-i18n="nav.sales">Expansion plan</a>
-    </div>
+    <nav class="nav-group" aria-labelledby="navProject">
+      <div class="nav-label" id="navProject" data-i18n="nav.more">Project pages</div>
+      <a href="market-research.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span data-i18n="nav.market">Market research</span></a>
+      <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
+      <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
+    </nav>
+    <div class="rail-foot"><b>AquaSentry v5</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -64,29 +69,67 @@
     </header>
 
     <main id="main">
-      <!-- OVERVIEW -->
+      <!-- ============ OVERVIEW ============ -->
       <section class="section" id="overview" aria-labelledby="ovHeading">
-        <div class="section-head">
-          <h1 id="ovHeading" data-i18n="ov.heading">Is this water safe?</h1>
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="ov.eyebrow">Live water check</span>
+          <h1 id="ovHeading"><span data-i18n="ov.heading">Is this water safe?</span></h1>
           <p class="meta" id="ovMeta"></p>
         </div>
 
-        <div class="verdict" id="verdict" data-tone="none" aria-live="polite">
-          <div class="verdict-text">
-            <div class="verdict-icon" id="verdictIcon" aria-hidden="true"></div>
-            <div>
-              <h2 class="verdict-title" id="verdictTitle" data-i18n="verdict.none.title">No reading yet</h2>
-              <p class="verdict-action" id="verdictAction" data-i18n="verdict.none.action">Load demo data or test a sample to see a result.</p>
+        <div class="alert-banner" id="alertBanner" hidden role="status">
+          <div class="ab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg></div>
+          <div style="flex:1"><b id="alertTitle"></b><span id="alertText"></span></div>
+          <a class="btn btn-danger" href="#action" id="alertBtn1" data-i18n="alert.steps">What to do</a>
+          <a class="btn btn-quiet" href="#authorities" id="alertBtn2" data-i18n="alert.report">Alert authorities</a>
+        </div>
+
+        <div class="hero">
+          <div class="verdict beam" id="verdict" data-tone="none" aria-live="polite" data-reveal>
+            <span class="beam-ring" aria-hidden="true"></span>
+            <canvas class="fx" id="heroFx" aria-hidden="true"></canvas>
+            <div class="verdict-top">
+              <span class="verdict-badge" id="verdictBadge" data-i18n="verdict.badge.none">Waiting</span>
+              <span class="meta mono" id="verdictTime"></span>
+            </div>
+            <div class="verdict-main">
+              <div class="verdict-icon" id="verdictIcon" aria-hidden="true"></div>
+              <div>
+                <h2 class="verdict-title" id="verdictTitle" data-i18n="verdict.none.title">No reading yet</h2>
+                <p class="verdict-action" id="verdictAction" data-i18n="verdict.none.action">Load demo data or test a sample to see a result.</p>
+              </div>
+            </div>
+            <div class="verdict-figure">
+              <div>
+                <div class="fig-label" data-i18n="ov.arsenic">Arsenic</div>
+                <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
+              </div>
+              <div class="fig-sub" id="asMgl"></div>
             </div>
           </div>
-          <div class="verdict-figure">
-            <div class="fig-label" data-i18n="ov.arsenic">Arsenic</div>
-            <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
-            <div class="fig-sub" id="asMgl"></div>
+
+          <div class="card gauge-card spot" data-reveal style="--d:120ms">
+            <div class="ring" id="ring">
+              <svg viewBox="0 0 240 240" aria-hidden="true">
+                <defs><linearGradient id="ringGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#34D399"/><stop offset="45%" stop-color="#FBBF24"/><stop offset="75%" stop-color="#FB923C"/><stop offset="100%" stop-color="#F43F5E"/></linearGradient></defs>
+                <g id="ringBands"></g>
+                <path class="ring-track" id="ringTrack"/>
+                <path class="ring-val" id="ringVal"/>
+                <g id="ringTicks"></g>
+              </svg>
+              <div class="ring-center"><div class="big mono" id="ringNum">–</div><div class="small" data-i18n="ring.unit">µg/L arsenic</div></div>
+            </div>
+            <button class="btn btn-primary btn-wide" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
+            <div class="quick" style="justify-content:center">
+              <span data-i18n="ov.quick">Try a sample:</span>
+              <button class="chip" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
+              <button class="chip" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
+              <button class="chip" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
+            </div>
           </div>
         </div>
 
-        <figure class="strip" aria-labelledby="stripCaption">
+        <figure class="strip card pad" aria-labelledby="stripCaption" data-reveal>
           <div class="strip-track">
             <div class="strip-seg seg-safe"><span data-i18n="class.Safe">Safe</span></div>
             <div class="strip-seg seg-caution"><span data-i18n="class.Caution">Caution</span></div>
@@ -105,37 +148,149 @@
         </figure>
 
         <div class="ov-lower">
-          <div class="why" id="whyBox" hidden>
+          <div class="card pad why spot" id="whyBox" data-reveal>
             <h3 data-i18n="ov.why">Why this result</h3>
-            <ul id="whyList"></ul>
+            <ul id="whyList"><li data-i18n="ov.why.empty">Run a test to see the reasons behind the verdict.</li></ul>
             <p class="lab-note" id="labNote" hidden data-i18n="ov.labNote"></p>
           </div>
-          <div class="ov-actions">
-            <button class="btn btn-primary" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
-            <div class="quick">
-              <span data-i18n="ov.quick">Try a sample:</span>
-              <button class="btn btn-quiet" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
-              <button class="btn btn-quiet" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
-              <button class="btn btn-quiet" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
-            </div>
+          <div data-reveal style="--d:100ms">
+            <h2 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h2>
+            <div class="readings-grid" id="readingsGrid"></div>
+            <p class="device-line" id="deviceLine"></p>
           </div>
-        </div>
-
-        <div class="readings" aria-labelledby="readHeading">
-          <h2 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h2>
-          <div class="readings-grid" id="readingsGrid"></div>
-          <p class="device-line" id="deviceLine"></p>
         </div>
       </section>
 
-      <!-- TEST A SAMPLE -->
+      <!-- ============ IF ARSENIC IS HIGH ============ -->
+      <section class="section" id="action" aria-labelledby="actHeading">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow warn" data-i18n="act.eyebrow">Public health protocol</span>
+          <h2 id="actHeading" data-i18n="act.heading">What to do if arsenic is high</h2>
+          <p class="lede" data-i18n="act.intro"></p>
+        </div>
+        <div class="protocol">
+          <article class="card proto danger spot tilt" data-reveal>
+            <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10l-1 7a4 4 0 0 1-8 0Z"/><path d="M4 4l16 16"/></svg></span>
+            <div class="proto-n">01</div><h3 data-i18n="act.s1.t">Stop drinking or cooking with it</h3><p data-i18n="act.s1.d"></p>
+          </article>
+          <article class="card proto danger spot tilt" data-reveal style="--d:80ms">
+            <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3Z"/><path d="M8 8c0-2 2-2 2-4M12 8c0-2 2-2 2-4"/><path d="M3 3l18 18"/></svg></span>
+            <div class="proto-n">02</div><h3 data-i18n="act.s2.t">Do not boil it</h3><p data-i18n="act.s2.d"></p>
+          </article>
+          <article class="card proto spot tilt" data-reveal style="--d:160ms">
+            <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2M9 12h6"/></svg></span>
+            <div class="proto-n">03</div><h3 data-i18n="act.s3.t">Washing and cleaning are still fine</h3><p data-i18n="act.s3.d"></p>
+          </article>
+          <article class="card proto spot tilt" data-reveal style="--d:240ms">
+            <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span>
+            <div class="proto-n">04</div><h3 data-i18n="act.s4.t">Tell the local authorities</h3><p data-i18n="act.s4.d"></p>
+            <a href="#authorities" class="btn btn-quiet" style="justify-self:start;margin-top:4px" data-i18n="act.s4.btn">Open the report</a>
+          </article>
+        </div>
+
+        <h3 class="h-sub" style="margin-top:34px" data-reveal data-i18n="treat.heading">Safe water options</h3>
+        <div class="treat">
+          <article class="card treat-card spot" data-reveal>
+            <span class="tag active" data-i18n="treat.rec">Recommended</span>
+            <h4 data-i18n="treat.alumina.t">Activated alumina / iron-oxide filter</h4>
+            <p data-i18n="treat.alumina.d"></p>
+            <div class="meter-l"><span data-i18n="treat.cost">Cost</span><span data-i18n="treat.low">Low</span></div>
+            <div class="meter"><i class="on"></i><i></i><i></i><i></i></div>
+          </article>
+          <article class="card treat-card spot" data-reveal style="--d:80ms">
+            <span class="tag tone-caution" data-i18n="treat.higher">Higher cost</span>
+            <h4 data-i18n="treat.ro.t">Reverse osmosis (RO)</h4>
+            <p data-i18n="treat.ro.d"></p>
+            <div class="meter-l"><span data-i18n="treat.cost">Cost</span><span data-i18n="treat.high">High</span></div>
+            <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          </article>
+          <article class="card treat-card spot" data-reveal style="--d:160ms">
+            <span class="tag" data-i18n="treat.now">Right now</span>
+            <h4 data-i18n="treat.alt.t">Switch to a tested source</h4>
+            <p data-i18n="treat.alt.d"></p>
+            <div class="meter-l"><span data-i18n="treat.cost">Cost</span><span data-i18n="treat.varies">Varies</span></div>
+            <div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+          </article>
+        </div>
+        <p class="callout" style="margin-top:16px" data-reveal><b data-i18n="act.health.t">Health:</b> <span data-i18n="act.health.d"></span></p>
+      </section>
+
+      <!-- ============ CONTACT AUTHORITIES ============ -->
+      <section class="section" id="authorities" aria-labelledby="authHeading">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="auth.eyebrow">Surveillance dispatch</span>
+          <h2 id="authHeading" data-i18n="auth.heading">Contact local authorities</h2>
+          <p class="lede" data-i18n="auth.intro"></p>
+        </div>
+        <div class="split">
+          <div data-reveal>
+            <article class="card dispatch">
+              <div class="dispatch-head">
+                <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span data-i18n="auth.report.t">Water quality incident report</span></h3>
+                <span class="tag" id="dispatchStatus" data-i18n="auth.status.none">No reading</span>
+              </div>
+              <dl class="dispatch-body" id="dispatchBody"></dl>
+              <div class="dispatch-actions">
+                <a class="btn btn-primary" id="dEmail" href="#"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3z"/><path d="m3 7 9 6 9-6"/></svg><span data-i18n="auth.email">Email report</span></a>
+                <button class="btn btn-quiet" type="button" id="dCopy"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg><span data-i18n="auth.copy">Copy text</span></button>
+                <button class="btn btn-quiet" type="button" id="dShare" hidden><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><span data-i18n="auth.share">Share</span></button>
+                <button class="btn btn-quiet" type="button" id="dPrint"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/></svg><span data-i18n="auth.print">Print / PDF</span></button>
+              </div>
+              <p class="dispatch-msg" id="dispatchMsg" role="status"></p>
+            </article>
+            <details class="card" style="margin-top:14px" id="contactsBox">
+              <summary data-i18n="auth.mine.t">Your local contacts (saved on this device)</summary>
+              <div class="details-body">
+                <p class="muted" style="font-size:.92rem" data-i18n="auth.mine.d"></p>
+                <div class="contacts-form">
+                  <label><span data-i18n="auth.mine.office">Water department office</span><input class="text-in" id="cOffice" autocomplete="organization"></label>
+                  <label><span data-i18n="auth.mine.phone">Phone</span><input class="text-in" id="cPhone" type="tel" autocomplete="tel"></label>
+                  <label><span data-i18n="auth.mine.email">Email</span><input class="text-in" id="cEmail" type="email" autocomplete="email"></label>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:12px;align-items:center"><button class="btn btn-quiet" type="button" id="cSave" data-i18n="auth.mine.save">Save contacts</button><span class="muted" id="cSaved" style="font-size:.9rem"></span></div>
+              </div>
+            </details>
+          </div>
+
+          <div class="dir" data-reveal style="--d:100ms">
+            <article class="card dir-item spot">
+              <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/></svg></span>
+              <div><h4 data-i18n="dir.vwsc.t">Gram Panchayat / Village Water &amp; Sanitation Committee</h4><p data-i18n="dir.vwsc.d"></p></div>
+              <div class="dir-act"><a class="btn btn-quiet" id="dirCallLocal" href="#authorities" data-i18n="dir.call">Call</a></div>
+            </article>
+            <article class="card dir-item spot">
+              <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3c-3.5 5-6 8.5-6 11.5a6 6 0 0 0 12 0C18 11.5 15.5 8 12 3Z"/><path d="M9.5 15a2.5 2.5 0 0 0 2.5 2.5"/></svg></span>
+              <div><h4 data-i18n="dir.phed.t">District water supply department (PHED / Rural Water Supply)</h4><p data-i18n="dir.phed.d"></p></div>
+              <div class="dir-act"><a class="btn btn-quiet" id="dirEmailLocal" href="#authorities" data-i18n="dir.email">Email</a></div>
+            </article>
+            <article class="card dir-item spot">
+              <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9"/></svg></span>
+              <div><h4 data-i18n="dir.jjm.t">Jal Jeevan Mission — Citizen Corner</h4><p data-i18n="dir.jjm.d"></p></div>
+              <div class="dir-act"><a class="btn btn-quiet" href="https://ejalshakti.gov.in/jjm/citizen_corner/villageinformation.aspx" target="_blank" rel="noopener" data-i18n="dir.open">Open</a></div>
+            </article>
+            <article class="card dir-item spot">
+              <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4Z"/><path d="M8 9h8M8 12h5"/></svg></span>
+              <div><h4 data-i18n="dir.cpgrams.t">CPGRAMS — national grievance portal</h4><p data-i18n="dir.cpgrams.d"></p></div>
+              <div class="dir-act"><a class="btn btn-quiet" href="https://pgportal.gov.in/" target="_blank" rel="noopener" data-i18n="dir.open">Open</a></div>
+            </article>
+            <article class="card dir-item emergency spot">
+              <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></span>
+              <div><h4 data-i18n="dir.emg.t">Someone feels unwell</h4><p data-i18n="dir.emg.d"></p></div>
+              <div class="dir-act"><a class="btn btn-danger" href="tel:108">108</a><a class="btn btn-quiet" href="tel:112">112</a></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TEST A SAMPLE ============ -->
       <section class="section" id="test" aria-labelledby="testHeading">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="test.eyebrow">Anodic stripping voltammetry</span>
           <h2 id="testHeading" data-i18n="test.heading">Test a sample</h2>
           <p class="lede" data-i18n="test.intro"></p>
         </div>
         <div class="test-grid">
-          <div class="test-controls">
+          <div class="card test-controls spot" data-reveal>
             <h3 class="h-small" data-i18n="test.steps">What the device does</h3>
             <ol class="steps">
               <li data-i18n="test.step1"></li>
@@ -151,8 +306,8 @@
             <button class="btn btn-primary btn-wide" type="button" id="runTestBtn" data-i18n="test.run">Run test</button>
             <p class="status-msg" id="testMsg" role="status"></p>
           </div>
-          <div class="test-output">
-            <div class="chart-box">
+          <div class="test-output" data-reveal style="--d:100ms">
+            <div class="card chart-box">
               <svg id="vgChart" viewBox="0 0 640 340" role="img" aria-label="Voltammogram"></svg>
               <div class="legend">
                 <span class="lg lg-raw" data-i18n="test.chart.raw">Raw signal</span>
@@ -160,7 +315,7 @@
                 <span class="lg lg-base" data-i18n="test.chart.base">Baseline</span>
               </div>
             </div>
-            <dl class="results" id="testResults">
+            <dl class="card results" id="testResults">
               <div><dt data-i18n="test.peak">Peak current</dt><dd id="trPeak">–</dd></div>
               <div><dt data-i18n="test.position">Peak position</dt><dd id="trPos">–</dd></div>
               <div><dt data-i18n="test.snr">Signal-to-noise</dt><dd id="trSnr">–</dd></div>
@@ -171,13 +326,14 @@
         </div>
       </section>
 
-      <!-- AQUANET -->
+      <!-- ============ AQUANET ============ -->
       <section class="section" id="network" aria-labelledby="nnHeading">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="nn.eyebrow">Neural network · runs on the ESP32</span>
           <h2 id="nnHeading" data-i18n="nn.heading">AquaNet model</h2>
           <p class="lede" data-i18n="nn.intro"></p>
         </div>
-        <div class="nn-model">
+        <div class="nn-model" data-reveal>
           <span class="nn-model-label" data-i18n="nn.model">Model</span>
           <div class="seg" role="group" aria-label="Model">
             <button type="button" data-model="v3" aria-pressed="true" data-i18n="nn.v3">V3 (trained)</button>
@@ -186,7 +342,7 @@
           <p class="nn-model-note" id="nnModelNote"></p>
         </div>
         <div class="nn-grid">
-          <div class="nn-inputs">
+          <div class="card nn-inputs spot" data-reveal>
             <label class="field"><span class="field-row"><span data-i18n="nn.as">Arsenic</span><output id="nnOutAs"></output></span><input type="range" id="nnAs" min="0" max="0.3" step="0.001" value="0.035"></label>
             <label class="field"><span class="field-row"><span data-i18n="nn.ph">pH</span><output id="nnOutPh"></output></span><input type="range" id="nnPh" min="4.5" max="10.5" step="0.05" value="7.3"></label>
             <label class="field"><span class="field-row"><span data-i18n="nn.ec">Conductivity</span><output id="nnOutEc"></output></span><input type="range" id="nnEc" min="50" max="3500" step="10" value="420"></label>
@@ -200,37 +356,65 @@
               <button class="chip" type="button" data-preset="0.22,5.8,1250,18,31" data-i18n="nn.p.ind">Industrial runoff</button>
             </div>
           </div>
-          <div class="nn-picture">
+          <div class="card nn-picture" data-reveal style="--d:100ms">
             <svg id="nnSvg" viewBox="0 0 720 420" role="img" aria-label="AquaNet network diagram"></svg>
             <p class="nn-legend" data-i18n="nn.legend"></p>
             <p class="nn-stats" id="nnStats"></p>
           </div>
         </div>
         <div class="nn-result">
-          <div class="nn-verdicts">
+          <div class="card nn-verdicts" data-reveal>
             <div><div class="k" data-i18n="nn.vote">Network's vote</div><div class="v" id="nnVote">–</div></div>
             <div><div class="k" data-i18n="nn.final">Final verdict</div><div class="v" id="nnFinal">–</div></div>
-            <div><div class="k" data-i18n="nn.confidence">Confidence</div><div class="v" id="nnConf">–</div></div>
-            <div><div class="k" data-i18n="nn.uncertainty">Uncertainty</div><div class="v" id="nnEnt">–</div></div>
+            <div><div class="k" data-i18n="nn.confidence">Confidence</div><div class="v mono" id="nnConf">–</div></div>
+            <div><div class="k" data-i18n="nn.uncertainty">Uncertainty</div><div class="v mono" id="nnEnt">–</div></div>
           </div>
-          <div class="nn-probs">
+          <div class="card nn-probs" data-reveal>
             <h3 class="h-small" data-i18n="nn.probs">Probability of each class</h3>
             <div id="nnBars"></div>
           </div>
-          <div class="nn-rules">
+          <div class="card nn-rules" data-reveal style="--d:100ms">
             <p class="nn-rule-msg" id="nnRuleMsg"></p>
             <ul id="nnReasons"></ul>
           </div>
         </div>
       </section>
 
-      <!-- CONTAMINANTS -->
+      <!-- ============ DEVICE & ROBOT ============ -->
+      <section class="section" id="device" aria-labelledby="devHeading">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="dev.eyebrow">Hardware v1.3 · 3D model from the project files</span>
+          <h2 id="devHeading" data-i18n="dev.heading">The device and the catamaran robot</h2>
+          <p class="lede" data-i18n="dev.intro"></p>
+        </div>
+        <div class="device-grid">
+          <div class="viewer" id="viewer3d" data-reveal>
+            <div class="viewer-ui">
+              <span class="viewer-hint" data-i18n="dev.hint">Drag to rotate · scroll to zoom</span>
+              <button class="btn btn-primary" type="button" id="explodeBtn" data-i18n="dev.explode">Explode view</button>
+            </div>
+          </div>
+          <div class="spec-list" data-reveal style="--d:100ms">
+            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 17h20l-3 4H5Z"/><path d="M12 3v14M12 4l6 8h-6"/></svg></span><div><h4 data-i18n="dev.s1.t">Twin-hull autonomous catamaran</h4><p data-i18n="dev.s1.d"></p></div></article>
+            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/></svg></span><div><h4 data-i18n="dev.s2.t">Non-immersion microfluidic sampling</h4><p data-i18n="dev.s2.d"></p></div></article>
+            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.5"/><path d="M12 13.5V21"/></svg></span><div><h4 data-i18n="dev.s3.t">Long-range radio and GPS maps</h4><p data-i18n="dev.s3.d"></p></div></article>
+            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></span><div><h4 data-i18n="dev.s4.t">AquaNet-V3 on the ESP32</h4><p data-i18n="dev.s4.d"></p></div></article>
+          </div>
+        </div>
+        <div class="renders">
+          <figure class="render card" data-reveal><img src="catamaran_prototype_render.jpg" alt="" loading="lazy"><figcaption data-i18n="dev.r1">Catamaran prototype render</figcaption></figure>
+          <figure class="render card" data-reveal style="--d:100ms"><img src="personal_tank_prototype_render.jpg" alt="" loading="lazy"><figcaption data-i18n="dev.r2">Household in-tank version (AquaSentry Mini)</figcaption></figure>
+        </div>
+      </section>
+
+      <!-- ============ CONTAMINANTS ============ -->
       <section class="section" id="contaminants" aria-labelledby="conHeading">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="con.eyebrow">WHO &amp; BIS 10500</span>
           <h2 id="conHeading" data-i18n="con.heading">Contaminants</h2>
           <p class="lede" data-i18n="con.intro"></p>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" data-reveal>
           <table class="data-table" id="conTable">
             <thead><tr><th data-i18n="con.col.name">Contaminant</th><th data-i18n="con.col.status">Status</th><th data-i18n="con.lod">Detection limit</th><th data-i18n="con.bis">India limit (BIS)</th><th data-i18n="con.method">Method</th></tr></thead>
             <tbody></tbody>
@@ -238,13 +422,14 @@
         </div>
       </section>
 
-      <!-- STANDARDS -->
+      <!-- ============ STANDARDS & METHODS ============ -->
       <section class="section" id="standards" aria-labelledby="stdHeading">
-        <div class="section-head">
-          <h2 id="stdHeading" data-i18n="std.heading">Standards used</h2>
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="std.eyebrow">Mandatory disclosure</span>
+          <h2 id="stdHeading" data-i18n="std.heading">Standards and methods</h2>
           <p class="lede" data-i18n="std.intro"></p>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" data-reveal>
           <table class="data-table">
             <thead><tr><th data-i18n="std.col.param">Reading</th><th data-i18n="std.col.limit">Limit</th><th data-i18n="std.col.effect">What happens</th></tr></thead>
             <tbody>
@@ -258,20 +443,61 @@
             </tbody>
           </table>
         </div>
+        <div class="disclosure">
+          <div class="card" data-reveal><h4 data-i18n="disc.scope.t">Screening scope</h4><p data-i18n="disc.scope.d"></p></div>
+          <div class="card" data-reveal><h4 data-i18n="disc.lod.t">Detection limit vs WHO guideline</h4><p data-i18n="disc.lod.d"></p></div>
+          <div class="card" data-reveal><h4 data-i18n="disc.rules.t">Safety rules always win</h4><p data-i18n="disc.rules.d"></p></div>
+        </div>
       </section>
 
-      <!-- REPORT -->
+      <!-- ============ IMPACT & MARKET ============ -->
+      <section class="section" id="impact" aria-labelledby="impHeading">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="imp.eyebrow">Why it matters</span>
+          <h2 id="impHeading" data-i18n="imp.heading">Impact and market</h2>
+          <p class="lede" data-i18n="imp.intro"></p>
+        </div>
+        <div class="kpis" data-reveal>
+          <div class="card kpi accent spot"><div class="kpi-k" data-i18n="imp.k1">People at risk worldwide</div><div class="kpi-v"><span data-count="220" data-suf="M+">0</span></div><div class="kpi-s" data-i18n="imp.k1s">drink groundwater above safe arsenic limits</div></div>
+          <div class="card kpi spot"><div class="kpi-k" data-i18n="imp.k2">Cost per test</div><div class="kpi-v"><span data-count="56" data-pre="₹">0</span></div><div class="kpi-s" data-i18n="imp.k2s">vs ₹2,200–4,500 for a lab test</div></div>
+          <div class="card kpi spot"><div class="kpi-k" data-i18n="imp.k3">Result time</div><div class="kpi-v"><span data-count="4" data-pre="~" data-suf=" min">0</span></div><div class="kpi-s" data-i18n="imp.k3s">vs 14–28 days through a lab</div></div>
+          <div class="card kpi spot"><div class="kpi-k" data-i18n="imp.k4">Water-quality market (2028)</div><div class="kpi-v"><span data-count="7.5" data-dec="1" data-pre="$" data-suf="B">0</span></div><div class="kpi-s" data-i18n="imp.k4s">heavy-metal niche about $1.2B</div></div>
+        </div>
+        <div class="link-cards" style="margin-top:16px">
+          <a class="card link-card spot tilt" href="market-research.html" data-reveal>
+            <span class="label-chip" data-i18n="imp.l1.k">Market research</span>
+            <h3 data-i18n="imp.l1.t">Market size, competition and unit economics</h3>
+            <div class="mini-chart" id="sparkMarket"></div>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+          </a>
+          <a class="card link-card spot tilt" href="sales-expansion.html" data-reveal style="--d:80ms">
+            <span class="label-chip" data-i18n="imp.l2.k">Sales &amp; expansion</span>
+            <h3 data-i18n="imp.l2.t">Revenue model, ROI calculator and 3-year roadmap</h3>
+            <div class="mini-chart" id="sparkSales"></div>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+          </a>
+          <a class="card link-card spot tilt" href="device-simulator.html" data-reveal style="--d:160ms">
+            <span class="label-chip" data-i18n="imp.l3.k">Device simulator</span>
+            <h3 data-i18n="imp.l3.t">Try the handheld MAS-G1 screen and import real scans</h3>
+            <div class="mini-chart" id="sparkDevice"></div>
+            <span class="arrow"><span data-i18n="imp.open">Open page</span> →</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ============ REPORT ============ -->
       <section class="section" id="report" aria-labelledby="repHeading">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
+          <span class="eyebrow" data-i18n="rep.eyebrow">Readings log</span>
           <h2 id="repHeading" data-i18n="rep.heading">Report</h2>
           <p class="lede" data-i18n="rep.intro"></p>
         </div>
-        <div class="rep-actions">
+        <div class="rep-actions" data-reveal>
           <button class="btn btn-primary" type="button" id="csvBtn" data-i18n="rep.csv">Download CSV</button>
           <button class="btn btn-quiet" type="button" id="printBtn" data-i18n="rep.print">Print</button>
           <a class="btn btn-quiet" id="pdfBtn" aria-disabled="true" data-i18n="rep.pdfOff">PDF certificate needs the server</a>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" data-reveal>
           <table class="data-table" id="repTable">
             <thead><tr><th data-i18n="rep.col.time">Time</th><th data-i18n="rep.col.as">Arsenic (µg/L)</th><th data-i18n="rep.col.verdict">Verdict</th><th data-i18n="rep.col.source">Source</th></tr></thead>
             <tbody></tbody>
@@ -282,14 +508,14 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v1.3</span>
+      <span>AquaSentry v5 · AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>
 
   <!-- Assistant -->
   <button class="chat-fab" id="chatFab" type="button" data-i18n-aria="chat.open" aria-label="Ask the water assistant" aria-controls="chatPanel" aria-expanded="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>
   </button>
   <div class="chat-panel" id="chatPanel" role="dialog" aria-labelledby="chatTitle" hidden>
     <div class="chat-head">
@@ -304,7 +530,12 @@
   </div>
 
   <script src="i18n.js"></script>
+  <script src="i18n-v5.js"></script>
+  <script src="shell.js"></script>
+  <script src="charts.js"></script>
   <script src="neural.js"></script>
+  <script src="device3d-data.js" defer></script>
+  <script src="device3d.js" defer></script>
   <script src="app.js"></script>
 </body>
 </html>

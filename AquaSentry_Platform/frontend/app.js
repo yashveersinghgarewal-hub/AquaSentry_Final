@@ -1,41 +1,41 @@
 /**
- * AquaSentry dashboard controller.
+ * AquaSentry dashboard controller (v5).
  * Works fully offline (simulated tests, AquaNet in the browser) and uses the FastAPI server when it is running.
+ * Page chrome (theme, menu, connection pill, chat, effects) lives in shell.js.
  */
 (function () {
   'use strict';
 
   const t = (k, v) => window.I18N.t(k, v);
   const $ = (id) => document.getElementById(id);
+  const UI = () => window.AquaUI;
   const DEVICE = 'AQUA-001';
-  const API = window.AQUASENTRY_API_URL ||
-    ((location.protocol === 'file:' || location.port === '8001') ? 'http://127.0.0.1:8000' : location.origin);
   const CAL = { slope: 0.8563, intercept: 0.0096, peakMv: -800, windowMv: 60, excludeMv: 105 };
+  const TONE_HEX = { none: '#2DD4BF', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E' };
+  const CONTACT_KEY = 'aquasentry.contacts';
 
   const state = {
-    online: false,
     reading: null,       // {asMgL, ph, ec, turb, temp, battery, lat, lon, time, source, savedOnServer}
     history: [],
     model: (window.AquaNet && window.AquaNet.hasV3) ? 'v3' : 'v1',
     lastTrace: null,
+    fx: null,
+    device: null,
   };
+  const online = () => !!(UI() && UI().online);
+  const api = (...a) => UI().api(...a);
 
-  // ---------------- helpers ----------------
-  async function api(path, opts, timeoutMs) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs || 4000);
-    try {
-      const res = await fetch(API + path, Object.assign({ signal: ctrl.signal }, opts || {}));
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    } finally { clearTimeout(timer); }
-  }
   function fmtTime(d) {
     const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
     try { return d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }); } catch (e) { return d.toTimeString().slice(0, 5); }
   }
+  function fmtDateTime(d) {
+    const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
+    try { return d.toLocaleString(lang, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return d.toISOString(); }
+  }
   function ugl(mgL) { return mgL * 1000; }
-  function fmtUg(mgL) { const u = ugl(mgL); return u < 10 ? u.toFixed(1) : Math.round(u).toString(); }
+  function fmtUgNum(u) { return u < 10 ? u.toFixed(1) : Math.round(u).toString(); }
+  function fmtUg(mgL) { return fmtUgNum(ugl(mgL)); }
 
   const ICONS = {
     none: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3"><path d="M28 7C21 17 15 24 15 31a13 13 0 0 0 26 0c0-7-6-14-13-24Z"/></svg>',
@@ -45,24 +45,11 @@
     Hazardous: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4h20l14 14v20L38 52H18L4 38V18Z"/><path d="M28 16v16M28 40v1"/></svg>',
   };
 
-  // ---------------- connection ----------------
-  async function checkServer() {
-    try { await api('/api/health', null, 2500); state.online = true; }
-    catch (e) { state.online = false; }
-    renderConn();
-    renderReport();
-    return state.online;
-  }
-  function renderConn() {
-    const c = $('conn');
-    c.dataset.state = state.online ? 'online' : 'offline';
-    $('connText').textContent = t(state.online ? 'conn.online' : 'conn.offline');
-  }
-
   // ---------------- readings ----------------
+  function evaluate(r) { return window.AquaNet.evaluate(r.asMgL, r.ph, r.ec, r.turb, r.temp, state.model); }
   function setReading(r, opts) {
     state.reading = r;
-    const res = window.AquaNet.evaluate(r.asMgL, r.ph, r.ec, r.turb, r.temp, state.model);
+    const res = evaluate(r);
     r.verdict = res.final;
     if (!opts || !opts.noHistory) {
       state.history.unshift({ time: r.time, asMgL: r.asMgL, verdict: res.final, source: r.source, ph: r.ph, ec: r.ec, turb: r.turb, temp: r.temp });
@@ -71,6 +58,7 @@
     renderOverview();
     syncNetworkInputs(r);
     renderReport();
+    renderDispatch();
   }
 
   function stripPercent(u) {
@@ -81,33 +69,83 @@
     return 100;
   }
 
+  // ---------------- ring gauge ----------------
+  const RING = { cx: 120, cy: 120, r: 92, start: -135, sweep: 270 };
+  function polar(deg, r) { const rad = deg * Math.PI / 180; return [RING.cx + r * Math.sin(rad), RING.cy - r * Math.cos(rad)]; }
+  function arcPath(f0, f1, r) {
+    r = r || RING.r;
+    const a = RING.start + RING.sweep * f0, b = RING.start + RING.sweep * f1;
+    const [x0, y0] = polar(a, r), [x1, y1] = polar(b, r);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${(b - a) > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  }
+  function initRing() {
+    const NS = 'http://www.w3.org/2000/svg';
+    $('ringTrack').setAttribute('d', arcPath(0, 1));
+    $('ringVal').setAttribute('d', arcPath(0, 1));
+    $('ringBands').innerHTML = '';
+    [[0, 0.2, '#34D399'], [0.2, 0.45, '#FBBF24'], [0.45, 0.75, '#FB923C'], [0.75, 1, '#F43F5E']].forEach(([a, b, c]) => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', arcPath(a + 0.004, b - 0.004, RING.r + 17)); p.setAttribute('class', 'ring-band'); p.setAttribute('stroke', c);
+      p.style.strokeWidth = '4'; p.style.opacity = '.85'; p.style.strokeLinecap = 'round';
+      $('ringBands').appendChild(p);
+    });
+    $('ringTicks').innerHTML = '';
+    [[0, '0'], [0.2, '10'], [0.45, '50'], [0.75, '150'], [1, '300']].forEach(([f, lab]) => {
+      const [tx, ty] = polar(RING.start + RING.sweep * f, RING.r - 24);
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', tx.toFixed(1)); text.setAttribute('y', (ty + 4).toFixed(1)); text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'ring-tick-l');
+      text.textContent = lab; $('ringTicks').appendChild(text);
+    });
+    const len = $('ringVal').getTotalLength();
+    $('ringVal').style.strokeDasharray = len; $('ringVal').style.strokeDashoffset = len;
+    state.ringLen = len;
+  }
+  function setRing(u) {
+    if (!state.ringLen) return;
+    const f = u == null ? 0 : stripPercent(u) / 100;
+    $('ringVal').style.strokeDashoffset = state.ringLen * (1 - Math.max(0.004, f));
+    const el = $('ringNum');
+    if (u == null) { el.textContent = '–'; el._v = 0; return; }
+    UI().countTo(el, u, fmtUgNum, 1300);
+  }
+
   function renderOverview() {
     const r = state.reading;
     const v = $('verdict');
     if (!r) {
       v.dataset.tone = 'none';
       $('verdictIcon').innerHTML = ICONS.none;
+      $('verdictBadge').textContent = t('verdict.badge.none');
       $('verdictTitle').textContent = t('verdict.none.title');
       $('verdictAction').textContent = t('verdict.none.action');
+      $('verdictTime').textContent = '';
       $('asValue').textContent = '–';
       $('asMgl').textContent = '';
       $('stripPin').hidden = true;
-      $('whyBox').hidden = true;
+      $('labNote').hidden = true;
+      $('alertBanner').hidden = true;
       $('ovMeta').textContent = t('ov.device', { code: DEVICE });
+      setRing(null);
+      if (state.fx) state.fx.setColor(TONE_HEX.none);
       renderReadingsGrid(null);
       return;
     }
-    const res = window.AquaNet.evaluate(r.asMgL, r.ph, r.ec, r.turb, r.temp, state.model);
+    const res = evaluate(r);
     v.dataset.tone = res.final;
     $('verdictIcon').innerHTML = ICONS[res.final];
+    $('verdictBadge').textContent = t('class.' + res.final);
     $('verdictTitle').textContent = t('verdict.' + res.final + '.title');
     $('verdictAction').textContent = t('verdict.' + res.final + '.action');
-    $('asValue').textContent = fmtUg(r.asMgL);
+    $('verdictTime').textContent = fmtTime(r.time);
+    UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
     $('asMgl').textContent = t('ov.mgl', { v: r.asMgL.toFixed(4) });
     const pin = $('stripPin');
     pin.hidden = false;
     pin.style.left = stripPercent(ugl(r.asMgL)) + '%';
     $('stripPinLabel').textContent = fmtUg(r.asMgL) + ' µg/L';
+    setRing(ugl(r.asMgL));
+    if (state.fx) state.fx.setColor(TONE_HEX[res.final]);
+    if (state.device) state.device.setRim(TONE_HEX[res.final]);
 
     const why = $('whyList');
     why.innerHTML = '';
@@ -118,10 +156,18 @@
     });
     $('labNote').hidden = !res.belowLod;
     $('labNote').textContent = t('ov.labNote');
-    $('whyBox').hidden = false;
+
+    // alert banner
+    const b = $('alertBanner');
+    b.hidden = false;
+    b.className = 'alert-banner' + (res.final === 'Safe' ? ' ok' : res.final === 'Caution' ? ' warn' : '');
+    $('alertTitle').textContent = t('alert.' + res.final + '.t');
+    $('alertText').textContent = t('alert.' + res.final + '.d');
+    $('alertBtn1').hidden = res.final === 'Safe';
+    $('alertBtn2').hidden = res.final === 'Safe' || res.final === 'Caution';
 
     const src = t('ov.source.' + r.source);
-    $('ovMeta').textContent = `${t('ov.device', { code: DEVICE })}, ${t('ov.lastReading', { time: fmtTime(r.time) })} (${src})`;
+    $('ovMeta').textContent = `${t('ov.device', { code: r.device || DEVICE })}, ${t('ov.lastReading', { time: fmtTime(r.time) })} (${src})`;
     renderReadingsGrid(r);
   }
 
@@ -139,12 +185,12 @@
       const okBand = d.ok ? `<div class="gauge-ok" style="left:${pct(d.ok[0])}%;width:${pct(d.ok[1]) - pct(d.ok[0])}%"></div>` : '';
       const dot = val !== null ? `<div class="gauge-dot" style="left:${pct(val)}%"></div>` : '';
       const inRange = val === null || !d.ok || (val >= d.ok[0] && val <= d.ok[1]);
-      const state = val === null || !d.ok ? '' : `<span class="reading-state ${inRange ? 'ok' : 'bad'}">${t(inRange ? 'read.ok' : 'read.bad')}</span>`;
-      return `<div class="reading">
+      const st = val === null || !d.ok ? '' : `<span class="reading-state ${inRange ? 'ok' : 'bad'}">${t(inRange ? 'read.ok' : 'read.bad')}</span>`;
+      return `<div class="card reading spot">
         <div class="reading-name">${t(d.label)}</div>
         <div class="reading-val">${val === null ? '–' : d.fmt(val)}${d.unit ? `<small>${d.unit}</small>` : ''}</div>
         <div class="gauge">${okBand}${dot}</div>
-        <div class="reading-foot"><span>${t(d.good)}</span>${state}</div>
+        <div class="reading-foot"><span>${t(d.good)}</span>${st}</div>
       </div>`;
     }).join('');
     const line = $('deviceLine');
@@ -152,15 +198,17 @@
       const parts = [];
       if (r.battery != null) parts.push(`${t('read.battery')} ${Math.round(r.battery)}%`);
       if (r.lat != null) parts.push(`${t('read.location')} ${r.lat.toFixed(2)}°N, ${r.lon.toFixed(2)}°E`);
-      line.textContent = parts.join('   |   ');
+      line.textContent = parts.join('   ·   ');
     } else line.textContent = '';
   }
 
   // ---------------- server data ----------------
-  async function loadLatestFromServer() {
+  async function loadLatestFromServer(code) {
+    code = code || DEVICE;
     try {
-      const d = await api(`/api/readings/latest?device_code=${encodeURIComponent(DEVICE)}`);
+      const d = await api(`/api/readings/latest?device_code=${encodeURIComponent(code)}`);
       setReading({
+        device: code,
         asMgL: (d.arsenic_ppb || 0) / 1000, ph: d.ph ?? 7.3, ec: d.conductivity_us_cm ?? 420, turb: d.turbidity_ntu ?? 2.0,
         temp: d.temperature_c ?? 25, battery: d.battery_pct, lat: d.latitude, lon: d.longitude,
         time: d.recorded_at ? new Date(d.recorded_at.endsWith('Z') || d.recorded_at.includes('+') ? d.recorded_at : d.recorded_at + 'Z') : new Date(),
@@ -169,10 +217,9 @@
       return true;
     } catch (e) { return false; }
   }
-
   async function loadDemo() {
-    if (state.online) {
-      try { await api('/api/demo/load', { method: 'POST' }, 6000); if (await loadLatestFromServer()) return; } catch (e) { /* fall through */ }
+    if (online()) {
+      try { await api('/api/demo/load', { method: 'POST' }, 6000); if (await loadLatestFromServer('DEMO-BOT-01')) return; } catch (e) { /* fall through */ }
     }
     setReading({ asMgL: 0.045, ph: 7.35, ec: 412, turb: 2.1, temp: 24.2, battery: 71, lat: 25.61, lon: 85.14, time: new Date(), source: 'demo' });
   }
@@ -225,7 +272,7 @@
     const { P, C } = synthTrace(asMgL);
     let out = processTrace(P, C);
     let saved = false;
-    if (state.online) {
+    if (online()) {
       try {
         const d = await api('/api/voltammetry/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ potentials_mv: P, currents_ua: C, filter_mode: 'savitzky_golay' }) });
         if (d && d.peak) {
@@ -242,7 +289,7 @@
 
     const prev = state.reading || { ph: 7.3, ec: 420, turb: 2.5, temp: 25, battery: 71, lat: 25.61, lon: 85.14 };
     const reading = { asMgL: out.asMgL, ph: prev.ph, ec: prev.ec, turb: prev.turb, temp: prev.temp, battery: prev.battery, lat: prev.lat, lon: prev.lon, time: new Date(), source: 'sim' };
-    if (state.online) {
+    if (online()) {
       try {
         await api('/api/readings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
           device_code: DEVICE, arsenic_ppb: Math.round(ugl(out.asMgL) * 100) / 100, ph: reading.ph, conductivity_us_cm: reading.ec,
@@ -260,7 +307,13 @@
     const svg = $('vgChart');
     const NS = 'http://www.w3.org/2000/svg';
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const add = (name, attrs, text) => { const e = document.createElementNS(NS, name); Object.keys(attrs).forEach((k) => e.setAttribute(k, attrs[k])); if (text !== undefined) e.textContent = text; svg.appendChild(e); return e; };
+    const add = (name, attrs, text, parent) => { const e = document.createElementNS(NS, name); Object.keys(attrs).forEach((k) => e.setAttribute(k, attrs[k])); if (text !== undefined) e.textContent = text; (parent || svg).appendChild(e); return e; };
+    const prim = UI().cssVar('--primary') || '#2DD4BF', vio = UI().cssVar('--violet') || '#818CF8';
+    const defs = add('defs', {});
+    const lg = add('linearGradient', { id: 'vgGrad', x1: 0, y1: 0, x2: 1, y2: 0 }, undefined, defs);
+    add('stop', { offset: '0%', 'stop-color': prim }, undefined, lg); add('stop', { offset: '100%', 'stop-color': vio }, undefined, lg);
+    const ag = add('linearGradient', { id: 'vgArea', x1: 0, y1: 0, x2: 0, y2: 1 }, undefined, defs);
+    add('stop', { offset: '0%', 'stop-color': prim, 'stop-opacity': 0.28 }, undefined, ag); add('stop', { offset: '100%', 'stop-color': prim, 'stop-opacity': 0 }, undefined, ag);
     const L = 64, R = 620, T = 20, B = 290;
     if (!state.lastTrace) { add('text', { x: 340, y: 160, 'text-anchor': 'middle', class: 'vg-empty' }, t('test.chart.empty')); return; }
     const { P, C, out } = state.lastTrace;
@@ -271,7 +324,7 @@
     const Y = (c) => B - (c - lo) / (hi - lo) * (B - T);
     const step = niceStep((hi - lo) / 5);
     for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-      add('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), class: 'vg-grid' });
+      add('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), class: 'vg-grid', 'stroke-dasharray': '3 5' });
       add('text', { x: L - 8, y: Y(v) + 4, 'text-anchor': 'end', class: 'vg-tick' }, (Math.abs(v) < 1e-9 ? 0 : v).toFixed(step < 0.1 ? 2 : 1));
     }
     for (let p = -1100; p <= -500; p += 100) add('text', { x: X(p), y: B + 20, 'text-anchor': 'middle', class: 'vg-tick' }, String(p));
@@ -279,13 +332,16 @@
     add('text', { x: (L + R) / 2, y: B + 44, 'text-anchor': 'middle', class: 'vg-title' }, t('test.chart.x'));
     add('text', { x: 16, y: (T + B) / 2, 'text-anchor': 'middle', class: 'vg-title', transform: `rotate(-90 16 ${(T + B) / 2})` }, t('test.chart.y'));
     const path = (arr) => arr.map((c, i) => `${i ? 'L' : 'M'}${X(P[i]).toFixed(1)} ${Y(c).toFixed(1)}`).join(' ');
+    add('path', { d: `${path(out.S)} L${X(P[P.length - 1]).toFixed(1)} ${B} L${X(P[0]).toFixed(1)} ${B} Z`, class: 'vg-area' });
     add('path', { d: path(C), class: 'vg-raw' });
     add('path', { d: path(out.base), class: 'vg-base' });
-    add('path', { d: path(out.S), class: 'vg-smooth' });
+    const sm = add('path', { d: path(out.S), class: 'vg-smooth' });
+    try { sm.style.setProperty('--len', Math.ceil(sm.getTotalLength())); } catch (e) { /* ignore */ }
     if (out.peakIdx >= 0) {
       const px = X(out.peakMv);
-      add('line', { x1: px, x2: px, y1: Y(out.base[out.peakIdx]), y2: Y(out.S[out.peakIdx]), class: 'vg-peak' });
-      add('text', { x: px + 8, y: Y(out.S[out.peakIdx]) - 8, class: 'vg-peak-label' }, `${t('test.peak')} ${out.net.toFixed(3)} µA`);
+      add('line', { x1: px, x2: px, y1: Y(out.base[out.peakIdx]), y2: Y(out.S[out.peakIdx]), class: 'vg-peak', 'stroke-dasharray': '2 3' });
+      add('circle', { cx: px, cy: Y(out.S[out.peakIdx]), r: 6, class: 'vg-peak-dot' });
+      add('text', { x: px + 10, y: Y(out.S[out.peakIdx]) - 10, class: 'vg-peak-label' }, `${t('test.peak')} ${out.net.toFixed(3)} µA`);
     }
   }
   function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; }
@@ -295,7 +351,7 @@
   function nnValues() { return NN_IDS.map(([id]) => parseFloat($(id).value)); }
   function syncNetworkInputs(r) {
     const vals = [Math.min(0.3, r.asMgL), r.ph, r.ec, Math.min(25, r.turb), r.temp];
-    NN_IDS.forEach(([id], i) => { $(id).value = vals[i]; });
+    NN_IDS.forEach(([id], i) => { $(id).value = vals[i]; UI().fillRange($(id)); });
     updateNetwork();
   }
   function updateNetwork() {
@@ -307,9 +363,10 @@
     $('nnFinal').innerHTML = `<span class="tone-${res.final}">${t('class.' + res.final)}</span>`;
     $('nnConf').textContent = (res.confidence * 100).toFixed(1) + '%';
     $('nnEnt').textContent = res.entropy.toFixed(2);
+    const colors = { Safe: 'var(--safe)', Caution: 'var(--caution-fill)', Unsafe: 'var(--unsafe)', Hazardous: 'var(--haz)' };
     $('nnBars').innerHTML = window.AquaNet.CLASSES.map((c, i) => {
       const p = (res.probs[i] * 100);
-      return `<div class="bar-row"><span>${t('class.' + c)}</span><div class="bar"><i style="width:${p.toFixed(1)}%;background:var(--${c === 'Safe' ? 'safe' : c === 'Caution' ? 'caution-fill' : c === 'Unsafe' ? 'unsafe' : 'haz'})"></i></div><span class="bar-pct">${p.toFixed(1)}%</span></div>`;
+      return `<div class="bar-row"><span>${t('class.' + c)}</span><div class="bar"><i style="width:${p.toFixed(1)}%;background:${colors[c]};color:${colors[c]}"></i></div><span class="bar-pct">${p.toFixed(1)}%</span></div>`;
     }).join('');
     $('nnRuleMsg').textContent = t(res.final !== res.vote ? 'nn.override' : 'nn.agree');
     $('nnReasons').innerHTML = res.reasons.map((x) => `<li>${t('reason.' + x.code, { v: x.v })}</li>`).join('');
@@ -343,6 +400,84 @@
       <td class="num">${a.lod}</td><td class="num">${a.bis}</td><td>${a.method}</td></tr>`).join('');
   }
 
+  // ---------------- authorities: incident report + contacts ----------------
+  function loadContacts() { try { return JSON.parse(localStorage.getItem(CONTACT_KEY) || '{}'); } catch (e) { return {}; } }
+  function saveContacts() {
+    const c = { office: $('cOffice').value.trim(), phone: $('cPhone').value.trim(), email: $('cEmail').value.trim() };
+    try { localStorage.setItem(CONTACT_KEY, JSON.stringify(c)); $('cSaved').textContent = t('auth.mine.saved'); } catch (e) { $('cSaved').textContent = t('auth.mine.nosave'); }
+    renderDispatch();
+  }
+  function reportRows() {
+    const r = state.reading;
+    if (!r) return null;
+    const res = evaluate(r);
+    return [
+      ['auth.f.station', `${r.device || DEVICE} (${t('auth.f.stationType')})`],
+      ['auth.f.contaminant', t('auth.f.arsenicTotal')],
+      ['auth.f.reading', `${r.asMgL.toFixed(4)} mg/L (${fmtUg(r.asMgL)} µg/L)`],
+      ['auth.f.limits', 'WHO 10 µg/L · BIS 10500: 10 µg/L (50 µg/L permissible)'],
+      ['auth.f.tier', `${t('class.' + res.final)} — ${t('verdict.' + res.final + '.title')}`],
+      ['auth.f.other', `pH ${r.ph.toFixed(2)} · ${Math.round(r.ec)} µS/cm · ${r.turb.toFixed(1)} NTU · ${r.temp.toFixed(1)} °C`],
+      ['auth.f.method', t('auth.f.methodVal')],
+      ['auth.f.geotag', r.lat != null ? `${r.lat.toFixed(4)}°N, ${r.lon.toFixed(4)}°E` : t('auth.f.noGps')],
+      ['auth.f.time', fmtDateTime(r.time)],
+    ];
+  }
+  function reportText() {
+    const rows = reportRows();
+    if (!rows) return '';
+    return `${t('auth.mail.subject', { code: (state.reading && state.reading.device) || DEVICE })}\n\n${t('auth.mail.intro')}\n\n` +
+      rows.map(([k, v]) => `${t(k)}: ${v}`).join('\n') + `\n\n${t('auth.mail.ask')}\n\n${t('auth.mail.note')}`;
+  }
+  function renderDispatch() {
+    const rows = reportRows();
+    const st = $('dispatchStatus');
+    const c = loadContacts();
+    if (!rows) {
+      $('dispatchBody').innerHTML = `<dt>—</dt><dd>${t('auth.empty')}</dd>`;
+      st.className = 'tag'; st.textContent = t('auth.status.none');
+      ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).setAttribute('aria-disabled', 'true'));
+    } else {
+      $('dispatchBody').innerHTML = rows.map(([k, v]) => `<dt>${t(k)}</dt><dd>${v.replace(/</g, '&lt;')}</dd>`).join('');
+      const res = evaluate(state.reading);
+      const urgent = res.final === 'Unsafe' || res.final === 'Hazardous';
+      st.className = 'tag ' + (urgent ? 'tone-haz' : res.final === 'Caution' ? 'tone-caution' : 'active');
+      st.textContent = t(urgent ? 'auth.status.urgent' : res.final === 'Caution' ? 'auth.status.watch' : 'auth.status.ok');
+      ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).removeAttribute('aria-disabled'));
+      const subject = encodeURIComponent(t('auth.mail.subject', { code: (state.reading && state.reading.device) || DEVICE }) + ' — ' + t('class.' + res.final));
+      $('dEmail').href = `mailto:${encodeURIComponent(c.email || '')}?subject=${subject}&body=${encodeURIComponent(reportText())}`;
+    }
+    // directory buttons that use saved contacts
+    const call = $('dirCallLocal'), mail = $('dirEmailLocal');
+    if (c.phone) { call.href = 'tel:' + c.phone.replace(/[^\d+]/g, ''); call.textContent = t('dir.call') + ' ' + c.phone; } else { call.href = '#contactsBox'; call.textContent = t('dir.addNumber'); }
+    if (c.email) { mail.href = $('dEmail').getAttribute('href') || ('mailto:' + c.email); mail.textContent = t('dir.email'); } else { mail.href = '#contactsBox'; mail.textContent = t('dir.addEmail'); }
+    $('dShare').hidden = !navigator.share;
+  }
+  function flash(msg) { const m = $('dispatchMsg'); m.textContent = msg; clearTimeout(m._t); m._t = setTimeout(() => { m.textContent = ''; }, 4000); }
+  async function copyReport() {
+    const text = reportText(); if (!text) return;
+    try { await navigator.clipboard.writeText(text); flash(t('auth.copied')); }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); flash(t('auth.copied')); } catch (err) { flash(t('auth.copyFail')); }
+      ta.remove();
+    }
+  }
+  function printReport() {
+    const rows = reportRows(); if (!rows) return;
+    const w = window.open('', '_blank', 'width=760,height=900');
+    if (!w) { window.print(); return; }
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    w.document.write(`<!doctype html><html lang="${window.I18N.lang}"><head><meta charset="utf-8"><title>${esc(t('auth.report.t'))}</title>
+      <style>body{font-family:system-ui,'Segoe UI',sans-serif;margin:40px;color:#111}h1{font-size:22px;margin:0 0 4px}p{color:#444}
+      table{border-collapse:collapse;width:100%;margin-top:20px}td{border:1px solid #ccc;padding:10px;vertical-align:top}td:first-child{width:34%;font-weight:600;background:#f4f6f8}
+      .foot{margin-top:24px;font-size:13px;color:#555}</style></head><body>
+      <h1>AquaSentry — ${esc(t('auth.report.t'))}</h1><p>${esc(t('auth.mail.intro'))}</p>
+      <table>${rows.map(([k, v]) => `<tr><td>${esc(t(k))}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+      <p class="foot">${esc(t('auth.mail.ask'))}<br><br>${esc(t('auth.mail.note'))}</p></body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  }
+
   // ---------------- report ----------------
   function renderReport() {
     const body = $('repTable').querySelector('tbody');
@@ -351,10 +486,10 @@
       <td><span class="tone-${h.verdict}" style="font-weight:700">${t('class.' + h.verdict)}</span></td><td>${t('ov.source.' + h.source)}</td></tr>`).join('')
       : `<tr class="empty-row"><td colspan="4">${t('rep.empty')}</td></tr>`;
     const pdf = $('pdfBtn');
-    const canPdf = state.online && state.reading && state.reading.savedOnServer;
+    const canPdf = online() && state.reading && state.reading.savedOnServer;
     pdf.setAttribute('aria-disabled', canPdf ? 'false' : 'true');
     pdf.textContent = t(canPdf ? 'rep.pdf' : 'rep.pdfOff');
-    if (canPdf) pdf.href = API + '/api/reports/certificate/pdf'; else pdf.removeAttribute('href');
+    if (canPdf) pdf.href = UI().API + '/api/reports/certificate/pdf'; else pdf.removeAttribute('href');
   }
   function downloadCsv() {
     const rows = [['time', 'arsenic_ug_l', 'arsenic_mg_l', 'ph', 'conductivity_us_cm', 'turbidity_ntu', 'temperature_c', 'verdict', 'source']];
@@ -367,103 +502,73 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  // ---------------- chat ----------------
-  function addMsg(text, cls) {
-    const d = document.createElement('div');
-    d.className = 'msg ' + cls;
-    d.textContent = text.replace(/\*\*/g, '').replace(/^#+\s/gm, '');
-    $('chatLog').appendChild(d);
-    $('chatLog').scrollTop = 1e6;
-    return d;
+  // ---------------- device 3D + sparklines ----------------
+  function deviceLabels() { return { lid: t('dev.p.lid'), base: t('dev.p.base'), well: t('dev.p.well'), strainer: t('dev.p.strainer') }; }
+  function initDevice() {
+    if (!window.AquaDevice3D || state.device !== null) return;
+    state.device = window.AquaDevice3D.mount($('viewer3d'), { labels: deviceLabels(), fallback: t('dev.noWebgl') }) || false;
+    $('explodeBtn').addEventListener('click', () => {
+      if (!state.device) return;
+      state.device.explode(!state.device.exploded);
+      $('explodeBtn').textContent = t(state.device.exploded ? 'dev.assemble' : 'dev.explode');
+    });
   }
-  function toggleChat(open) {
-    const p = $('chatPanel');
-    const show = open === undefined ? p.hidden : open;
-    p.hidden = !show;
-    $('chatFab').setAttribute('aria-expanded', show ? 'true' : 'false');
-    if (show) { if (!$('chatLog').children.length) addMsg(t('chat.hello'), 'bot'); $('chatInput').focus(); }
-  }
-  async function sendChat(e) {
-    e.preventDefault();
-    const text = $('chatInput').value.trim();
-    if (!text) return;
-    $('chatInput').value = '';
-    addMsg(text, 'user');
-    if (!state.online) { addMsg(t('chat.offline'), 'bot'); return; }
-    const wait = addMsg(t('chat.thinking'), 'bot wait');
-    try {
-      const msg = window.I18N.lang === 'hi' ? `Please answer in simple Hindi. ${text}` : text;
-      const d = await api('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) }, 30000);
-      wait.remove(); addMsg(d.reply || '…', 'bot');
-    } catch (err) { wait.remove(); addMsg(t('chat.offline'), 'bot'); }
-  }
-
-  // ---------------- layout: menu, scroll spy, theme ----------------
-  function setMenu(open) {
-    $('rail').classList.toggle('open', open);
-    $('railBackdrop').hidden = !open;
-    $('menuBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-  function initScrollSpy() {
-    const links = Array.from(document.querySelectorAll('.nav-link'));
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) links.forEach((l) => l.setAttribute('aria-current', l.dataset.section === en.target.id ? 'true' : 'false'));
-      });
-    }, { rootMargin: '-40% 0px -55% 0px' });
-    document.querySelectorAll('main .section').forEach((s) => obs.observe(s));
-    links.forEach((l) => l.addEventListener('click', () => setMenu(false)));
-  }
-  function toggleTheme() {
-    const root = document.documentElement;
-    const cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    const next = cur === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem('aquasentry.theme', next); } catch (e) { /* ignore */ }
+  function drawSparks() {
+    if (!window.AquaCharts) return;
+    window.AquaCharts.spark($('sparkMarket'), [2.1, 2.6, 3.4, 4.2, 5.1, 5.9, 6.6, 7.5], 'var(--primary)');
+    window.AquaCharts.spark($('sparkSales'), [2.2, 6, 11, 19.1, 26, 33, 38, 41.1], 'var(--violet)');
+    const tr = synthTrace(0.06); window.AquaCharts.spark($('sparkDevice'), tr.C.map((c) => c + 0.2), 'var(--primary-2)');
   }
 
   function rerenderAll() {
-    renderConn();
     renderOverview();
     updateNetwork();
     renderContaminants();
     renderReport();
+    renderDispatch();
     drawChart();
+    drawSparks();
     $('testAsOut').textContent = $('testAs').value + ' µg/L';
     if (!$('runTestBtn').disabled) $('runTestBtn').textContent = t('test.run');
+    if (state.device) { state.device.setLabels(deviceLabels()); $('explodeBtn').textContent = t(state.device.exploded ? 'dev.assemble' : 'dev.explode'); }
   }
 
   // ---------------- init ----------------
-  document.addEventListener('DOMContentLoaded', async () => {
-    $('menuBtn').addEventListener('click', () => setMenu(!$('rail').classList.contains('open')));
-    $('railBackdrop').addEventListener('click', () => setMenu(false));
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setMenu(false); toggleChat(false); } });
-    $('themeBtn').addEventListener('click', toggleTheme);
+  document.addEventListener('DOMContentLoaded', () => {
     $('demoBtn').addEventListener('click', loadDemo);
     document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => runTest(parseFloat(b.dataset.quick), { quiet: true })));
     $('testAs').addEventListener('input', () => { $('testAsOut').textContent = $('testAs').value + ' µg/L'; });
     $('runTestBtn').addEventListener('click', () => runTest(parseFloat($('testAs').value) / 1000));
     NN_IDS.forEach(([id]) => $(id).addEventListener('input', updateNetwork));
     document.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
-      b.dataset.preset.split(',').map(Number).forEach((v, i) => { $(NN_IDS[i][0]).value = v; });
+      b.dataset.preset.split(',').map(Number).forEach((v, i) => { $(NN_IDS[i][0]).value = v; UI().fillRange($(NN_IDS[i][0])); });
       updateNetwork();
     }));
     document.querySelectorAll('[data-model]').forEach((b) => b.addEventListener('click', () => {
       if (b.disabled) return;
       state.model = b.dataset.model;
-      updateNetwork();
-      renderOverview();
+      updateNetwork(); renderOverview(); renderDispatch();
     }));
     $('csvBtn').addEventListener('click', downloadCsv);
     $('printBtn').addEventListener('click', () => window.print());
-    $('chatFab').addEventListener('click', () => toggleChat());
-    $('chatClose').addEventListener('click', () => toggleChat(false));
-    $('chatForm').addEventListener('submit', sendChat);
+    $('dCopy').addEventListener('click', copyReport);
+    $('dPrint').addEventListener('click', printReport);
+    $('dShare').addEventListener('click', () => { const text = reportText(); if (text && navigator.share) navigator.share({ title: t('auth.report.t'), text }).catch(() => {}); });
+    $('dEmail').addEventListener('click', (e) => { if ($('dEmail').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
+    const c = loadContacts();
+    $('cOffice').value = c.office || ''; $('cPhone').value = c.phone || ''; $('cEmail').value = c.email || '';
+    $('cSave').addEventListener('click', saveContacts);
+    document.querySelectorAll('a[href="#contactsBox"]').forEach((a) => a.addEventListener('click', () => { $('contactsBox').open = true; }));
+    $('dirCallLocal').addEventListener('click', () => { if ($('dirCallLocal').getAttribute('href') === '#contactsBox') $('contactsBox').open = true; });
+    $('dirEmailLocal').addEventListener('click', () => { if ($('dirEmailLocal').getAttribute('href') === '#contactsBox') $('contactsBox').open = true; });
     document.addEventListener('aquasentry:lang', rerenderAll);
+    document.addEventListener('aquasentry:theme', () => { drawChart(); drawSparks(); });
+    document.addEventListener('aquasentry:online', (e) => { renderReport(); if (e.detail.online) loadLatestFromServer(); });
 
-    initScrollSpy();
+    const canvas = $('heroFx');
+    if (canvas && UI().WaterFX) { state.fx = new (UI().WaterFX)(canvas); if (!state.fx.ok) state.fx = null; }
+    initRing();
     rerenderAll();
-    if (await checkServer()) await loadLatestFromServer();
-    setInterval(async () => { const was = state.online; await checkServer(); if (!was && state.online) loadLatestFromServer(); }, 30000);
+    initDevice();
   });
 })();

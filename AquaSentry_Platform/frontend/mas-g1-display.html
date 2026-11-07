@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAS-G1 Device Display Simulator</title>
 <style>
+@font-face{font-family:"JetBrains Mono";font-weight:400;src:url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2");}
+@font-face{font-family:"JetBrains Mono";font-weight:700;src:url("fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2");}
+@font-face{font-family:"Space Grotesk";font-weight:700;src:url("fonts/sora-latin-700-normal.woff2") format("woff2");}
+@font-face{font-family:"Inter";font-weight:400;src:url("fonts/mukta-latin-400-normal.woff2") format("woff2");}
+@font-face{font-family:"Inter";font-weight:500;src:url("fonts/mukta-latin-500-normal.woff2") format("woff2");}
+</style>
+<style>
   :root{
     --bezel:#14181a;
     --bezel-hi:#2b3336;
@@ -23,13 +30,13 @@
   *{box-sizing:border-box;}
   body{
     margin:0;
-    min-height:100vh;
+    min-height:0;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
-    background:#05070a;
+    background:transparent;
     font-family:'Inter',system-ui,sans-serif;
-    padding:32px 16px;
+    padding:12px 8px 24px;
   }
   .device{
     width:420px;
@@ -357,9 +364,11 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/webfontloader/1.6.28/webfontloader.js"></script>
 <script>
-WebFont.load({google:{families:['Space Grotesk:700','Inter:400,500','JetBrains Mono:400,700']}});
+/* Embedded in device-simulator.html: report our height so the frame can fit the device (works on file:// too). */
+(function(){ function send(){ try{ parent.postMessage({ aquasentryFrameHeight: document.documentElement.scrollHeight }, '*'); }catch(e){} }
+  window.addEventListener('load', send); window.addEventListener('resize', send);
+  if (window.ResizeObserver) new ResizeObserver(send).observe(document.body); })();
 </script>
 <script>
 (function(){
