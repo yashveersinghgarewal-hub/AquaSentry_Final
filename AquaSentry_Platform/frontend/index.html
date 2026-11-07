@@ -46,7 +46,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5.3</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><b>AquaSentry v5.4</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -59,6 +59,7 @@
         <span class="conn-dot" aria-hidden="true"></span>
         <span id="connText" data-i18n="conn.checking">Checking server…</span>
       </div>
+      <span class="live-pill" id="livePill" hidden><span class="live-dot" aria-hidden="true"></span><span data-i18n="live.on">Live</span></span>
       <div class="topbar-right">
         <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
           <button type="button" data-lang-choice="en" aria-pressed="true">English</button>
@@ -165,7 +166,9 @@
         <div class="fleet">
           <div>
             <h3 class="h-sub" data-i18n="fleet.devices">Devices</h3>
-            <ul class="device-list" id="deviceList"><li class="empty" data-i18n="fleet.empty">Start the server to see devices.</li></ul>
+            <ul class="device-list" id="deviceList" aria-live="polite"><li class="empty" data-i18n="fleet.empty">Start the server to see devices.</li></ul>
+            <h3 class="h-sub warn-head" data-i18n="warn.heading">Warnings</h3>
+            <ul class="warn-list" id="warnList"><li class="empty" data-i18n="warn.none">No warnings.</li></ul>
           </div>
           <div>
             <div class="hist-head">
@@ -176,8 +179,16 @@
                 <button type="button" data-hist="720" aria-pressed="true" data-i18n="fleet.r.month">30 days</button>
               </div>
             </div>
+            <p class="trend-note" id="trendNote" hidden></p>
             <div class="hist-wrap"><svg class="hist" id="historyChart" role="img" aria-labelledby="histDesc"></svg></div>
             <p class="meta" id="histDesc"></p>
+            <details class="hist-table">
+              <summary data-i18n="hist.table">Show these readings as a table</summary>
+              <div class="table-wrap"><table class="data-table" id="histTable">
+                <thead><tr><th data-i18n="rep.col.time">Time</th><th data-i18n="hist.col.device">Device</th><th data-i18n="rep.col.as">Arsenic (µg/L)</th><th data-i18n="rep.col.verdict">Verdict</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+            </details>
           </div>
         </div>
       </section>
@@ -529,10 +540,12 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5.3, AquaNet-V3</span>
+      <span>AquaSentry v5.4, AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <!-- Assistant -->
   <button class="chat-fab" id="chatFab" type="button" data-i18n-aria="chat.open" aria-label="Ask the water assistant" aria-controls="chatPanel" aria-expanded="false">

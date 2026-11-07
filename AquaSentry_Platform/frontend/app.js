@@ -511,7 +511,7 @@
     const body = $('repTable').querySelector('tbody');
     body.innerHTML = state.history.length ? state.history.map((h) => `<tr>
       <td>${fmtTime(h.time)}</td><td class="num">${fmtUg(h.asMgL)}</td>
-      <td><span class="tone-${h.verdict}" style="font-weight:700">${t('class.' + h.verdict)}</span></td><td>${t('ov.source.' + h.source)}</td></tr>`).join('')
+      <td>${vchip(h.verdict, h.asMgL)}</td><td>${t('ov.source.' + h.source)}</td></tr>`).join('')
       : `<tr class="empty-row"><td colspan="4">${t('rep.empty')}</td></tr>`;
     const pdf = $('pdfBtn');
     const canPdf = online() && state.reading && state.reading.savedOnServer;
@@ -519,7 +519,13 @@
     pdf.textContent = t(canPdf ? 'rep.pdf' : 'rep.pdfOff');
     if (canPdf) pdf.href = UI().API + '/api/reports/certificate/pdf'; else pdf.removeAttribute('href');
   }
+  // verdict as paint + words (never colour alone)
+  function vchip(cls, asMgL) {
+    const key = cls === 'Below Sensor LOD' || (cls === 'Safe' && asMgL != null && ugl(asMgL) < 20) ? 'Clear' : cls;
+    return `<span class="vchip c-${esc(String(cls).replace(/\s+/g, ''))}">${esc(t('class.' + key))}</span>`;
+  }
   function downloadCsv() {
+    if (online()) { window.location.href = UI().API + '/api/data/export?format=csv'; return; }   // every device, from the server
     const rows = [['time', 'arsenic_ug_l', 'arsenic_mg_l', 'ph', 'conductivity_us_cm', 'turbidity_ntu', 'temperature_c', 'verdict', 'source']];
     state.history.slice().reverse().forEach((h) => rows.push([h.time.toISOString(), ugl(h.asMgL).toFixed(1), h.asMgL.toFixed(4), h.ph, h.ec, h.turb, h.temp, h.verdict, h.source]));
     const blob = new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' });
@@ -560,15 +566,66 @@
     if (mins < 48 * 60) return t('fleet.seen.h', { n: Math.round(mins / 60) });
     return t('fleet.seen.d', { n: Math.round(mins / 1440) });
   }
+  const ICON_UP = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 11l5-6 5 6"/></svg>';
+  const ICON_DOWN = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5l5 6 5-6"/></svg>';
+  const WARN_ICON = {
+    trend: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+    offline: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/></svg>',
+    reading: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg>',
+  };
+  function renderWarnings(list) {
+    const ul = $('warnList');
+    if (!ul) return;
+    if (list === null) { ul.innerHTML = `<li class="empty">${esc(t('fleet.empty'))}</li>`; return; }
+    // field data first: hide demo/simulated alerts whenever a real node has something to say
+    const real = list.filter((a) => a.type === 'trend' || a.type === 'offline' || a.source_type === 'hardware');
+    // one line per device and kind (newest wins); trends and silent devices before single readings
+    const seen = new Set(), pick = [];
+    (real.length ? real : list).slice().sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).forEach((a) => {
+      const k = (a.type || 'reading') + '|' + (a.device_code || a.id);
+      if (!seen.has(k)) { seen.add(k); pick.push(a); }
+    });
+    const rank = { trend: 0, offline: 1 };
+    const items = pick.sort((a, b) => (rank[a.type] ?? 2) - (rank[b.type] ?? 2)).slice(0, 6);
+    if (!items.length) { ul.innerHTML = `<li class="empty">${esc(t('warn.none'))}</li>`; return; }
+    ul.innerHTML = items.map((a) => {
+      const type = a.type || 'reading';
+      const level = a.level === 'CRITICAL' ? 'crit' : a.level === 'WARNING' ? 'warn' : 'note';
+      const when = a.timestamp ? fmtDateTime(new Date(a.timestamp)) : '';
+      const label = t('warn.type.' + type);
+      return `<li class="wl ${level}"><span class="wl-ico">${WARN_ICON[type] || WARN_ICON.reading}</span>` +
+        `<span class="wl-body"><b>${esc(label)}${a.device_code ? ': ' + esc(a.device_code) : ''}</b><span>${esc(String(a.message || '').replace(a.device_code + ': ', ''))}</span>` +
+        `<small>${esc(when)}</small></span></li>`;
+    }).join('');
+  }
+  function renderTrendNote(devs) {
+    const p = $('trendNote');
+    if (!p) return;
+    const d = devs && state.histDevice ? devs.find((x) => x.device_code === state.histDevice) : null;
+    if (!d || !d.trend || !d.trend.message) { p.hidden = true; return; }
+    p.hidden = false;
+    p.className = 'trend-note ' + (d.trend.direction === 'rising' ? 'up' : d.trend.direction === 'falling' ? 'down' : '');
+    p.textContent = `${d.device_code}: ${d.trend.message}`;
+    if (d.trend.p_value != null) p.title = `Mann-Kendall p = ${d.trend.p_value}`;
+  }
+  function fillHistTable(points) {
+    const tb = $('histTable') && $('histTable').querySelector('tbody');
+    if (!tb) return;
+    tb.innerHTML = points.length ? points.slice().reverse().slice(0, 200).map((p) =>
+      `<tr><td>${esc(fmtDateTime(p.t))}</td><td>${esc(p.device_code || '–')}</td><td class="num">${fmtUgNum(p.ppb)}</td><td>${vchip(p.cls, p.ppb / 1000)}</td></tr>`).join('')
+      : `<tr class="empty-row"><td colspan="4">${esc(t('hist.empty'))}</td></tr>`;
+  }
   function deviceRow(d) {
     const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${fmtUgNum(d.latest.arsenic_ppb)} µg/L</span>` : '<span></span>';
     const count = d.reading_count === 1 ? t('fleet.count.one', { u: d.unsafe_count }) : t('fleet.count', { n: d.reading_count, u: d.unsafe_count });
     const meta = [t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
       .filter(Boolean).join(', ');
     const sel = state.histDevice === d.device_code;
+    const tr = d.trend && d.trend.direction === 'rising' ? `<span class="dv-trend up">${ICON_UP}${esc(t('trend.rising'))}</span>`
+      : d.trend && d.trend.direction === 'falling' ? `<span class="dv-trend down">${ICON_DOWN}${esc(t('trend.falling'))}</span>` : '';
     return `<li><button type="button" class="dv-row" data-device="${esc(d.device_code)}" aria-pressed="${sel}">` +
       `<span class="dv-dot ${esc(d.status)}" aria-hidden="true"></span><span class="dv-name">${esc(d.device_code)}</span>${latest}` +
-      `<span class="dv-meta">${esc(meta)}</span></button></li>`;
+      `<span class="dv-meta">${tr}${esc(meta)}</span></button></li>`;
   }
   function renderDevices(list) {
     const ul = $('deviceList');
@@ -607,6 +664,7 @@
     });
     [[10, ''], [20, ' lod'], [150, '']].forEach(([u, c]) => add('line', { class: 'h-edge' + c, x1: L, x2: W - R, y1: Y(u), y2: Y(u) }));
     if (!points.length) {
+      fillHistTable([]);
       add('text', { class: 'h-empty', x: (L + W - R) / 2, y: H / 2, 'text-anchor': 'middle' }, t('hist.empty'));
       $('histDesc').textContent = local ? t('hist.local') : '';
       return;
@@ -624,8 +682,14 @@
     }
     const byDevice = {};
     points.forEach((p) => { (byDevice[p.device_code || ''] = byDevice[p.device_code || ''] || []).push(p); });
-    Object.values(byDevice).forEach((pts) => {
-      if (pts.length > 1) add('polyline', { class: 'h-line', points: pts.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
+    const DASH = ['', '6 4', '2 3', '10 3 2 3'];   // series differ by line style too, not by colour alone
+    const series = Object.entries(byDevice);
+    series.forEach(([code, pts], k) => {
+      if (pts.length > 1) add('polyline', { class: 'h-line', 'stroke-dasharray': DASH[k % DASH.length], points: pts.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
+      if (code && series.length > 1 && series.length <= 4) {
+        const last = pts[pts.length - 1];
+        add('text', { class: 'h-label', x: Math.min(W - R - 2, X(last.t.getTime()) + 6), y: Y(last.ppb) - 8, 'text-anchor': 'end' }, code);
+      }
     });
     points.forEach((p) => {
       const c = add('circle', { class: 'h-pt', cx: X(p.t.getTime()), cy: Y(p.ppb), r: points.length > 120 ? 3 : 5, fill: cssVar(PAINT[p.cls] || '--ink-3') });
@@ -633,6 +697,7 @@
       tt.textContent = `${fmtUgNum(p.ppb)} µg/L, ${t('class.' + (p.cls === 'Below Sensor LOD' ? 'Clear' : p.cls))}, ${fmtDateTime(p.t)}${p.device_code ? ', ' + p.device_code : ''}`;
       c.appendChild(tt);
     });
+    fillHistTable(points);
     const max = Math.max(...points.map((p) => p.ppb));
     $('histDesc').textContent = (local ? t('hist.local') + ' ' : '') +
       t('hist.desc', { n: points.length, a: fmtDateTime(new Date(t0)), b: fmtDateTime(new Date(t1)), max: fmtUgNum(max) });
@@ -640,6 +705,8 @@
   async function loadFleet() {
     if (!online()) {
       renderDevices(null);
+      renderWarnings(null);
+      renderTrendNote(null);
       const since = Date.now() - state.histHours * 3600e3;
       const pts = state.history.filter((h) => h.time.getTime() >= since).map((h) => ({ t: h.time, ppb: ugl(h.asMgL), cls: h.verdict })).reverse();
       drawHistory(pts, true);
@@ -647,11 +714,48 @@
     }
     try {
       const dev = state.histDevice ? `&device_code=${encodeURIComponent(state.histDevice)}` : '';
-      const [devs, hist] = await Promise.all([api('/api/devices'), api(`/api/readings/history?hours=${state.histHours}&limit=1000${dev}`)]);
+      $('deviceList').setAttribute('aria-busy', 'true');
+      const [devs, hist, alerts] = await Promise.all([api('/api/devices'), api(`/api/readings/history?hours=${state.histHours}&limit=1000${dev}`),
+        api('/api/alerts/recent?limit=20').catch(() => ({ alerts: [] }))]);
+      $('deviceList').removeAttribute('aria-busy');
       renderDevices(devs);
+      renderWarnings(alerts.alerts || []);
+      renderTrendNote(devs);
       drawHistory(hist.map((p) => ({ t: new Date(p.t), ppb: p.ppb, cls: p.cls, device_code: p.device_code })), false);
     } catch (e) { renderDevices(null); }
   }
+
+  // ---------------- live updates (Server-Sent Events) ----------------
+  let live = null, fleetTimer = null, toastTimer = null;
+  function toast(text, urgent) {
+    const el = $('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'toast' + (urgent ? ' urgent' : '');
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, urgent ? 9000 : 5000);
+  }
+  function startLive() {
+    if (live || !window.EventSource || !online()) return;
+    live = new EventSource(UI().API + '/api/events');
+    live.addEventListener('open', () => { $('livePill').hidden = false; });
+    live.addEventListener('error', () => { $('livePill').hidden = true; });   // EventSource reconnects by itself
+    live.addEventListener('reading', (e) => {
+      let d; try { d = JSON.parse(e.data); } catch (err) { return; }
+      clearTimeout(fleetTimer);
+      fleetTimer = setTimeout(loadFleet, 700);
+      if (d.source_type === 'hardware') {
+        toast(t('live.reading', { code: d.device_code, v: fmtUgNum(d.arsenic_ppb), cls: t('class.' + (d.classification === 'Below Sensor LOD' ? 'Clear' : d.classification)) }), false);
+        if (state.reading && state.reading.device === d.device_code) loadLatestFromServer(d.device_code);
+      }
+    });
+    live.addEventListener('alert', (e) => {
+      let a; try { a = JSON.parse(e.data); } catch (err) { return; }
+      if (a.source_type === 'hardware') toast(a.message, true);
+    });
+  }
+  function stopLive() { if (live) { live.close(); live = null; } if ($('livePill')) $('livePill').hidden = true; }
 
   function rerenderAll() {
     renderOverview();
@@ -697,7 +801,10 @@
     $('dirEmailLocal').addEventListener('click', () => { if ($('dirEmailLocal').getAttribute('href') === '#contactsBox') $('contactsBox').open = true; });
     document.addEventListener('aquasentry:lang', rerenderAll);
     document.addEventListener('aquasentry:theme', () => { drawChart(); drawSparks(); loadFleet(); });
-    document.addEventListener('aquasentry:online', (e) => { renderReport(); loadFleet(); if (e.detail.online) loadLatestFromServer(); });
+    document.addEventListener('aquasentry:online', (e) => {
+      renderReport(); loadFleet();
+      if (e.detail.online) { loadLatestFromServer(); startLive(); } else stopLive();
+    });
     document.querySelectorAll('[data-hist]').forEach((b) => b.addEventListener('click', () => {
       state.histHours = Number(b.dataset.hist);
       document.querySelectorAll('[data-hist]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));

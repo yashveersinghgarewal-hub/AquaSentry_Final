@@ -9,7 +9,7 @@ Includes non-destructive schema migrations for SQLite.
 import os
 import shutil
 from typing import Dict, Any
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Default database lives next to the platform code, whatever folder the server was started from
@@ -29,7 +29,20 @@ if os.environ.get("VERCEL") or os.environ.get("VERCEL_URL"):
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record):
+        """Per-connection settings: SQLite forgets these when a connection closes.
+        busy_timeout makes a writer wait up to 5 s for another writer instead of failing with
+        "database is locked"; foreign_keys enforces device -> reading links; FULL sync is the safe
+        choice for safety records (the write volume of a sensor network is tiny)."""
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA busy_timeout=5000")
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute("PRAGMA synchronous=FULL")
+        cur.close()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -47,7 +60,6 @@ def ensure_sqlite_columns():
     try:
         with engine.begin() as conn:
             conn.execute(text("PRAGMA journal_mode=WAL;"))
-            conn.execute(text("PRAGMA synchronous=NORMAL;"))
     except Exception as e:
         print(f"Warning: Could not enable SQLite WAL mode: {e}")
 
@@ -84,6 +96,8 @@ def ensure_sqlite_columns():
         devices_required = {
             "firmware_version": "VARCHAR(32) DEFAULT 'v1.0.0'",
             "status": "VARCHAR(32) DEFAULT 'online'",
+            "api_key_hash": "VARCHAR(64)",
+            "api_key_hint": "VARCHAR(16)",
         }
         existing_cols = {col["name"] for col in inspector.get_columns("devices")}
         missing = devices_required.keys() - existing_cols
@@ -94,6 +108,45 @@ def ensure_sqlite_columns():
                     conn.execute(
                         text(f"ALTER TABLE devices ADD COLUMN {col_name} {devices_required[col_name]}")
                     )
+
+
+def ensure_indexes():
+    """Indexes added after the first release (CREATE INDEX IF NOT EXISTS is safe to repeat)."""
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_readings_device_recorded ON readings (device_id, recorded_at)"))
+    except Exception as e:
+        print(f"Warning: could not create index: {e}")
+
+
+def sqlite_info() -> Dict[str, Any]:
+    import sqlite3
+    v = sqlite3.sqlite_version_info
+    # 3.7.0-3.51.2 have a WAL-reset race fixed in 3.51.3 (backports 3.50.7, 3.44.6)
+    fixed = v >= (3, 51, 3) or (3, 50, 7) <= v < (3, 51, 0) or (3, 44, 6) <= v < (3, 45, 0) or v < (3, 7, 0)
+    return {"sqlite_version": sqlite3.sqlite_version, "wal_reset_bug_fixed": fixed}
+
+
+def backup_database(dest_dir: str) -> Dict[str, Any]:
+    """Consistent online copy using SQLite's backup API (safe while the server is writing)."""
+    import sqlite3
+    from datetime import datetime, timezone
+    if not DATABASE_URL.startswith("sqlite"):
+        return {"status": "skipped", "message": "Backups here only cover SQLite; use your database's own tools."}
+    src_path = DATABASE_URL.replace("sqlite:///", "", 1)
+    os.makedirs(dest_dir, exist_ok=True)
+    name = "aquasentry-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S") + ".db"
+    dest_path = os.path.join(dest_dir, name)
+    src = sqlite3.connect(src_path)
+    dst = sqlite3.connect(dest_path)
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    return {"status": "success", "file": dest_path, "size_bytes": os.path.getsize(dest_path)}
 
 
 def get_db():

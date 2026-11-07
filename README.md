@@ -10,6 +10,12 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
 
+## What changed in v5.4
+
+- **Backend:** per-device API keys, rate limiting, security headers with a hash-based Content-Security-Policy, SQLite tuning and online backups, live updates over Server-Sent Events, real CSV export, and an **arsenic trend early warning** (Mann-Kendall + Sen's slope) that flags a source getting worse before it crosses a limit.
+- **Dashboard:** live indicator and toasts, a warnings list (rising arsenic, silent devices, unsafe readings), trend notes, accessible chart with a table view, offline mode.
+- Every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
+
 ## What changed in v5.3
 
 - **ESP32:** offline buffer moved to LittleFS (the NVS one silently overflowed), ESP32-S3 and ESP32-C3 support, a setup hotspot so Wi-Fi and the server address can be changed without reflashing, a `/status.json` page, and a CI job that compiles the firmware with Espressif's core for all three chips.
@@ -40,7 +46,7 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 The first run creates a `.venv` folder and installs packages (needs internet). Full steps: **`WHATS_NEW_AND_HOW_TO_RUN.md`**.
 
-Run all tests: `python main.py --test` (167 tests: 22 neural toolkit + 145 platform).
+Run all tests: `python main.py --test` (185 tests: 22 neural toolkit + 163 platform).
 
 **With an ESP32:** start the server with **`Start AquaSentry for ESP32.bat`** (or `python main.py --serve --host 0.0.0.0 --port 8000`), then open `Firmware/esp32_firmware/esp32_firmware.ino` in the Arduino IDE, fill in Wi-Fi and server address, and upload. See `Firmware/README.md`.
 

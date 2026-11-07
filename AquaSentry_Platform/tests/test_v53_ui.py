@@ -25,7 +25,9 @@ def test_dashboard_strings_exist_in_english_and_hindi():
     html = open(os.path.join(FRONT, "index.html"), encoding="utf-8").read()
     keys = sorted(_keys(html) | {"chart.you", "verdict.Clear.title", "verdict.Clear.action", "class.Clear",
                                  "alert.Clear.t", "alert.Clear.d", "fleet.all", "fleet.demo", "fleet.count", "fleet.count.one",
-                                 "fleet.st.online", "fleet.st.late", "fleet.st.offline", "fleet.st.demo", "hist.empty", "hist.desc", "hist.local"})
+                                 "fleet.st.online", "fleet.st.late", "fleet.st.offline", "fleet.st.demo", "hist.empty", "hist.desc", "hist.local",
+                                 "live.reading", "warn.none", "warn.type.reading", "warn.type.trend", "warn.type.offline",
+                                 "trend.rising", "trend.falling"})
     script = (
         "global.window = {}; global.localStorage = {getItem(){return null}, setItem(){}};"
         "global.document = {documentElement: {lang: 'en', setAttribute(){}}, querySelectorAll(){return []}, addEventListener(){}, dispatchEvent(){}, readyState: 'loading'};"
@@ -66,6 +68,13 @@ def test_chart_edges_sit_on_swatch_centres():
 def test_scripts_parse(name):
     res = subprocess.run([NODE, "--check", os.path.join(FRONT, name)], capture_output=True, text=True)
     assert res.returncode == 0, res.stderr
+
+
+def test_service_worker_never_caches_the_api():
+    sw = open(os.path.join(FRONT, "sw.js"), encoding="utf-8").read()
+    assert "startsWith('/api/')" in sw and "startsWith('/ws/')" in sw
+    for asset in re.findall(r"'([^']+\.(?:js|css|html|svg|woff2|json))'", sw):
+        assert os.path.exists(os.path.join(FRONT, asset)), f"precached file missing: {asset}"
 
 
 def test_every_page_uses_the_field_layer_without_the_motion_layer():

@@ -1,5 +1,17 @@
 # Changelog
 
+Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
+
+## v5.4 — backend hardening, live data, arsenic trend warnings
+- **Security:** security headers on every response and a Content-Security-Policy that allows only the pages' own inline scripts by SHA-256 hash; per-IP rate limits (429 + Retry-After); **per-device API keys** (`POST/DELETE /api/admin/devices/{code}/key`, stored as hashes, a keyed device must use its key); stricter input validation; request IDs and Server-Timing.
+- **Database:** per-connection SQLite `busy_timeout`, `foreign_keys`, `synchronous=FULL`; composite `(device_id, recorded_at)` index; online backups (`POST /api/admin/backup`); SQLite version and WAL-fix status in `/api/health`.
+- **Live updates:** `GET /api/events` Server-Sent Events (`reading`, `alert`); the dashboard shows a Live indicator, refreshes devices and history, and shows a toast for new hardware readings.
+- **Trend early warning:** Mann-Kendall test + Sen's slope per device (`/api/devices/{code}/trend`, also in `/api/devices`), straight-line projection to the next limit; rising-trend and silent-device notices in `/api/alerts/recent`; `GET /api/devices/{code}` detail.
+- **Export:** `format=csv` now really returns CSV (it returned JSON), streamed, formula-injection safe, with a device filter.
+- **Dashboard UX:** warnings list, trend note, chart data-table fallback and line styles, verdict chips with words, sticky-header-safe focus, 44 px touch targets, offline device symbol, offline mode via a service worker.
+- Tests: 185 (22 toolkit + 163 platform).
+
+
 ## v5.3 — ESP32 hardening and the "field kit" dashboard
 **ESP32 firmware (5.3.0)**
 - **Offline buffer moved from NVS to LittleFS.** The old buffer promised 500 readings in NVS, but NVS is meant for small values (a blob costs 3+ entries), the default NVS partition is shared with Wi-Fi, and `putBytes` failures were never checked, so readings were silently lost after roughly a hundred. Now a fixed-size ring file (`/offline.bin`, 1,000 readings), formatted on first boot, with a RAM fallback if LittleFS cannot mount.

@@ -256,6 +256,11 @@ void main(){
   UI.cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
   // ---------------- init ----------------
+  // Offline support: only on secure origins (localhost, the desktop app, HTTPS) - browsers do not allow it on plain LAN HTTP.
+  if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     if ($('menuBtn')) $('menuBtn').addEventListener('click', () => setMenu(!$('rail').classList.contains('open')));
     if ($('railBackdrop')) $('railBackdrop').addEventListener('click', () => setMenu(false));

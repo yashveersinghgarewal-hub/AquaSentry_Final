@@ -14,6 +14,7 @@ Provides:
 
 import os
 import io
+import re
 import hmac
 import json
 import uuid
@@ -27,13 +28,21 @@ from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 load_dotenv()
 
+import csv
+import time as _time
 from fastapi import FastAPI, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .database import engine, get_db, Base, ensure_sqlite_columns, compact_database
+from .database import (engine, get_db, Base, ensure_sqlite_columns, compact_database, ensure_indexes,
+                       sqlite_info, backup_database, DATABASE_URL)
+from . import security
+from .events import HUB
+from .trends import analyse as analyse_trend
 from .classification import classify_arsenic_neural
 from .standards import (
     WHO_GUIDELINE_UG_L,
@@ -67,14 +76,16 @@ from .chat_policy import (
 # Create tables on startup and apply non-destructive column migrations
 Base.metadata.create_all(bind=engine)
 ensure_sqlite_columns()
+ensure_indexes()
+START_TIME = _time.time()
 
 app = FastAPI(
     title="AquaSentry Water Safety & Surveillance API",
     description="Scientific backend and edge neural classifier for autonomous water quality monitoring.",
-    version="1.4.0",
+    version="1.5.0",
 )
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 
 
 def active_model_name() -> str:
@@ -94,6 +105,14 @@ def _v3_topology():
 
 
 V3_SIZES, V3_NODES, V3_WEIGHTS, V3_PARAMS = _v3_topology()
+
+
+def _is_number(v: str) -> bool:
+    try:
+        float(v)
+        return True
+    except ValueError:
+        return False
 
 
 def _val(x, default):
@@ -130,9 +149,25 @@ def _key_ok(request: Request) -> bool:
     return bool(key) and hmac.compare_digest(given.encode(), key.encode())
 
 
+def _check_device_key(db: Session, device_code: str, request: Request):
+    dev = db.query(models.Device).filter_by(device_code=device_code).first()
+    if dev is not None and dev.api_key_hash:
+        given = request.headers.get("x-api-key")
+        if not (security.key_matches(given, dev.api_key_hash) or _key_ok(request)):
+            raise HTTPException(status_code=401, detail=f"Device '{device_code}' has its own API key; send it as X-API-Key.")
+
+
 def require_writer(request: Request):
+    """Writes are allowed from this computer, with the global key, or with any registered device key
+    (the device key is then checked against the device_code in the body by _check_device_key)."""
     if _api_key() is None or _is_loopback(request) or _key_ok(request):
         return
+    given = request.headers.get("x-api-key")
+    if given and given.startswith(security.KEY_PREFIX):
+        from .database import SessionLocal
+        with SessionLocal() as db:
+            if db.query(models.Device).filter(models.Device.api_key_hash == security.hash_key(given)).first():
+                return
     raise HTTPException(status_code=401, detail="Missing or wrong X-API-Key header (see AQUASENTRY_API_KEY in .env).")
 
 
@@ -147,14 +182,32 @@ if _api_key() is None:
     print("[AquaSentry] Note: AQUASENTRY_API_KEY is not set, so any device on the network can add readings. "
           "Set it in .env (and DEVICE_API_KEY in the firmware) before deploying.")
 
-cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins != ["*"] else ["*"],
+    allow_origins=cors_origins or ["*"],
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(security.RateLimitMiddleware)
+_PAGES = ["index.html", "market-research.html", "sales-expansion.html", "device-simulator.html", "mas-g1-display.html"]
+_FRONTEND_FOR_CSP = __import__("pathlib").Path(os.getenv("AQUASENTRY_FRONTEND_DIR",
+                                                          __import__("pathlib").Path(__file__).resolve().parent.parent / "frontend"))
+app.add_middleware(security.SecurityHeadersMiddleware,
+                   csp=security.build_csp(security.inline_script_hashes(_FRONTEND_FOR_CSP, _PAGES)))
+
+
+@app.middleware("http")
+async def request_id_and_timing(request: Request, call_next):
+    """Every response carries X-Request-ID (echoed if the client sent one) and Server-Timing."""
+    rid = (request.headers.get("x-request-id") or uuid.uuid4().hex[:16])[:64]
+    t0 = _time.perf_counter()
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = rid
+    response.headers["Server-Timing"] = f"app;dur={(_time.perf_counter() - t0) * 1000:.1f}"
+    return response
 
 
 def now_utc():
@@ -186,6 +239,9 @@ def health_check(db: Session = Depends(get_db)):
         "standards_version": "WHO GDWQ 4th ed. / IS 10500:2012 + Amd. 1 (2015, As 10 µg/L no relaxation)",
         "write_auth": "api_key" if _api_key() else "open",
         "app_version": APP_VERSION,
+        "uptime_s": round(_time.time() - START_TIME, 1),
+        "live_subscribers": HUB.subscriber_count,
+        **sqlite_info(),
         "ai_chatbot_configured": client is not None,
         "analytes_cataloged": len(ANALYTE_REGISTRY),
         "voltammetry_pipeline": "Savitzky-Golay 5pt + Linear Baseline",
@@ -228,11 +284,12 @@ def build_alert(classification: str, as_ppb: float, **extra) -> Optional[Dict[st
     if classification not in ("Unsafe", "Hazardous"):
         return None
     arsenic_driven = as_ppb >= BIS_PERMISSIBLE_LIMIT_UG_L
+    where = f" at {extra['device_code']}" if extra.get("device_code") else ""
     if arsenic_driven:
-        msg = (f"ARSENIC EXCEEDANCE: {as_ppb:.1f} µg/L detected "
-               f"(India IS 10500 and WHO limit: {BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L, no relaxation).")
+        msg = (f"Arsenic {as_ppb:.1f} µg/L{where}: above the {BIS_PERMISSIBLE_LIMIT_UG_L:.0f} µg/L limit "
+               f"(India IS 10500, no relaxation, and WHO). Do not drink.")
     else:
-        msg = f"WATER QUALITY ALERT: reading classified {classification} (arsenic {as_ppb:.1f} µg/L; another reading is out of limits)."
+        msg = f"Water{where} classified {classification}: another reading (pH, turbidity or conductivity) is out of limits."
     return {
         "id": str(uuid.uuid4()),
         "timestamp": now_utc().isoformat(),
@@ -497,7 +554,7 @@ def _classify_stored(rec: "models.Reading"):
 
 @app.post("/api/readings", response_model=schemas.ReadingResponse, tags=["Readings"],
           dependencies=[Depends(require_writer)])
-def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)):
+def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session = Depends(get_db)):
     """
     Ingest a new arsenic reading from the autonomous vessel or simulator.
     Evaluates risk with conservative public health precedence rules and stores full audit lineage.
@@ -508,6 +565,9 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
         if existing:
             # Same reading re-sent (e.g. the ESP32 retrying after a timeout): return what was stored.
             return _reading_response(existing, _classify_stored(existing), prefix="[Idempotent Cache Hit] ")
+
+    # A device with its own key must use it: nobody else on the network can post as that device.
+    _check_device_key(db, payload.device_code, request)
 
     try:
         eval_res = classify_arsenic_neural(
@@ -556,8 +616,11 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(reading)
 
+    HUB.publish("reading", {"id": reading.id, "device_code": payload.device_code, "arsenic_ppb": reading.arsenic_ppb,
+                            "classification": eval_res.label, "recorded_at": _utc(reading.recorded_at),
+                            "source_type": reading.source_type})
     # Imp 21: alert on every Unsafe / Hazardous verdict (not only arsenic, and at the current 10 µg/L limit)
-    dispatch_emergency_alert({
+    alert = dispatch_emergency_alert({
         "arsenic_ppb": reading.arsenic_ppb,
         "source_type": reading.source_type,
         "source_label": reading.source_label,
@@ -565,6 +628,8 @@ def create_reading(payload: schemas.ReadingCreate, db: Session = Depends(get_db)
         "reading_id": reading.id,
         "device_code": payload.device_code,
     })
+    if alert:
+        HUB.publish("alert", alert)
 
     return _reading_response(reading, eval_res)
 
@@ -629,38 +694,156 @@ def reading_history(
 DEVICE_EXPECTED_INTERVAL_MIN = float(os.getenv("DEVICE_EXPECTED_INTERVAL_MIN", "60"))
 
 
-@app.get("/api/devices", response_model=List[schemas.DeviceStatusOut], tags=["Devices"])
-def list_devices(db: Session = Depends(get_db)):
-    """Every device that has sent data, with online / late / offline status and its latest result."""
-    out = []
+def _device_points(db: Session, device_id: int, days: float = 180):
+    since = (now_utc() - timedelta(days=days)).replace(tzinfo=None)
+    rows = (db.query(models.Reading.recorded_at, models.Reading.arsenic_ppb)
+            .filter(models.Reading.device_id == device_id, models.Reading.recorded_at >= since)
+            .order_by(models.Reading.recorded_at.asc()).all())
+    return [(_utc(t), float(v)) for t, v in rows]
+
+
+def _device_status(d: "models.Device", latest) -> tuple:
+    hardware = bool(latest is not None and latest.source_type == "hardware")
+    seen = _utc(d.last_seen)
+    mins = round((now_utc() - seen).total_seconds() / 60.0, 1) if seen else None
+    if not hardware:
+        st = "demo"
+    elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 1.5:
+        st = "online"
+    elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 3:
+        st = "late"
+    else:
+        st = "offline"
+    return st, mins, hardware, seen
+
+
+def _device_out(db: Session, d: "models.Device", counts: dict, unsafe: dict, with_trend: bool = True) -> schemas.DeviceStatusOut:
+    latest = (db.query(models.Reading).filter(models.Reading.device_id == d.id)
+              .order_by(models.Reading.recorded_at.desc()).first())
+    st, mins, hardware, seen = _device_status(d, latest)
+    trend = None
+    if with_trend and hardware:
+        t = analyse_trend(_device_points(db, d.id, 90), lod=LOD_UG_L)
+        trend = schemas.TrendSummary(direction=t["direction"], significant=t.get("significant", False),
+                                     sen_slope_ug_per_week=t.get("sen_slope_ug_per_week"),
+                                     p_value=(t.get("mann_kendall") or {}).get("p_value"),
+                                     days_to_next_limit=(t.get("projection") or {}).get("days"),
+                                     next_limit_ug_l=(t.get("projection") or {}).get("limit_ug_l"),
+                                     message=t.get("message"))
+    return schemas.DeviceStatusOut(
+        device_code=d.device_code, firmware_version=d.firmware_version if hardware else None,
+        first_seen=_utc(d.first_seen), last_seen=seen, status=st, minutes_since_seen=mins,
+        reading_count=int(counts.get(d.id, 0)), unsafe_count=int(unsafe.get(d.id, 0)), is_hardware=hardware,
+        has_device_key=bool(d.api_key_hash), trend=trend,
+        latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
+                                       recorded_at=_utc(latest.recorded_at)) if latest else None,
+    )
+
+
+def _counts(db: Session):
     counts = dict(db.query(models.Reading.device_id, func.count(models.Reading.id)).group_by(models.Reading.device_id).all())
     unsafe = dict(db.query(models.Reading.device_id, func.count(models.Reading.id))
                   .filter(models.Reading.classification.in_(["Unsafe", "Hazardous"]))
                   .group_by(models.Reading.device_id).all())
-    for d in db.query(models.Device).all():
-        latest = (db.query(models.Reading).filter(models.Reading.device_id == d.id)
-                  .order_by(models.Reading.recorded_at.desc()).first())
-        hardware = bool(latest is not None and latest.source_type == "hardware")
-        seen = _utc(d.last_seen)
-        mins = round((now_utc() - seen).total_seconds() / 60.0, 1) if seen else None
-        if not hardware:
-            status_ = "demo"
-        elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 1.5:
-            status_ = "online"
-        elif mins is not None and mins <= DEVICE_EXPECTED_INTERVAL_MIN * 3:
-            status_ = "late"
-        else:
-            status_ = "offline"
-        out.append(schemas.DeviceStatusOut(
-            device_code=d.device_code, firmware_version=d.firmware_version if hardware else None,
-            first_seen=_utc(d.first_seen), last_seen=seen, status=status_, minutes_since_seen=mins,
-            reading_count=int(counts.get(d.id, 0)), unsafe_count=int(unsafe.get(d.id, 0)), is_hardware=hardware,
-            latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
-                                           recorded_at=_utc(latest.recorded_at)) if latest else None,
-        ))
+    return counts, unsafe
+
+
+@app.get("/api/devices", response_model=List[schemas.DeviceStatusOut], tags=["Devices"])
+def list_devices(db: Session = Depends(get_db)):
+    """Every device that has sent data, with online / late / offline status, its latest result and,
+    for hardware nodes, the arsenic trend (Mann-Kendall + Sen's slope over 90 days)."""
+    counts, unsafe = _counts(db)
+    out = [_device_out(db, d, counts, unsafe) for d in db.query(models.Device).all()]
     rank = {"online": 0, "late": 1, "offline": 2, "demo": 3}
     out.sort(key=lambda x: (rank[x.status], -(x.last_seen.timestamp() if x.last_seen else 0)))
     return out
+
+
+def _device_or_404(db: Session, code: str) -> "models.Device":
+    d = db.query(models.Device).filter_by(device_code=code).first()
+    if d is None:
+        raise HTTPException(status_code=404, detail=f"No device called '{code}'.")
+    return d
+
+
+@app.get("/api/devices/{device_code}", tags=["Devices"])
+def device_detail(device_code: str, db: Session = Depends(get_db)):
+    """One device: status, trend, the last 20 readings and verdict counts."""
+    d = _device_or_404(db, device_code)
+    counts, unsafe = _counts(db)
+    base = _device_out(db, d, counts, unsafe).model_dump(mode="json")
+    recent = (db.query(models.Reading).filter(models.Reading.device_id == d.id)
+              .order_by(models.Reading.recorded_at.desc()).limit(20).all())
+    by_class = dict(db.query(models.Reading.classification, func.count(models.Reading.id))
+                    .filter(models.Reading.device_id == d.id).group_by(models.Reading.classification).all())
+    base["recent"] = [{"id": r.id, "recorded_at": _utc(r.recorded_at).isoformat(), "arsenic_ppb": r.arsenic_ppb,
+                       "classification": r.classification, "ph": r.ph, "turbidity_ntu": r.turbidity_ntu,
+                       "conductivity_us_cm": r.conductivity_us_cm, "temperature_c": r.temperature_c} for r in recent]
+    base["by_classification"] = by_class
+    return base
+
+
+@app.get("/api/devices/{device_code}/trend", tags=["Devices"])
+def device_trend(device_code: str, days: float = Query(90, gt=1, le=3650), db: Session = Depends(get_db)):
+    """Is arsenic at this source rising? Mann-Kendall trend test (tie-corrected, non-detects set to the
+    detection limit) with Sen's slope, plus a straight-line projection to the next limit."""
+    d = _device_or_404(db, device_code)
+    return {"device_code": d.device_code, "days": days, **analyse_trend(_device_points(db, d.id, days), lod=LOD_UG_L)}
+
+
+@app.post("/api/admin/devices/{device_code}/key", tags=["Admin"], dependencies=[Depends(require_admin)])
+def create_device_key(device_code: str, db: Session = Depends(get_db)):
+    """Give a device its own API key (shown once; only its hash is stored). Replaces any previous key.
+    Put it in DEVICE_API_KEY on the ESP32 or in its setup page."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]{2,64}", device_code):
+        raise HTTPException(status_code=422, detail="Device codes use letters, digits, - and _ (2-64 characters).")
+    d = _get_or_create_device(db, device_code)
+    key = security.new_device_key()
+    d.api_key_hash, d.api_key_hint = security.hash_key(key), key[:8]
+    db.commit()
+    return {"device_code": d.device_code, "api_key": key, "hint": d.api_key_hint,
+            "note": "Store this now: the server keeps only a hash and cannot show it again."}
+
+
+@app.delete("/api/admin/devices/{device_code}/key", tags=["Admin"], dependencies=[Depends(require_admin)])
+def revoke_device_key(device_code: str, db: Session = Depends(get_db)):
+    d = _device_or_404(db, device_code)
+    d.api_key_hash = d.api_key_hint = None
+    db.commit()
+    return {"device_code": d.device_code, "status": "revoked"}
+
+
+@app.get("/api/events", tags=["Live"])
+async def live_events(request: Request, max_events: int = Query(0, ge=0, le=10000,
+                      description="Stop after this many events (0 = keep streaming)")):
+    """Server-Sent Events: `reading` for every stored reading, `alert` for Unsafe / Hazardous verdicts,
+    and a comment heartbeat every 15 s. Browsers reconnect automatically (EventSource)."""
+    HUB.bind_loop(asyncio.get_running_loop())
+    q = HUB.subscribe()
+    if q is None:
+        raise HTTPException(status_code=503, detail="Too many live connections; try again shortly.")
+
+    async def stream():
+        sent = 0
+        try:
+            yield "retry: 5000\n: connected\n\n"
+            while True:
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    if await request.is_disconnected():
+                        break
+                    yield ": keep-alive\n\n"
+                    continue
+                yield msg
+                sent += 1
+                if max_events and sent >= max_events:
+                    break
+        finally:
+            HUB.unsubscribe(q)
+
+    return StreamingResponse(stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ---------------------------------------------------------------------------
@@ -1162,12 +1345,17 @@ def export_data(
     format: str = Query("json", description="Export format: json | csv"),
     redact_coordinates: bool = Query(False, description="Redact exact coordinates for public privacy"),
     source_type: Optional[str] = Query(None),
+    device_code: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """Export water quality readings with complete scientific schema versioning and lineage."""
+    """Export water quality readings with schema version and lineage, as JSON or CSV (spreadsheet-safe)."""
+    if format not in ("json", "csv"):
+        raise HTTPException(status_code=422, detail="format must be json or csv.")
     q = db.query(models.Reading).order_by(models.Reading.recorded_at.desc())
     if source_type:
         q = q.filter(models.Reading.source_type == source_type)
+    if device_code:
+        q = q.join(models.Device).filter(models.Device.device_code == device_code)
     readings = q.all()
 
     records = []
@@ -1197,6 +1385,32 @@ def export_data(
             "longitude": lon,
             "coordinates_redacted": redact_coordinates,
         })
+
+    if format == "csv":
+        cols = ["sample_id", "recorded_at", "device_code", "arsenic_ppb", "arsenic_mg_l", "classification",
+                "regulatory_tier", "is_safe_to_drink", "ph", "conductivity_us_cm", "turbidity_ntu", "temperature_c",
+                "latitude", "longitude", "source_type", "is_simulated", "model_version", "method_version"]
+        codes = {d.id: d.device_code for d in db.query(models.Device).all()}
+
+        def cell(v):
+            v = "" if v is None else str(v)
+            # spreadsheet formula injection: a cell starting with = + - @ would run as a formula
+            return "'" + v if v[:1] in ("=", "+", "-", "@", "\t", "\r") and not _is_number(v) else v
+
+        def rows():
+            buf = io.StringIO()
+            w = csv.writer(buf)
+            w.writerow(cols)
+            for rec, r in zip(records, readings):
+                rec = dict(rec, device_code=codes.get(r.device_id))
+                w.writerow([cell(rec.get(c)) for c in cols])
+                if buf.tell() > 32768:
+                    yield buf.getvalue(); buf.seek(0); buf.truncate()
+            yield buf.getvalue()
+
+        fname = f"aquasentry_readings_{now_utc().strftime('%Y%m%d')}.csv"
+        return StreamingResponse(rows(), media_type="text/csv; charset=utf-8",
+                                 headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
     return {
         "export_metadata": {
@@ -1601,12 +1815,34 @@ def get_recent_alerts(limit: int = Query(20, ge=1, le=100), db: Session = Depend
             ts = r.recorded_at if r.recorded_at.tzinfo else r.recorded_at.replace(tzinfo=timezone.utc)
             a["id"], a["timestamp"] = f"reading-{r.id}", ts.isoformat()
             alerts.append(a)
+    # Early warnings that are not single readings: a rising trend, or a node that stopped reporting.
+    counts, unsafe = _counts(db)
+    for d in db.query(models.Device).all():
+        info = _device_out(db, d, counts, unsafe)
+        if not info.is_hardware:
+            continue
+        if info.trend and info.trend.direction == "rising":
+            alerts.append({"id": f"trend-{d.device_code}", "type": "trend", "level": "NOTICE", "device_code": d.device_code,
+                           "timestamp": now_utc().isoformat(), "message": f"{d.device_code}: {info.trend.message}",
+                           "action_required": "Test this source more often and arrange a laboratory test."})
+        if info.status == "offline":
+            hrs = (info.minutes_since_seen or 0) / 60
+            alerts.append({"id": f"offline-{d.device_code}", "type": "offline", "level": "NOTICE", "device_code": d.device_code,
+                           "timestamp": now_utc().isoformat(), "message": f"{d.device_code} has not reported for {hrs:.0f} hours.",
+                           "action_required": "Check power, Wi-Fi and the status page of the node."})
     return {"count": len(alerts), "alerts": alerts}
 
 
 # ===========================================================================
 # Imp 22: SQLite WAL Compaction Endpoint
 # ===========================================================================
+
+@app.post("/api/admin/backup", tags=["Admin"], dependencies=[Depends(require_admin)])
+def backup_now():
+    """Consistent copy of the SQLite database into AquaSentry_Platform/backups/ (safe while running)."""
+    dest = os.getenv("AQUASENTRY_BACKUP_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backups"))
+    return backup_database(dest)
+
 
 @app.post("/api/admin/db/compact", tags=["Admin"], dependencies=[Depends(require_admin)])
 def compact_sqlite_database():

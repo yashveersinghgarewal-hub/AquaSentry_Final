@@ -3,7 +3,7 @@ Pydantic schemas: define validated shapes accepted and returned by the API.
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import timezone
 from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
 
@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator, field_valida
 # ---------- Incoming: what the Arduino / bridge sends ----------
 
 class ReadingCreate(BaseModel):
-    device_code: str = Field(..., description="Unique ID of the robot, e.g. 'AQUA-001'", min_length=2, max_length=64)
+    device_code: str = Field(..., description="Unique ID of the robot, e.g. 'AQUA-001'", min_length=2, max_length=64,
+                             pattern=r"^[A-Za-z0-9_.:-]{2,64}$")
     arsenic_ppb: Optional[float] = Field(None, ge=0, le=50000, description="Measured arsenic concentration in µg/L (ppb)")
     arsenic_concentration_mg_l: Optional[float] = Field(None, ge=0, le=50.0, description="Measured arsenic concentration in mg/L")
 
@@ -40,7 +41,8 @@ class ReadingCreate(BaseModel):
     battery_pct: Optional[float] = Field(None, ge=0, le=100, description="Battery state of charge 0-100%")
     source_label: Optional[str] = Field(None, max_length=64, description="Sampling station or sector label")
 
-    source_type: Optional[str] = Field("simulated", description="simulated | hardware | manual_import | synthetic_fixture")
+    source_type: Optional[Literal["simulated", "hardware", "manual_import", "synthetic_fixture", "synthetic_demo"]] = Field(
+        "simulated", description="simulated | hardware | manual_import | synthetic_fixture | synthetic_demo")
     idempotency_key: Optional[str] = Field(None, max_length=64, description="Unique client transmission ID to prevent duplicates")
 
     recorded_at: Optional[datetime] = Field(
@@ -171,6 +173,16 @@ class DeviceLatestOut(BaseModel):
     recorded_at: datetime
 
 
+class TrendSummary(BaseModel):
+    direction: str                     # rising | falling | no_trend | insufficient_data
+    significant: bool = False
+    sen_slope_ug_per_week: Optional[float] = None
+    p_value: Optional[float] = None
+    days_to_next_limit: Optional[float] = None
+    next_limit_ug_l: Optional[float] = None
+    message: Optional[str] = None
+
+
 class DeviceStatusOut(BaseModel):
     device_code: str
     firmware_version: Optional[str] = None
@@ -181,6 +193,8 @@ class DeviceStatusOut(BaseModel):
     reading_count: int
     unsafe_count: int
     is_hardware: bool
+    has_device_key: bool = False
+    trend: Optional[TrendSummary] = None
     latest: Optional[DeviceLatestOut] = None
 
 

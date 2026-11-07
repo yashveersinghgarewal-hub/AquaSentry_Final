@@ -1,12 +1,12 @@
 {
-  "name": "AquaSentry Autonomous Water Safety System",
+  "name": "AquaSentry arsenic water check",
   "short_name": "AquaSentry",
-  "description": "Autonomous Electrochemical Water Quality Surveillance & Edge Neural Safety System",
+  "description": "Is this water safe? Arsenic screening results from AquaSentry sensors, in English and Hindi.",
   "start_url": "index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#050708",
-  "theme_color": "#050708",
+  "orientation": "any",
+  "background_color": "#F2F5F4",
+  "theme_color": "#F2F5F4",
   "icons": [
     {
       "src": "logo.svg",

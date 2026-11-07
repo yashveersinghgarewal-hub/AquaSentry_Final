@@ -22,6 +22,7 @@ from sqlalchemy import (
     Text,
     Boolean,
 )
+from sqlalchemy import Index
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -40,6 +41,8 @@ class Device(Base):
     location_label = Column(String(128), nullable=True)  # e.g. "Powai Lake North"
     firmware_version = Column(String(32), default="v1.0.0")
     status = Column(String(32), default="online")        # online | offline | maintenance
+    api_key_hash = Column(String(64), nullable=True)     # SHA-256 of the device's own API key (never the key)
+    api_key_hint = Column(String(16), nullable=True)     # first characters, to tell keys apart
     first_seen = Column(DateTime, default=utc_now)
     last_seen = Column(DateTime, default=utc_now)
 
@@ -94,6 +97,8 @@ class Reading(Base):
     raw_payload = Column(Text, nullable=True)  # original unparsed payload
 
     device = relationship("Device", back_populates="readings")
+
+    __table_args__ = (Index("ix_readings_device_recorded", "device_id", "recorded_at"),)
 
 
 class Sample(Base):
