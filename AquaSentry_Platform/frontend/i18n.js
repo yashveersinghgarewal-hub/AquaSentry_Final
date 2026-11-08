@@ -442,10 +442,13 @@
   };
 
   const STORE_KEY = 'aquasentry.lang';
-  let current = 'en';
+  // Languages loaded on demand (one small file each); missing keys fall back to English.
+  const LAZY = { bn: 'i18n-bn.js', as: 'i18n-as.js', pa: 'i18n-pa.js' };
+  let current = 'en', pending = null;
   try {
     const saved = localStorage.getItem(STORE_KEY);
     if (saved && STRINGS[saved]) current = saved;
+    else if (saved && LAZY[saved]) pending = saved;
   } catch (e) { /* storage blocked: stay in English */ }
 
   function t(key, vars) {
@@ -466,9 +469,25 @@
     document.querySelectorAll('[data-lang-choice]').forEach((btn) => {
       btn.setAttribute('aria-pressed', btn.getAttribute('data-lang-choice') === current ? 'true' : 'false');
     });
+    document.querySelectorAll('[data-lang-select]').forEach((sel) => { sel.value = current; });
+  }
+
+  function loadLang(lang) {
+    if (STRINGS[lang] && STRINGS[lang].__loaded) return Promise.resolve();
+    return new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = LAZY[lang];
+      s.onload = () => { (STRINGS[lang] = STRINGS[lang] || {}).__loaded = true; ok(); };
+      s.onerror = fail;
+      document.head.appendChild(s);
+    });
   }
 
   function setLang(lang) {
+    if (LAZY[lang] && !(STRINGS[lang] && STRINGS[lang].__loaded)) {
+      loadLang(lang).then(() => setLang(lang)).catch(() => {});
+      return;
+    }
     if (!STRINGS[lang]) return;
     current = lang;
     try { localStorage.setItem(STORE_KEY, lang); } catch (e) { /* ignore */ }
@@ -479,12 +498,17 @@
   /** Add or override strings (used by i18n-v5.js and the project pages). */
   function extend(lang, dict) { STRINGS[lang] = Object.assign(STRINGS[lang] || {}, dict); }
 
-  window.I18N = { t, apply, setLang, extend, get lang() { return current; }, languages: Object.keys(STRINGS) };
+  window.I18N = { t, apply, setLang, extend, get lang() { return current; }, languages: Object.keys(STRINGS).concat(Object.keys(LAZY)) };
 
   document.addEventListener('DOMContentLoaded', () => {
     apply();
     document.querySelectorAll('[data-lang-choice]').forEach((btn) => {
       btn.addEventListener('click', () => setLang(btn.getAttribute('data-lang-choice')));
     });
+    document.querySelectorAll('[data-lang-select]').forEach((sel) => {
+      sel.value = pending || current;
+      sel.addEventListener('change', () => setLang(sel.value));
+    });
+    if (pending) setLang(pending);       // a saved Bengali / Assamese / Punjabi choice
   });
 })();

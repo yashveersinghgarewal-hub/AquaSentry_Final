@@ -12,7 +12,10 @@
   let uid = 0;
   function mk(name, attrs, parent, text) {
     const e = document.createElementNS(NS, name);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    for (const k in attrs) {
+      if (k === 'style') e.style.cssText = attrs[k];   // CSSOM, allowed by a strict style-src (a style attribute is not)
+      else e.setAttribute(k, attrs[k]);
+    }
     if (text !== undefined) e.textContent = text;
     if (parent) parent.appendChild(e);
     return e;
@@ -39,7 +42,8 @@
   }
   function legend(el, series) {
     const d = document.createElement('div'); d.className = 'chart-legend';
-    d.innerHTML = series.map((s) => `<span><i style="background:${col(s.color)}"></i>${s.name}</span>`).join('');
+    d.innerHTML = series.map((s) => `<span><i></i>${s.name}</span>`).join('');
+    d.querySelectorAll('i').forEach((i, k) => { i.style.background = col(series[k].color); });   // CSSOM: allowed by a strict CSP
     el.appendChild(d);
   }
   function gradient(defs, color, vertical, a1, a2) {

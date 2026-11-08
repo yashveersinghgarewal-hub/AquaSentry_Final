@@ -80,7 +80,9 @@ class LoginIn(BaseModel):
 
 @router.get("/api/auth/status", tags=["Auth"])
 def auth_status(request: Request):
-    return {"read_protected": read_key() is not None, "signed_in": reader_allowed(request)}
+    """Also tells the dashboard which map tile server to use (MAP_TILE_URL)."""
+    return {"read_protected": read_key() is not None, "signed_in": reader_allowed(request),
+            "map_tiles": os.getenv("MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")}
 
 
 @router.post("/api/auth/login", tags=["Auth"])

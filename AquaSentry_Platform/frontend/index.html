@@ -61,10 +61,17 @@
       </div>
       <span class="live-pill" id="livePill" hidden><span class="live-dot" aria-hidden="true"></span><span data-i18n="live.on">Live</span></span>
       <div class="topbar-right">
-        <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
-          <button type="button" data-lang-choice="en" aria-pressed="true">English</button>
-          <button type="button" data-lang-choice="hi" aria-pressed="false" lang="hi">हिन्दी</button>
-        </div>
+        <label class="lang-select">
+          <span class="sr-only" data-i18n="lang.label">Language</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          <select id="langSelect" data-lang-select>
+            <option value="en">English</option>
+            <option value="hi" lang="hi">हिन्दी</option>
+            <option value="bn" lang="bn">বাংলা</option>
+            <option value="as" lang="as">অসমীয়া</option>
+            <option value="pa" lang="pa">ਪੰਜਾਬੀ</option>
+          </select>
+        </label>
         <button class="icon-btn" id="themeBtn" type="button" data-i18n-aria="theme.toggle" aria-label="Switch light or dark theme">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
         </button>
@@ -126,13 +133,13 @@
           <div class="kit-body">
             <div class="kit-marker" id="stripPin" hidden><span id="stripPinLabel"></span></div>
             <ol class="kit-swatches" aria-hidden="true">
-              <li style="--c:#FAF6E4"><b>0</b></li>
-              <li style="--c:#F3E39B"><b>10</b></li>
-              <li style="--c:#E6C55A"><b>20</b></li>
-              <li style="--c:#D09A35"><b>50</b></li>
-              <li style="--c:#AC6A28" class="dark"><b>100</b></li>
-              <li style="--c:#864620" class="dark"><b>150</b></li>
-              <li style="--c:#57301A" class="dark"><b>300+</b></li>
+              <li class="kc-faf6e4"><b>0</b></li>
+              <li class="kc-f3e39b"><b>10</b></li>
+              <li class="kc-e6c55a"><b>20</b></li>
+              <li class="kc-d09a35"><b>50</b></li>
+              <li class="dark kc-ac6a28"><b>100</b></li>
+              <li class="dark kc-864620"><b>150</b></li>
+              <li class="dark kc-57301a"><b>300+</b></li>
             </ol>
             <div class="kit-bands">
               <span class="band ok" data-i18n="chart.band.ok">Within limit</span>
@@ -148,6 +155,7 @@
             <h3 data-i18n="ov.why">Why this result</h3>
             <ul id="whyList"><li data-i18n="ov.why.empty">Run a test to see the reasons behind the verdict.</li></ul>
             <p class="lab-note" id="labNote" hidden data-i18n="ov.labNote"></p>
+            <ul class="qc-notes" id="qcNotes" hidden></ul>
           </div>
           <div>
             <h3 class="h-sub" id="readHeading" data-i18n="read.heading">Other water readings</h3>
@@ -163,12 +171,24 @@
           <h2 id="fleetHeading" data-i18n="fleet.heading">Devices and history</h2>
           <p class="lede" data-i18n="fleet.intro">Every sensor that has sent a reading, and how arsenic has changed over time.</p>
         </div>
+        <div class="map-card" id="mapCard">
+          <div class="hist-head">
+            <h3 class="h-sub" data-i18n="map.heading">Map of sensor nodes</h3>
+            <span class="map-key" aria-hidden="true"><i class="k-safe"></i><span data-i18n="class.Clear">Not detected</span><i class="k-caution"></i><span data-i18n="class.Caution">Caution</span><i class="k-unsafe"></i><span data-i18n="class.Unsafe">Unsafe</span><i class="k-haz"></i><span data-i18n="class.Hazardous">Hazardous</span></span>
+          </div>
+          <div class="node-map" id="nodeMap" role="region" data-i18n-aria="map.heading" aria-label="Map of sensor nodes"></div>
+          <p class="meta" id="mapNote" data-i18n="map.none">Nodes appear here once their location is set.</p>
+        </div>
         <div class="fleet">
           <div>
             <h3 class="h-sub" data-i18n="fleet.devices">Devices</h3>
             <ul class="device-list" id="deviceList" aria-live="polite"><li class="empty" data-i18n="fleet.empty">Start the server to see devices.</li></ul>
             <h3 class="h-sub warn-head" data-i18n="warn.heading">Warnings</h3>
             <ul class="warn-list" id="warnList"><li class="empty" data-i18n="warn.none">No warnings.</li></ul>
+            <div class="push-box" id="pushBox" hidden>
+              <button type="button" class="btn btn-quiet" id="pushBtn" data-i18n="push.on">Get alerts on this phone</button>
+              <p class="meta" id="pushNote"></p>
+            </div>
           </div>
           <div>
             <div class="hist-head">
@@ -178,6 +198,11 @@
                 <button type="button" data-hist="168" aria-pressed="false" data-i18n="fleet.r.week">7 days</button>
                 <button type="button" data-hist="720" aria-pressed="true" data-i18n="fleet.r.month">30 days</button>
               </div>
+            </div>
+            <div class="dev-tools" id="devTools" hidden>
+              <a class="btn btn-quiet" id="devPage" target="_blank" rel="noopener" data-i18n="dev.page">Public page</a>
+              <a class="btn btn-quiet" id="devSticker" target="_blank" rel="noopener" data-i18n="dev.sticker">Print QR sticker</a>
+              <a class="btn btn-quiet" id="devJjm" download data-i18n="dev.jjm">Jal Jeevan Mission CSV</a>
             </div>
             <p class="trend-note" id="trendNote" hidden></p>
             <div class="hist-wrap"><svg class="hist" id="historyChart" role="img" aria-labelledby="histDesc"></svg></div>
@@ -189,6 +214,28 @@
                 <tbody></tbody>
               </table></div>
             </details>
+            <div class="lab-card" id="labCard">
+              <h3 class="h-sub" data-i18n="lab.heading">Lab checks</h3>
+              <p class="lab-summary" id="labSummary" data-i18n="lab.none">No laboratory results yet. A lab test is the only way to confirm the sensor.</p>
+              <div class="table-wrap"><table class="data-table" id="labTable" hidden>
+                <thead><tr><th data-i18n="rep.col.time">Time</th><th data-i18n="hist.col.device">Device</th><th data-i18n="lab.col.node">Sensor (µg/L)</th><th data-i18n="lab.col.lab">Lab (µg/L)</th><th data-i18n="lab.col.method">Method</th></tr></thead>
+                <tbody></tbody>
+              </table></div>
+              <details class="lab-add">
+                <summary data-i18n="lab.add">Add a lab result</summary>
+                <form id="labForm" class="lab-form">
+                  <label><span data-i18n="hist.col.device">Device</span><select id="labDevice" required></select></label>
+                  <label><span data-i18n="lab.f.as">Total arsenic (µg/L)</span><input id="labAs" type="number" min="0" max="50000" step="0.1" required inputmode="decimal"></label>
+                  <label><span data-i18n="lab.f.as3">As(III), if measured</span><input id="labAs3" type="number" min="0" step="0.1" inputmode="decimal"></label>
+                  <label><span data-i18n="lab.col.method">Method</span><select id="labMethod"><option>ICP-MS</option><option>HG-AAS</option><option>GF-AAS</option><option>ICP-OES</option><option value="FTK" data-i18n="lab.ftk">Field test kit</option><option value="other" data-i18n="lab.other">Other</option></select></label>
+                  <label><span data-i18n="lab.f.date">Sample date</span><input id="labDate" type="date" required></label>
+                  <label><span data-i18n="lab.f.name">Laboratory</span><input id="labName" type="text" maxlength="128" autocomplete="organization"></label>
+                  <label class="check"><input id="labNabl" type="checkbox"><span data-i18n="lab.f.nabl">NABL-accredited lab</span></label>
+                  <button type="submit" class="btn" data-i18n="lab.save">Save lab result</button>
+                  <p class="meta" id="labMsg" role="status"></p>
+                </form>
+              </details>
+            </div>
           </div>
         </div>
       </section>
@@ -205,22 +252,22 @@
             <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10l-1 7a4 4 0 0 1-8 0Z"/><path d="M4 4l16 16"/></svg></span>
             <div class="proto-n">01</div><h3 data-i18n="act.s1.t">Stop drinking or cooking with it</h3><p data-i18n="act.s1.d"></p>
           </article>
-          <article class="card proto danger spot tilt" data-reveal style="--d:80ms">
+          <article class="card proto danger spot tilt d-80" data-reveal>
             <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3Z"/><path d="M8 8c0-2 2-2 2-4M12 8c0-2 2-2 2-4"/><path d="M3 3l18 18"/></svg></span>
             <div class="proto-n">02</div><h3 data-i18n="act.s2.t">Do not boil it</h3><p data-i18n="act.s2.d"></p>
           </article>
-          <article class="card proto spot tilt" data-reveal style="--d:160ms">
+          <article class="card proto spot tilt d-160" data-reveal>
             <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2M9 12h6"/></svg></span>
             <div class="proto-n">03</div><h3 data-i18n="act.s3.t">Washing and cleaning are still fine</h3><p data-i18n="act.s3.d"></p>
           </article>
-          <article class="card proto spot tilt" data-reveal style="--d:240ms">
+          <article class="card proto spot tilt d-240" data-reveal>
             <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span>
             <div class="proto-n">04</div><h3 data-i18n="act.s4.t">Tell the local authorities</h3><p data-i18n="act.s4.d"></p>
-            <a href="#authorities" class="btn btn-quiet" style="justify-self:start;margin-top:4px" data-i18n="act.s4.btn">Open the report</a>
+            <a href="#authorities" class="btn btn-quiet js-start mt-4" data-i18n="act.s4.btn">Open the report</a>
           </article>
         </div>
 
-        <h3 class="h-sub" style="margin-top:34px" data-reveal data-i18n="treat.heading">Safe water options</h3>
+        <h3 class="h-sub mt-34" data-reveal data-i18n="treat.heading">Safe water options</h3>
         <div class="treat">
           <article class="card treat-card spot" data-reveal>
             <span class="tag active" data-i18n="treat.rec">Recommended</span>
@@ -229,14 +276,14 @@
             <div class="meter-l"><span data-i18n="treat.cost">Cost</span><span data-i18n="treat.low">Low</span></div>
             <div class="meter"><i class="on"></i><i></i><i></i><i></i></div>
           </article>
-          <article class="card treat-card spot" data-reveal style="--d:80ms">
+          <article class="card treat-card spot d-80" data-reveal>
             <span class="tag tone-caution" data-i18n="treat.higher">Higher cost</span>
             <h3 data-i18n="treat.ro.t">Reverse osmosis (RO)</h3>
             <p data-i18n="treat.ro.d"></p>
             <div class="meter-l"><span data-i18n="treat.cost">Cost</span><span data-i18n="treat.high">High</span></div>
             <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
           </article>
-          <article class="card treat-card spot" data-reveal style="--d:160ms">
+          <article class="card treat-card spot d-160" data-reveal>
             <span class="tag" data-i18n="treat.now">Right now</span>
             <h3 data-i18n="treat.alt.t">Switch to a tested source</h3>
             <p data-i18n="treat.alt.d"></p>
@@ -244,7 +291,7 @@
             <div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i></div>
           </article>
         </div>
-        <p class="callout" style="margin-top:16px" data-reveal><b data-i18n="act.health.t">Health:</b> <span data-i18n="act.health.d"></span></p>
+        <p class="callout mt-16" data-reveal><b data-i18n="act.health.t">Health:</b> <span data-i18n="act.health.d"></span></p>
       </section>
 
       <!-- ============ CONTACT AUTHORITIES ============ -->
@@ -270,21 +317,21 @@
               </div>
               <p class="dispatch-msg" id="dispatchMsg" role="status"></p>
             </article>
-            <details class="card" style="margin-top:14px" id="contactsBox">
+            <details class="card mt-14" id="contactsBox">
               <summary data-i18n="auth.mine.t">Your local contacts (saved on this device)</summary>
               <div class="details-body">
-                <p class="muted" style="font-size:.92rem" data-i18n="auth.mine.d"></p>
+                <p class="muted fs-92" data-i18n="auth.mine.d"></p>
                 <div class="contacts-form">
                   <label><span data-i18n="auth.mine.office">Water department office</span><input class="text-in" id="cOffice" autocomplete="organization"></label>
                   <label><span data-i18n="auth.mine.phone">Phone</span><input class="text-in" id="cPhone" type="tel" autocomplete="tel"></label>
                   <label><span data-i18n="auth.mine.email">Email</span><input class="text-in" id="cEmail" type="email" autocomplete="email"></label>
                 </div>
-                <div style="display:flex;gap:10px;margin-top:12px;align-items:center"><button class="btn btn-quiet" type="button" id="cSave" data-i18n="auth.mine.save">Save contacts</button><span class="muted" id="cSaved" style="font-size:.9rem"></span></div>
+                <div class="row-inline mt-12"><button class="btn btn-quiet" type="button" id="cSave" data-i18n="auth.mine.save">Save contacts</button><span class="muted fs-90" id="cSaved"></span></div>
               </div>
             </details>
           </div>
 
-          <div class="dir" data-reveal style="--d:100ms">
+          <div class="dir d-100" data-reveal>
             <article class="card dir-item spot">
               <span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/></svg></span>
               <div><h3 data-i18n="dir.vwsc.t">Gram Panchayat / Village Water &amp; Sanitation Committee</h3><p data-i18n="dir.vwsc.d"></p></div>
@@ -338,7 +385,7 @@
             <button class="btn btn-primary btn-wide" type="button" id="runTestBtn" data-i18n="test.run">Run test</button>
             <p class="status-msg" id="testMsg" role="status"></p>
           </div>
-          <div class="test-output" data-reveal style="--d:100ms">
+          <div class="test-output d-100" data-reveal>
             <div class="card chart-box">
               <svg id="vgChart" viewBox="0 0 640 340" role="img" aria-label="Voltammogram"></svg>
               <div class="legend">
@@ -388,7 +435,7 @@
               <button class="chip" type="button" data-preset="0.22,5.8,1250,18,31" data-i18n="nn.p.ind">Industrial runoff</button>
             </div>
           </div>
-          <div class="card nn-picture" data-reveal style="--d:100ms">
+          <div class="card nn-picture d-100" data-reveal>
             <svg id="nnSvg" viewBox="0 0 720 420" role="img" aria-label="AquaNet network diagram"></svg>
             <p class="nn-legend" data-i18n="nn.legend"></p>
             <p class="nn-stats" id="nnStats"></p>
@@ -405,7 +452,7 @@
             <h3 class="h-small" data-i18n="nn.probs">Probability of each class</h3>
             <div id="nnBars"></div>
           </div>
-          <div class="card nn-rules" data-reveal style="--d:100ms">
+          <div class="card nn-rules d-100" data-reveal>
             <p class="nn-rule-msg" id="nnRuleMsg"></p>
             <ul id="nnReasons"></ul>
           </div>
@@ -426,7 +473,7 @@
               <button class="btn btn-primary" type="button" id="explodeBtn" data-i18n="dev.explode">Explode view</button>
             </div>
           </div>
-          <div class="spec-list" data-reveal style="--d:100ms">
+          <div class="spec-list d-100" data-reveal>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 17h20l-3 4H5Z"/><path d="M12 3v14M12 4l6 8h-6"/></svg></span><div><h3 data-i18n="dev.s1.t">Twin-hull autonomous catamaran</h3><p data-i18n="dev.s1.d"></p></div></article>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/></svg></span><div><h3 data-i18n="dev.s2.t">Non-immersion microfluidic sampling</h3><p data-i18n="dev.s2.d"></p></div></article>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.5"/><path d="M12 13.5V21"/></svg></span><div><h3 data-i18n="dev.s3.t">Long-range radio and GPS maps</h3><p data-i18n="dev.s3.d"></p></div></article>
@@ -435,7 +482,7 @@
         </div>
         <div class="renders">
           <figure class="render card" data-reveal><img src="catamaran_prototype_render.jpg" alt="" loading="lazy"><figcaption data-i18n="dev.r1">Catamaran prototype render</figcaption></figure>
-          <figure class="render card" data-reveal style="--d:100ms"><img src="personal_tank_prototype_render.jpg" alt="" loading="lazy"><figcaption data-i18n="dev.r2">Household in-tank version (AquaSentry Mini)</figcaption></figure>
+          <figure class="render card d-100" data-reveal><img src="personal_tank_prototype_render.jpg" alt="" loading="lazy"><figcaption data-i18n="dev.r2">Household in-tank version (AquaSentry Mini)</figcaption></figure>
         </div>
       </section>
 
@@ -495,20 +542,20 @@
           <div class="card kpi spot"><div class="kpi-k" data-i18n="imp.k3">Result time</div><div class="kpi-v"><span data-count="4" data-pre="~" data-suf=" min">0</span></div><div class="kpi-s" data-i18n="imp.k3s">vs 14–28 days through a lab</div></div>
           <div class="card kpi spot"><div class="kpi-k" data-i18n="imp.k4">Water-quality market (2028)</div><div class="kpi-v"><span data-count="7.5" data-dec="1" data-pre="$" data-suf="B">0</span></div><div class="kpi-s" data-i18n="imp.k4s">heavy-metal niche about $1.2B</div></div>
         </div>
-        <div class="link-cards" style="margin-top:16px">
+        <div class="link-cards mt-16">
           <a class="card link-card spot tilt" href="market-research.html" data-reveal>
             <span class="label-chip" data-i18n="imp.l1.k">Market research</span>
             <h3 data-i18n="imp.l1.t">Market size, competition and unit economics</h3>
             <div class="mini-chart" id="sparkMarket"></div>
             <span class="arrow"><span data-i18n="imp.open">Open page</span></span>
           </a>
-          <a class="card link-card spot tilt" href="sales-expansion.html" data-reveal style="--d:80ms">
+          <a class="card link-card spot tilt d-80" href="sales-expansion.html" data-reveal>
             <span class="label-chip" data-i18n="imp.l2.k">Sales &amp; expansion</span>
             <h3 data-i18n="imp.l2.t">Revenue model, ROI calculator and 3-year roadmap</h3>
             <div class="mini-chart" id="sparkSales"></div>
             <span class="arrow"><span data-i18n="imp.open">Open page</span></span>
           </a>
-          <a class="card link-card spot tilt" href="device-simulator.html" data-reveal style="--d:160ms">
+          <a class="card link-card spot tilt d-160" href="device-simulator.html" data-reveal>
             <span class="label-chip" data-i18n="imp.l3.k">Device simulator</span>
             <h3 data-i18n="imp.l3.t">Try the handheld MAS-G1 screen and import real scans</h3>
             <div class="mini-chart" id="sparkDevice"></div>
@@ -568,8 +615,16 @@
   <script src="shell.js"></script>
   <script src="charts.js"></script>
   <script src="neural.js"></script>
-  <script src="device3d-data.js" defer></script>
-  <script src="device3d.js" defer></script>
   <script src="app.js"></script>
+  <script src="field-ui.js"></script>
+  <dialog class="signin" id="signinDlg" aria-labelledby="signinTitle">
+    <form method="dialog" id="signinForm">
+      <h2 id="signinTitle" data-i18n="signin.title">Sign in to see the data</h2>
+      <p data-i18n="signin.body">This server keeps its readings private. Enter the viewer key from the person who runs it.</p>
+      <label><span data-i18n="signin.key">Viewer key</span><input id="signinKey" type="password" autocomplete="current-password" required></label>
+      <p class="meta" id="signinMsg" role="status"></p>
+      <div class="row-inline mt-12"><button class="btn" type="submit" data-i18n="signin.go">Sign in</button><button class="btn btn-quiet" type="button" id="signinCancel" data-i18n="signin.later">Not now</button></div>
+    </form>
+  </dialog>
 </body>
 </html>

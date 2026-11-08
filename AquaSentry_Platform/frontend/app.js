@@ -25,14 +25,22 @@
     device: null,
   };
   const online = () => !!(UI() && UI().online);
+  /** Apply data-left / data-width (percent) and data-color set in HTML templates, through the CSSOM. */
+  function applyGeometry(root) {
+    (root || document).querySelectorAll('[data-left],[data-width],[data-color]').forEach((e) => {
+      if (e.dataset.left != null) e.style.left = e.dataset.left + '%';
+      if (e.dataset.width != null) e.style.width = e.dataset.width + '%';
+      if (e.dataset.color != null) { e.style.background = e.dataset.color; e.style.color = e.dataset.color; }
+    });
+  }
   const api = (...a) => UI().api(...a);
 
   function fmtTime(d) {
-    const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
+    const lang = ({ hi: 'hi-IN', bn: 'bn-IN', as: 'as-IN', pa: 'pa-IN' })[window.I18N.lang] || 'en-IN';
     try { return d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }); } catch (e) { return d.toTimeString().slice(0, 5); }
   }
   function fmtDateTime(d) {
-    const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
+    const lang = ({ hi: 'hi-IN', bn: 'bn-IN', as: 'as-IN', pa: 'pa-IN' })[window.I18N.lang] || 'en-IN';
     try { return d.toLocaleString(lang, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return d.toISOString(); }
   }
   function ugl(mgL) { return mgL * 1000; }
@@ -181,6 +189,7 @@
     });
     $('labNote').hidden = !res.belowLod;
     $('labNote').textContent = t('ov.labNote');
+    renderQc(state.reading && state.reading.qc);
 
     // alert banner
     const b = $('alertBanner');
@@ -207,8 +216,8 @@
     grid.innerHTML = READ_DEFS.map((d) => {
       const val = r ? (r[d.key] ?? null) : null;
       const pct = (x) => Math.max(0, Math.min(100, (x - d.min) / (d.max - d.min) * 100));
-      const okBand = d.ok ? `<div class="gauge-ok" style="left:${pct(d.ok[0])}%;width:${pct(d.ok[1]) - pct(d.ok[0])}%"></div>` : '';
-      const dot = val !== null ? `<div class="gauge-dot" style="left:${pct(val)}%"></div>` : '';
+      const okBand = d.ok ? `<div class="gauge-ok" data-left="${pct(d.ok[0])}" data-width="${pct(d.ok[1]) - pct(d.ok[0])}"></div>` : '';
+      const dot = val !== null ? `<div class="gauge-dot" data-left="${pct(val)}"></div>` : '';
       const inRange = val === null || !d.ok || (val >= d.ok[0] && val <= d.ok[1]);
       const st = val === null || !d.ok ? '' : `<span class="reading-state ${inRange ? 'ok' : 'bad'}">${t(inRange ? 'read.ok' : 'read.bad')}</span>`;
       return `<div class="card reading spot">
@@ -218,6 +227,7 @@
         <div class="reading-foot"><span>${t(d.good)}</span>${st}</div>
       </div>`;
     }).join('');
+    applyGeometry(grid);
     const line = $('deviceLine');
     if (r && (r.battery != null || r.lat != null)) {
       const parts = [];
@@ -238,6 +248,7 @@
         temp: d.temperature_c ?? null, battery: d.battery_pct, lat: d.latitude, lon: d.longitude,
         time: d.recorded_at ? new Date(d.recorded_at.endsWith('Z') || d.recorded_at.includes('+') ? d.recorded_at : d.recorded_at + 'Z') : new Date(),
         source: d.is_simulated === false || d.source_type === 'hardware' ? 'device' : 'demo', savedOnServer: true,
+        qc: (d.qc_flags || '').split(',').filter(Boolean),
       });
       return true;
     } catch (e) { return false; }
@@ -391,8 +402,9 @@
     const colors = { Safe: 'var(--safe)', Caution: 'var(--caution-fill)', Unsafe: 'var(--unsafe)', Hazardous: 'var(--haz)' };
     $('nnBars').innerHTML = window.AquaNet.CLASSES.map((c, i) => {
       const p = (res.probs[i] * 100);
-      return `<div class="bar-row"><span>${t('class.' + c)}</span><div class="bar"><i style="width:${p.toFixed(1)}%;background:${colors[c]};color:${colors[c]}"></i></div><span class="bar-pct">${p.toFixed(1)}%</span></div>`;
+      return `<div class="bar-row"><span>${t('class.' + c)}</span><div class="bar"><i data-width="${p.toFixed(1)}" data-color="${colors[c]}"></i></div><span class="bar-pct">${p.toFixed(1)}%</span></div>`;
     }).join('');
+    applyGeometry($('nnBars'));
     $('nnRuleMsg').textContent = t(res.final !== res.vote ? 'nn.override' : 'nn.agree');
     $('nnReasons').innerHTML = res.reasons.map((x) => `<li>${t('reason.' + x.code, { v: x.v })}</li>`).join('');
     const c = window.AquaNet.countWeights(state.model);
@@ -538,6 +550,26 @@
 
   // ---------------- device 3D + sparklines ----------------
   function deviceLabels() { return { lid: t('dev.p.lid'), base: t('dev.p.base'), well: t('dev.p.well'), strainer: t('dev.p.strainer') }; }
+  /** Measurement-quality caveats from the node (As(III) only, copper, factory calibration). */
+  function renderQc(flags) {
+    const ul = $('qcNotes');
+    if (!ul) return;
+    const show = (flags || []).filter((f) => ['as3_only', 'copper_interference', 'uncalibrated'].includes(f));
+    ul.hidden = !show.length;
+    ul.innerHTML = show.map((f) => `<li class="qc-${f}">${esc(t('qc.' + f))}</li>`).join('');
+  }
+  function loadScript(src) {
+    return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+  }
+  /** The 3D model (about 180 KB) loads only when its section comes near the screen. */
+  function lazyDevice() {
+    const el = $('viewer3d');
+    if (!el) return;
+    const go = () => loadScript('device3d-data.js').then(() => loadScript('device3d.js')).then(initDevice).catch(() => {});
+    if (!('IntersectionObserver' in window)) { go(); return; }
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); go(); } }, { rootMargin: '600px' });
+    io.observe(el);
+  }
   function initDevice() {
     if (!window.AquaDevice3D || state.device !== null) return;
     state.device = window.AquaDevice3D.mount($('viewer3d'), { labels: deviceLabels(), fallback: t('dev.noWebgl') }) || false;
@@ -620,7 +652,9 @@
     const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${fmtUgNum(d.latest.arsenic_ppb)} µg/L</span>` : '<span></span>';
     const count = d.reading_count === 1 ? t('fleet.count.one', { u: d.unsafe_count }) : t('fleet.count', { n: d.reading_count, u: d.unsafe_count });
     const batt = d.latest && d.latest.battery_pct != null ? t('fleet.batt', { n: Math.round(d.latest.battery_pct) }) : '';
-    const meta = [t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, batt, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
+    const lab = d.lab ? t('fleet.lab', { v: fmtUgNum(d.lab.arsenic_ug_l) }) : '';
+    const place = d.site && (d.site.name || d.site.village) ? (d.site.name || d.site.village) : '';
+    const meta = [place, t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, batt, lab, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
       .filter(Boolean).join(', ');
     const sel = state.histDevice === d.device_code;
     const tr = d.trend && d.trend.direction === 'rising' ? `<span class="dv-trend up">${ICON_UP}${esc(t('trend.rising'))}</span>`
@@ -675,7 +709,7 @@
     let t0 = Math.min(...ts), t1 = Math.max(...ts);
     if (t1 - t0 < 3600e3) { t0 -= 1800e3; t1 += 1800e3; }
     const X = (x) => L + 8 + (W - L - R - 16) * (x - t0) / (t1 - t0);
-    const lang = window.I18N.lang === 'hi' ? 'hi-IN' : 'en-IN';
+    const lang = ({ hi: 'hi-IN', bn: 'bn-IN', as: 'as-IN', pa: 'pa-IN' })[window.I18N.lang] || 'en-IN';
     const span = t1 - t0;
     const fmt = (d) => span > 2 * 86400e3 ? d.toLocaleDateString(lang, { day: 'numeric', month: 'short' }) : d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
     for (let i = 0; i <= 4; i++) {
@@ -686,8 +720,15 @@
     points.forEach((p) => { (byDevice[p.device_code || ''] = byDevice[p.device_code || ''] || []).push(p); });
     const DASH = ['', '6 4', '2 3', '10 3 2 3'];   // series differ by line style too, not by colour alone
     const series = Object.entries(byDevice);
+    if (series.length > 4) {
+      // Many sources: joining each one's points makes a tangle. Show one line, the highest reading per day.
+      const days = {};
+      points.forEach((p) => { const k = p.t.toISOString().slice(0, 10); if (!days[k] || p.ppb > days[k].ppb) days[k] = p; });
+      const top = Object.keys(days).sort().map((k) => days[k]);
+      if (top.length > 1) add('polyline', { class: 'h-line h-max', points: top.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
+    }
     series.forEach(([code, pts], k) => {
-      if (pts.length > 1) add('polyline', { class: 'h-line', 'stroke-dasharray': DASH[k % DASH.length], points: pts.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
+      if (series.length <= 4 && pts.length > 1) add('polyline', { class: 'h-line', 'stroke-dasharray': DASH[k % DASH.length], points: pts.map((p) => `${X(p.t.getTime()).toFixed(1)},${Y(p.ppb).toFixed(1)}`).join(' ') });
       if (code && series.length > 1 && series.length <= 4) {
         const last = pts[pts.length - 1];
         add('text', { class: 'h-label', x: Math.min(W - R - 2, X(last.t.getTime()) + 6), y: Y(last.ppb) - 8, 'text-anchor': 'end' }, code);
@@ -702,7 +743,8 @@
     fillHistTable(points);
     const max = Math.max(...points.map((p) => p.ppb));
     $('histDesc').textContent = (local ? t('hist.local') + ' ' : '') +
-      t('hist.desc', { n: points.length, a: fmtDateTime(new Date(t0)), b: fmtDateTime(new Date(t1)), max: fmtUgNum(max) });
+      t('hist.desc', { n: points.length, a: fmtDateTime(new Date(t0)), b: fmtDateTime(new Date(t1)), max: fmtUgNum(max) }) +
+      (series.length > 4 ? ' ' + t('hist.dailyMax') : '');
   }
   async function loadFleet() {
     if (!online()) {
@@ -721,6 +763,7 @@
         api('/api/alerts/recent?limit=20').catch(() => ({ alerts: [] }))]);
       $('deviceList').removeAttribute('aria-busy');
       renderDevices(devs);
+      document.dispatchEvent(new CustomEvent('aquasentry:fleet', { detail: { devices: devs, device: state.histDevice } }));
       renderWarnings(alerts.alerts || []);
       renderTrendNote(devs);
       drawHistory(hist.map((p) => ({ t: new Date(p.t), ppb: p.ppb, cls: p.cls, device_code: p.device_code })), false);
@@ -818,6 +861,6 @@
     if (canvas && UI().WaterFX) { state.fx = new (UI().WaterFX)(canvas); if (!state.fx.ok) state.fx = null; }
     initRing();
     rerenderAll();
-    initDevice();
+    lazyDevice();
   });
 })();

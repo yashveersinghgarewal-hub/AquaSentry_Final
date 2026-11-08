@@ -21,7 +21,8 @@
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs || 4000);
     try {
-      const res = await fetch(API + path, Object.assign({ signal: ctrl.signal }, opts || {}));
+      const res = await fetch(API + path, Object.assign({ signal: ctrl.signal, credentials: 'same-origin' }, opts || {}));
+      if (res.status === 401 && (!opts || !opts.method || opts.method === 'GET')) document.dispatchEvent(new CustomEvent('aquasentry:signin'));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return await res.json();
     } finally { clearTimeout(timer); }

@@ -247,8 +247,11 @@ def init_db() -> str:
     return how
 
 
-def schema_revision() -> str:
+def schema_revision(db=None) -> str:
+    """Pass the request's session: in single-connection mode a second connection would have to wait."""
     try:
+        if db is not None:
+            return db.execute(text("SELECT version_num FROM alembic_version")).scalar() or "none"
         with engine.connect() as conn:
             return conn.execute(text("SELECT version_num FROM alembic_version")).scalar() or "none"
     except Exception:

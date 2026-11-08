@@ -1,0 +1,41 @@
+/* Public water-check page (QR sticker target) and the printable sticker. Uses the tokens in field.css. */
+body.pub { background: var(--bg); color: var(--ink); min-height: 100vh; margin: 0; }
+.pub-main { max-width: 640px; margin: 0 auto; padding: 16px 16px 40px; }
+.pub-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.pub-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.15rem; color: var(--ink); text-decoration: none; }
+.pub-brand svg { width: 26px; height: 26px; color: var(--primary); }
+.pub-card { padding: 22px 20px; border-radius: 8px; border: 1px solid var(--line-strong); border-left: 10px solid var(--line-strong);
+  background: var(--surface); }
+.pub-card.v-Safe, .pub-card.v-Clear { border-left-color: var(--paint-safe); }
+.pub-card.v-Caution { border-left-color: var(--paint-caution); }
+.pub-card.v-Unsafe { border-left-color: var(--paint-unsafe); }
+.pub-card.v-Hazardous { border-left-color: var(--paint-haz); }
+.pub-place { margin: 0 0 6px; color: var(--ink-2); font-weight: 600; }
+.pub-verdict { margin: 0 0 8px; font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.1; }
+.pub-value { margin: 0; font-size: 1.25rem; font-weight: 600; }
+.pub-when { margin: 6px 0 0; color: var(--ink-2); }
+.pub-when.stale { color: var(--ink); font-weight: 600; }
+.pub-do { margin: 14px 0 0; font-size: 1.1rem; line-height: 1.5; }
+.pub-lab { margin: 14px 0 0; padding: 10px 14px; border-radius: 4px; background: var(--surface-2); border-left: 4px solid var(--line-strong); }
+.pub-lab.ok { border-left-color: var(--paint-safe); } .pub-lab.bad { border-left-color: var(--paint-unsafe); font-weight: 600; }
+.pub-demo { margin: 12px 0 0; font-weight: 600; }
+.pub-steps { margin-top: 22px; }
+.pub-steps h2 { font-size: 1.2rem; margin: 0 0 8px; }
+.pub-steps ol { margin: 0; padding-left: 22px; display: grid; gap: 10px; line-height: 1.5; }
+.pub-foot { margin-top: 28px; color: var(--ink-2); font-size: .9rem; }
+
+.sticker { margin-top: 24px; display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; padding: 16px;
+  border: 2px dashed var(--line-strong); border-radius: 8px; background: #fff; color: #111; }
+.sticker[hidden] { display: none; }
+.sticker-qr svg { width: 150px; height: 150px; display: block; }
+.sticker-text { display: grid; gap: 4px; }
+.sticker-text b { font-size: 1.2rem; }
+.sticker-text small { color: #333; word-break: break-all; }
+.sticker-print { grid-column: 1 / -1; justify-self: start; }
+
+@media print {
+  body.sticker-mode .pub-head, body.sticker-mode .pub-card, body.sticker-mode .pub-steps, body.sticker-mode .pub-foot,
+  body.sticker-mode .sticker-print { display: none !important; }
+  body.sticker-mode { background: #fff; }
+  .sticker { border: 1px solid #000; break-inside: avoid; }
+}

@@ -67,6 +67,13 @@ jobs:
         run: |
           python main.py --test
 
+      - name: Platform tests in single-connection mode (SQLite without the WAL-reset fix)
+        if: matrix.python-version == '3.12'
+        working-directory: AquaSentry_Platform
+        env:
+          SQLITE_SINGLE_CONNECTION: "1"
+        run: python -m pytest -q tests
+
   firmware:
     # Real compile of the ESP32 sketch with Espressif's Arduino core, for every supported chip.
     runs-on: ubuntu-24.04   # arduino/compile-sketches pins Python 3.12.4, which has no build for Ubuntu 26.04

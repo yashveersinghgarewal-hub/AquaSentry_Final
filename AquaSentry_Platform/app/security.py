@@ -43,12 +43,21 @@ def inline_script_hashes(frontend_dir: Path, pages: Iterable[str]) -> list:
     return sorted(set(out))
 
 
-def build_csp(script_hashes: list) -> str:
+def tile_origin() -> str:
+    """Origin of the map tile server (MAP_TILE_URL overrides OpenStreetMap's), for img-src."""
+    from urllib.parse import urlparse
+    u = urlparse(os.getenv("MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"))
+    return f"{u.scheme}://{u.netloc}" if u.scheme in ("http", "https") and u.netloc else ""
+
+
+def build_csp(script_hashes: list, strict_style: bool = False) -> str:
+    """strict_style: no inline styles at all (the dashboard and the public device page set geometry through
+    the CSSOM, which CSP allows); the older project pages still use style="" attributes."""
     return "; ".join([
         "default-src 'self'",
         "script-src 'self' " + " ".join(script_hashes),
-        "style-src 'self' 'unsafe-inline'",          # pages use style="" attributes for layout values
-        "img-src 'self' data: blob:",
+        "style-src 'self'" if strict_style else "style-src 'self' 'unsafe-inline'",
+        ("img-src 'self' data: blob: " + tile_origin()).strip(),
         "font-src 'self'",
         "connect-src 'self'",
         "object-src 'none'",
@@ -73,10 +82,14 @@ BASE_HEADERS = {
 }
 
 
+STRICT_STYLE_PAGES = {"/", "/index.html", "/device.html"}
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, csp: str):
+    def __init__(self, app, csp: str, strict_csp: Optional[str] = None):
         super().__init__(app)
         self.csp = csp
+        self.strict_csp = strict_csp or csp
 
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
@@ -85,7 +98,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         ctype = response.headers.get("content-type", "")
         if "text/html" in ctype:
-            response.headers.setdefault("Content-Security-Policy", LEGACY_CSP if path.startswith("/legacy_v1/") else self.csp)
+            policy = LEGACY_CSP if path.startswith("/legacy_v1/") else (
+                self.strict_csp if path in STRICT_STYLE_PAGES else self.csp)
+            response.headers.setdefault("Content-Security-Policy", policy)
         if path.startswith("/api/"):
             response.headers.setdefault("Cache-Control", "no-store")
         return response

@@ -131,11 +131,12 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(auth_router.ReadProtectionMiddleware)
 app.add_middleware(security.RateLimitMiddleware)
-_PAGES = ["index.html", "market-research.html", "sales-expansion.html", "device-simulator.html", "mas-g1-display.html"]
+_PAGES = ["index.html", "device.html", "market-research.html", "sales-expansion.html", "device-simulator.html", "mas-g1-display.html"]
 _FRONTEND_FOR_CSP = __import__("pathlib").Path(os.getenv("AQUASENTRY_FRONTEND_DIR",
                                                           __import__("pathlib").Path(__file__).resolve().parent.parent / "frontend"))
-app.add_middleware(security.SecurityHeadersMiddleware,
-                   csp=security.build_csp(security.inline_script_hashes(_FRONTEND_FOR_CSP, _PAGES)))
+_SCRIPT_HASHES = security.inline_script_hashes(_FRONTEND_FOR_CSP, _PAGES)
+app.add_middleware(security.SecurityHeadersMiddleware, csp=security.build_csp(_SCRIPT_HASHES),
+                   strict_csp=security.build_csp(_SCRIPT_HASHES, strict_style=True))
 
 
 _SAFE_RID = re.compile(r"[^A-Za-z0-9._:-]")
@@ -195,7 +196,7 @@ def health_check(db: Session = Depends(get_db)):
         "alert_webhook": ("signed" if os.getenv("ALERT_WEBHOOK_SECRET") else "unsigned") if os.getenv("ALERT_WEBHOOK_URL") else "off",
         "webhook_deliveries": dict(webhooks.STATS),
         **sqlite_info(),
-        "schema_revision": schema_revision(),
+        "schema_revision": schema_revision(db),
         "ai_chatbot_configured": client is not None,
         "analytes_cataloged": len(ANALYTE_REGISTRY),
         "voltammetry_pipeline": "Savitzky-Golay 5pt + Linear Baseline",

@@ -261,7 +261,8 @@ def public_device(device_code: str, db: Session = Depends(get_db)):
         "latest": None if r is None else {
             "arsenic_ug_l": round(r.arsenic_ppb, 1), "classification": r.classification,
             "is_safe_to_drink": r.is_safe_to_drink, "recorded_at": _utc(r.recorded_at),
-            "is_demo": r.source_type != "hardware", "caveats": caveats(r.qc_flags)},
+            "is_demo": r.source_type != "hardware", "caveats": caveats(r.qc_flags),
+            "qc_flags": [f for f in (r.qc_flags or "").split(",") if f]},
         "lab": field.latest_lab(db, d.id),
         "limit_ug_l": 10.0,
     }

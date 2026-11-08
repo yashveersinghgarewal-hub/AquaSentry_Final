@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F2F5F4">
+  <title>AquaSentry — Water check</title>
+  <meta name="description" content="Latest arsenic check for this water source.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="field.css">
+  <link rel="stylesheet" href="device.css">
+</head>
+<body class="pub">
+  <main class="pub-main" id="main">
+    <header class="pub-head">
+      <a class="pub-brand" href="index.html"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C11 10 7 15 7 20a9 9 0 0 0 18 0c0-5-4-10-9-17Z" fill="currentColor"/></svg><span data-i18n="app.title">AquaSentry</span></a>
+      <label class="lang-select"><span class="sr-only" data-i18n="lang.label">Language</span>
+        <select data-lang-select>
+          <option value="en">English</option><option value="hi" lang="hi">हिन्दी</option><option value="bn" lang="bn">বাংলা</option>
+          <option value="as" lang="as">অসমীয়া</option><option value="pa" lang="pa">ਪੰਜਾਬੀ</option>
+        </select></label>
+    </header>
+
+    <section class="pub-card" id="pubCard" aria-live="polite">
+      <p class="pub-place" id="pubPlace"></p>
+      <h1 class="pub-verdict" id="pubVerdict" data-i18n="pub.loading">Checking…</h1>
+      <p class="pub-value" id="pubValue"></p>
+      <p class="pub-when" id="pubWhen"></p>
+      <p class="pub-do" id="pubDo"></p>
+      <ul class="qc-notes" id="pubQc" hidden></ul>
+      <p class="pub-lab" id="pubLab" hidden></p>
+      <p class="pub-demo" id="pubDemo" hidden data-i18n="pub.demo">This is demo data, not a real test.</p>
+    </section>
+
+    <section class="pub-steps" id="pubSteps" hidden aria-labelledby="pubStepsH">
+      <h2 id="pubStepsH" data-i18n="act.heading">What to do if arsenic is high</h2>
+      <ol>
+        <li><b data-i18n="act.s1.t">Stop drinking or cooking with it</b> <span data-i18n="act.s1.d"></span></li>
+        <li><b data-i18n="act.s2.t">Do not boil it</b> <span data-i18n="act.s2.d"></span></li>
+        <li><b data-i18n="act.s3.t">Washing and cleaning are still fine</b> <span data-i18n="act.s3.d"></span></li>
+        <li><b data-i18n="act.s4.t">Tell the local authorities</b></li>
+      </ol>
+    </section>
+
+    <section class="sticker" id="sticker" hidden aria-label="QR sticker">
+      <div class="sticker-qr" id="stickerQr"></div>
+      <div class="sticker-text">
+        <b data-i18n="pub.scan">Scan to check this water</b>
+        <span id="stickerName"></span>
+        <small id="stickerUrl"></small>
+        <small data-i18n="pub.limit">Arsenic limit: 10 µg/L (IS 10500, WHO)</small>
+      </div>
+      <button type="button" class="btn sticker-print" id="stickerPrint" data-i18n="pub.print">Print</button>
+    </section>
+
+    <p class="pub-foot" data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</p>
+  </main>
+  <script src="i18n.js"></script>
+  <script src="i18n-v5.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="device.js"></script>
+</body>
+</html>
