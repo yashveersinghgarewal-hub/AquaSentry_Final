@@ -9,7 +9,8 @@ Statuses:
   Partial         software did part; the rest is the team's
   Worksheet       team, laboratory or field work; the workbook gives the steps, a template or a calculator, and where to record it
 
-Usage: python Analysis/roadmap_status.py          (rewrites Docs/ISEF_ROADMAP_STATUS.md and Docs/planning/roadmap_status.svg)
+Usage: python Analysis/roadmap_status.py          (rewrites Docs/ISEF_ROADMAP_STATUS.md, Docs/REMAINING_WORK.md
+                                                   and Docs/planning/roadmap_status.svg)
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ ROOT = os.path.dirname(HERE)
 CSV = os.path.join(ROOT, "Docs", "planning", "isef_roadmap_status.csv")
 MD = os.path.join(ROOT, "Docs", "ISEF_ROADMAP_STATUS.md")
 SVG = os.path.join(ROOT, "Docs", "planning", "roadmap_status.svg")
+REMAINING = os.path.join(ROOT, "Docs", "REMAINING_WORK.md")
 sys.path.insert(0, HERE)
 import svg_plots as sp  # noqa: E402
 
@@ -51,8 +53,8 @@ def render(rows):
          "what is ready and waiting for the team's data, and - for the team, laboratory and field items - which worksheet, "
          "template or calculator in `Docs/TEAM_WORKBOOK.md` carries it. Every item has one of the four statuses; none is unaddressed.", "",
          "| status | meaning | items |", "|---|---|---|",
-         f"| **Done** | software implemented and tested | {total['Done']} |",
-         f"| **Tooling ready** | software exists; closes when real data or measurements go through it | {total['Tooling ready']} |",
+         f"| **Done** | software implemented and tested; nothing left to measure for this item | {total['Done']} |",
+         f"| **Tooling ready** | software exists but has not been run on real samples or hardware; closes when the team's data go through it | {total['Tooling ready']} |",
          f"| **Partial** | software did its part; the rest is the team's | {total['Partial']} |",
          f"| **Worksheet** | team, laboratory or field work with its steps, template or calculator in `Docs/TEAM_WORKBOOK.md` | {total['Worksheet']} |",
          f"| | **total** | **{len(rows)}** ({software_share} with a software share) |", "",
@@ -74,6 +76,74 @@ def render(rows):
           "- The 15 items the roadmap says to do first (1, 2, 4, 6, 7, 12, 24, 36, 64–67, 88, 108, 109) are team, lab and field work; every one has its worksheet, QC run type, template or analysis script ready.",
           "- Item 257 is in force: after v5.10 the software only changes to fix a defect or to process real data.", ""]
     return "\n".join(L), by_section, total
+
+
+# ---------------------------------------------------------------- what is left (Docs/REMAINING_WORK.md)
+GROUPS = [
+    ("lab", "In the laboratory (chemistry and bench)", "Needs chemicals, a supervisor and the instrument, under the approved research plan. Each row names its template in Docs/templates/ and the script that turns the measurement into the figure."),
+    ("field", "In the field", "Needs real sources, sample bottles and a laboratory partner."),
+    ("tooling", "Run the ready-made tools on real data", "The software for these exists and is tested, but nothing real has gone through it yet. Each closes when the measurements are made and the script or endpoint in the row is run on them."),
+    ("partial", "Finish what the software started", "The software did its share; the rest is writing, drawing, measuring or choosing."),
+    ("team", "Team work: rules, writing, people, poster and interview", "No software share. Logbook, forms, writing and practice; the worksheet in Docs/TEAM_WORKBOOK.md gives the steps."),
+]
+
+OUTSIDE = [
+    "Write sections 2-4 of `Docs/AI_USE_STATEMENT_TEMPLATE.md` (what you checked, what you designed, what the AI did not do) in your own words, and print it for the booth.",
+    "Have native speakers check the Hindi, Bengali, Assamese and Punjabi screens (`AquaSentry_Platform/frontend/i18n-*.js`); they were machine-assisted.",
+    "Complete the Team section of `README.md` with every member's name and role once the team is final (ISEF allows at most three).",
+    "Confirm in writing whether the team entered IRIS 2026-27 and record the answer and the next fair in `Docs/planning/timeline.csv`.",
+    "Review GitHub's automatic dependency pull requests (Dependabot) as they arrive; CI must pass before merging.",
+    "Tune the firmware's reference-electrode thresholds (`QC_REF_MAX_ABS_UA`, `QC_REF_MAX_DRIFT_UA`) from the dummy-cell characterisation (item 166) before the first field day.",
+]
+
+
+def _group(r):
+    if r["status"] == "Tooling ready":
+        return "tooling"
+    if r["status"] == "Partial":
+        return "partial"
+    return {"lab": "lab", "field": "field"}.get(r["owner"], "team")
+
+
+def _line(r):
+    step = r["where_or_next_step"].replace("\n", " ").strip()
+    return f"- [ ] **{r['item']}** ({r['priority']}) {r['title']}. *{step}*"
+
+
+def render_remaining(rows):
+    open_rows = [r for r in rows if r["status"] != "Done"]
+    p0 = [r for r in open_rows if r["priority"] == "P0"]
+    c = Counter(_group(r) for r in open_rows)
+    L = ["# What is left before ISEF", "",
+         "Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_status.py` (edit the CSV, rerun; a test "
+         "keeps this page in sync). Item numbers match `Docs/ISEF_ROADMAP.md`, where each item is explained, and "
+         "`Docs/TEAM_WORKBOOK.md`, where each open item has its steps, template and place to record.", "",
+         f"**{len(open_rows)} of {len(rows)} roadmap items are still open.** None is unaddressed: every one has a worksheet, a "
+         f"template or a ready script. What remains is laboratory work ({c['lab']}), field work ({c['field']}), running the "
+         f"ready-made tools on real measurements ({c['tooling']}), finishing items the software started ({c['partial']}) and the "
+         f"team's own work ({c['team']}: rules, writing, people, poster, interview).", "",
+         "Tick items here or copy the list into the logbook with the date you finish each one. The logbook is the evidence; "
+         "this page is the plan. Do not let an AI write the research plan, abstract, poster or citations (item 1).", "",
+         f"## Start here: the {len(p0)} must-do (P0) items", "",
+         "These decide whether the project is ISEF-level at all. The order is the roadmap's: rules first, then the science.", ""]
+    L += [_line(r) + f" `{r['status']}`" for r in p0]
+    for key, title, blurb in GROUPS:
+        items = [r for r in open_rows if _group(r) == key and r["priority"] != "P0"]
+        if not items:
+            continue
+        L += ["", f"## {title} ({len(items)})", "", blurb, ""]
+        sec = None
+        for r in items:
+            if r["section"] != sec:
+                sec = r["section"]
+                L += ["", f"**{sec}**", ""]
+            L.append(_line(r))
+    L += ["", "## Outside the roadmap", ""] + [f"- [ ] {t}" for t in OUTSIDE]
+    L += ["", "## Already done in software", "",
+          f"{sum(1 for r in rows if r['status'] == 'Done')} items need nothing more from the code; they are listed with their "
+          "file and test in `Docs/ISEF_ROADMAP_STATUS.md`. *Done* there never means the sensor works: every accuracy claim "
+          "still waits for real paired samples in `Data/field/`.", ""]
+    return "\n".join(L)
 
 
 def figure(by_section):
@@ -115,6 +185,8 @@ def main() -> int:
         f.write(md)
     with open(SVG, "w", encoding="utf-8") as f:
         f.write(figure(by_section))
+    with open(REMAINING, "w", encoding="utf-8") as f:
+        f.write(render_remaining(rows))
     print(f"{len(rows)} items: " + ", ".join(f"{k} {v}" for k, v in total.most_common()))
     return 0
 

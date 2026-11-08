@@ -24,6 +24,9 @@ Tests: **110 → 139 → 167 → 185 → 206 → 236** (22 neural toolkit + 214 
 4c. [v5.6: can the reading be trusted, and who hears about it](#4c-v56-can-the-reading-be-trusted-and-who-hears-about-it)
 4d. [v5.7: competition roadmap and repository clean-up](#4d-v57-competition-roadmap-and-repository-clean-up)
 4e. [v5.7: harm review of v5.6 (safety fixes)](#4e-v57-harm-review-of-v56-safety-fixes)
+4f. [v5.8: the Research and Engineering Review (60 items) and the ISEF list](#4f-v58-the-research-and-engineering-review-60-items-and-the-isef-list)
+4g. [v5.9: the ISEF roadmap, item by item](#4g-v59-the-isef-roadmap-item-by-item)
+4h. [v5.10: what is left, honest status, clearer screens](#4h-v510-what-is-left-honest-status-clearer-screens)
 5. [API reference: everything added or changed](#5-api-reference-everything-added-or-changed)
 6. [Settings added](#6-settings-added)
 7. [Upgrade notes (behaviour that changed)](#7-upgrade-notes-behaviour-that-changed)
@@ -376,6 +379,24 @@ unless a learned model beats it on an unseen site). The honest demo result of th
 synthetic data - is printed as such.
 
 ---
+## 4i. v5.10 (Nalin Aggarwal): what is left, honest status, clearer screens
+
+**Why:** a review of v5.9 found the status register counting 29 items as Done because their code existed, although nothing real had gone through it; a judge or mentor reading "83 done" would overestimate the project. The team also needed one list of what is left. And a UI pass found places where the screens said something less clearly than they could.
+
+| Change | Reason | Verified by |
+| --- | --- | --- |
+| `Docs/REMAINING_WORK.md`, generated with the status page | one checklist of the 213 open items, P0 first | `test_v59_roadmap_register.py::test_remaining_work_lists_every_open_item_once`, `test_rendered_markdown_matches_csv` |
+| 29 Done → Tooling ready, 122 → Team | "Done" means nothing is left to measure | register test; README counts test |
+| CSV rows 158 and 205 quoted | unquoted commas silently cut the next-step text | `test_csv_rows_have_no_unquoted_commas` |
+| Practice group under the result | risk communication: never mix practice with a real result; the main action should be the real one | `test_v510_ui.py::test_practice_controls_are_grouped_and_not_the_primary_action`, browser + axe tests |
+| Lab bias in words, one decimal | "reads -21.73 µg/L compared with the lab" makes the reader do the sign | `test_lab_bias_is_described_in_words` |
+| Trend projection horizon (2 years) | a straight line is not a forecast; "4539 days" is false precision | `test_slow_rise_is_not_projected_years_ahead`, `test_medium_rise_is_given_in_months_and_fast_rise_in_days` |
+| "Last reading" = newest measurement | a node re-sending old data is in contact but has no new reading | browser check of the demo's silent node |
+| Phone padding under the assistant button; tables scroll | WCAG 2.2 SC 2.4.11 Focus Not Obscured; dates broke over three lines | screenshots at 390 px; browser tests |
+| One version label; OSM copyright link | consistency; OSM tile policy asks for a clear credit | `test_every_page_shows_the_same_release_as_the_changelog` |
+| Dependabot bumps folded in | Dependabot's own CI runs had failed only because Espressif's download server timed out | 310 tests on the newest versions |
+
+Sources: OSM Foundation tile usage policy; WCAG 2.2 (SC 2.4.11, 2.5.8); research on communicating drinking-water results (lead with "is it safe?", then what to do, with layered detail and honest uncertainty; PMC9104598).
 
 ## 5. API reference: everything added or changed
 

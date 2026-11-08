@@ -213,7 +213,7 @@
     else if (low) { $('asValue').textContent = '<' + CAL.lodUg; $('asValue')._v = 0; }
     else UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
     $('asMgl').textContent = failed ? t('auth.f.notValid') : low ? t('auth.f.notDetected')
-      : t('ov.mgl', { v: r.asMgL.toFixed(4) }) + (r.uncertaintyUg != null ? ' · ' + t('ov.unc', { u: r.uncertaintyUg < 10 ? r.uncertaintyUg.toFixed(1) : Math.round(r.uncertaintyUg) }) : '');
+      : t('ov.mgl', { v: r.asMgL.toFixed(4) });   // v5.10: the ± is stated once, in the uncertainty line below
     const pin = $('stripPin');
     if (failed) pin.hidden = true;
     else {
@@ -807,14 +807,19 @@
     const batt = d.latest && d.latest.battery_pct != null ? t('fleet.batt', { n: Math.round(d.latest.battery_pct) }) : '';
     const lab = d.lab ? t('fleet.lab', { v: fmtUgNum(d.lab.arsenic_ug_l) }) : '';
     const place = d.site && (d.site.name || d.site.village) ? (d.site.name || d.site.village) : '';
-    const meta = [place, t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, batt, lab, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
-      .filter(Boolean).join(', ');
+    // v5.10: two short lines instead of one long comma run: where and when, then the numbers
+    // "last reading" is the age of the newest MEASUREMENT, not of the last upload: a node that only re-sends old
+    // buffered readings is in contact ("Online") but has no new data, and the list must not say "0 min ago"
+    const readAt = d.latest && d.latest.recorded_at ? Date.parse(d.latest.recorded_at) : NaN;
+    const readMins = Number.isFinite(readAt) ? (Date.now() - readAt) / 60000 : d.minutes_since_seen;
+    const where = [place, t('fleet.st.' + d.status), seenText(readMins)].filter(Boolean).join(' · ');
+    const facts = [count, batt, lab, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : ''].filter(Boolean).join(' · ');
     const sel = state.histDevice === d.device_code;
     const tr = d.trend && d.trend.direction === 'rising' ? `<span class="dv-trend up">${ICON_UP}${esc(t('trend.rising'))}</span>`
       : d.trend && d.trend.direction === 'falling' ? `<span class="dv-trend down">${ICON_DOWN}${esc(t('trend.falling'))}</span>` : '';
     return `<li><button type="button" class="dv-row" data-device="${esc(d.device_code)}" aria-pressed="${sel}">` +
       `<span class="dv-dot ${esc(d.status)}" aria-hidden="true"></span><span class="dv-name">${esc(d.device_code)}</span>${latest}` +
-      `<span class="dv-meta">${tr}${esc(meta)}</span></button></li>`;
+      `<span class="dv-meta"><span class="dv-where">${tr}${esc(where)}</span><span class="dv-facts">${esc(facts)}</span></span></button></li>`;
   }
   function renderDevices(list) {
     const ul = $('deviceList');

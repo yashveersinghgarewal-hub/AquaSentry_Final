@@ -467,3 +467,23 @@ body.judging [data-judge-hide], body.judging #impact, body.judging .chat-fab, bo
 body.judging #judgeBtn { background: var(--ink); color: var(--bg); }
 .judge-badge { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
   padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--bg); margin-bottom: 6px; }
+
+/* ---------------- v5.10 UI pass ---------------- */
+/* Practice controls sit in their own labelled group under the real result, never styled as the main action */
+.reading-card .practice { display: grid; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line-strong); }
+.practice-label { margin: 0; font-size: .74rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.practice-note { margin: 0; font-size: .85rem; color: var(--ink-3); max-width: 48ch; }
+.reading-card .practice .quick { margin-top: 0; }
+/* Device list: where/when on one line, the numbers on the next */
+.dv-meta .dv-where, .dv-meta .dv-facts { display: block; }
+.dv-meta .dv-where { color: var(--ink-2); }
+.dv-meta .dv-facts { font-size: .84rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* Phones: keep the last lines of a section clear of the floating assistant button (WCAG 2.2 SC 2.4.11),
+   and let the lab table scroll sideways instead of breaking dates and codes over three lines */
+@media (max-width: 720px) {
+  #main { padding-bottom: 88px; }
+  #labTable th, #labTable td, #histTable th, #histTable td { white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-fab::after { animation: none; }
+}

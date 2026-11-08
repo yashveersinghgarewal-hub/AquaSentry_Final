@@ -18,11 +18,19 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 **[`Docs/ISEF_ROADMAP.md`](Docs/ISEF_ROADMAP.md)** lists 267 prioritised changes for Regeneron ISEF-level judging, grouped by the official criteria, starting with the rules that can disqualify a project (generative-AI use, the 12-month window, hazardous-chemical forms). The two biggest gaps it targets: the results so far come from **simulated data**, and the arsenic detection limit (**20 µg/L**) is above the **10 µg/L** legal limit.
 
-**[`Docs/ISEF_ROADMAP_STATUS.md`](Docs/ISEF_ROADMAP_STATUS.md)** is the status of all 267 items — **86 done in software, 38 with the tooling ready for real data, 29 partly done, 114 team / laboratory / field items each with its worksheet** in [`Docs/TEAM_WORKBOOK.md`](Docs/TEAM_WORKBOOK.md) (steps, template in `Docs/templates/`, script in `Analysis/`, where to record). No item is unaddressed.
+**[`Docs/ISEF_ROADMAP_STATUS.md`](Docs/ISEF_ROADMAP_STATUS.md)** is the status of all 267 items — **57 done in software, 67 with the tooling ready for real data, 29 partly done, 114 team / laboratory / field items** each with its worksheet in [`Docs/TEAM_WORKBOOK.md`](Docs/TEAM_WORKBOOK.md) (steps, template in `Docs/templates/`, script in `Analysis/`, where to record). What is left, as one checklist with the must-do items first: **[`Docs/REMAINING_WORK.md`](Docs/REMAINING_WORK.md)**. No item is unaddressed; "done" means nothing is left to measure for that item.
 
 ## What changed in v5.10
 
-Every roadmap item not closed by v5.9 is addressed: the two open software items are implemented (a 1-D CNN on raw voltammograms in the research pipeline, item 157; a reference-electrode settle test in firmware 5.10.0, item 174); the laboratory and field items get analysis scripts (`linearity.py`, `doe_factorial.py`, `electrode_study.py`, `power_budget.py`, `deployment_report.py`, `decision_matrix.py`, `scale_estimate.py`) and data-capture templates; every team item gets a worksheet in `Docs/TEAM_WORKBOOK.md` with 29 templates in `Docs/templates/`. Details in `CHANGELOG.md`.
+Every roadmap item not closed by v5.9 is addressed, and the register is stricter about what "done" means.
+
+- **[`Docs/REMAINING_WORK.md`](Docs/REMAINING_WORK.md)**: the 210 open items as one checklist, P0 first, grouped into laboratory, field, run-the-ready-tools, finish-what-software-started and team work.
+- **Honest status** (Nalin Aggarwal): 29 items whose software exists but has never seen real samples or hardware are "tooling ready", not "done".
+- **The two open software items**: a 1-D CNN on raw voltammograms in the research pipeline (item 157, fed by `GET /api/scans/export`) and a reference-electrode settle test in firmware 5.10.0 (item 174, `REF_UNSTABLE`).
+- **Analysis scripts for the laboratory and field items**: `linearity.py`, `doe_factorial.py`, `electrode_study.py`, `power_budget.py`, `deployment_report.py`, `decision_matrix.py`, `scale_estimate.py`; `make_poster_figures.py` runs them all.
+- **Worksheets and templates**: `Docs/TEAM_WORKBOOK.md` (Do / Use / Record for every open item) and 29 templates in `Docs/templates/`.
+- **Clearer screens** (Nalin Aggarwal): practice controls kept apart from real results, the lab comparison and trend warnings in plain words, a tidier device list, phone layout fixes, one version label everywhere, OSM credit link.
+- **Current dependencies**: FastAPI, Uvicorn, httpx, pypdf and the GitHub Actions brought up to date; every test passes on the newest versions.
 
 ## What changed in v5.9
 

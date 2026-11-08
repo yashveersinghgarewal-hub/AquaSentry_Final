@@ -2,6 +2,47 @@
 
 Full story of every change since v5.1, with reasons and sources: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
+## v5.10 — every roadmap item addressed; honest status; clearer screens
+
+Use: `AquaSentry_v5.10.zip` / branch `main`. After v5.9, 184 of the 267 roadmap items were not marked done. v5.10 addresses each of them and tightens what "done" means. Register (`Docs/ISEF_ROADMAP_STATUS.md`): **Done 57 · Tooling ready 67 · Partial 29 · Worksheet 114** — no item is unaddressed. What is left, as one checklist: `Docs/REMAINING_WORK.md`.
+
+**Code**
+- Item 157: `TraceCNN` in `Analysis/aquanet_v2_pipeline.py` — a numpy 1-D convolutional network on raw voltammograms (resampled to the node's 121-point grid), trained in the same leave-one-site-out loop and kept only if it beats the calibration line on an inner site; `GET /api/scans/export` returns every stored real scan with its points and reading ids to feed it (`--scans scans.json`). On the synthetic demo it does not beat the line, and the report says so.
+- Item 174: firmware 5.10.0 reference-electrode / cell settle test before every cycle (rest current and drift at −300 mV; `QC_REF_*` thresholds to tune on the bench), new `REF_UNSTABLE` fault bit, figures in `/status.json`; server text and dashboard text in five languages.
+- Raw export (`/api/data/export`, schema 1.4.0) carries device code, battery, QC, outcome, uncertainty, time source and firmware for deployment reports.
+
+**Analysis scripts for the laboratory and field items** (numpy only, SVG, `--demo` on labelled synthetic data)
+- `linearity.py` (64–65, 73, 87): calibration with CIs, residual plot, pure-error lack-of-fit, LOD/LOQ from residual and blank SD, peak vs deposition time.
+- `doe_factorial.py` (86): randomised 2^k plan and analysis with effects, 95 % CIs and a Pareto chart.
+- `electrode_study.py` (70–72, 80): lifetime to −10 %, drift per 100 scans, electrode-to-electrode CV and lot comparison, repeatability and intermediate precision.
+- `power_budget.py` (165, 171, 190): mAh/day from measured mode currents, battery life, solar panel size for the worst-month insolation and days of autonomy.
+- `deployment_report.py` (114–115, 182–183, 185): uptime, gaps, late deliveries from the offline buffer, QC and outcome counts, battery slope, unrepeated positives.
+- `decision_matrix.py` (48–49, 55, 57): weighted scores plus a ± 30 % weight-sensitivity check that says whether the winner is robust.
+- `scale_estimate.py` (126, 177, 211, 214): tests per year, cost per test and programme cost as ranges from an assumptions table; maintenance visits derived from the QC rules; missing assumptions named, never guessed.
+- `make_poster_figures.py` runs all of them.
+
+**Workbook and templates**
+- `Docs/TEAM_WORKBOOK.md`: Do / Use / Record for every item not fully closed by code, grouped by roadmap section.
+- `Docs/templates/` (29 files): ISEF forms checklist, chemical inventory with SDS columns, lab safety log, literature table (three documents pre-listed for verification), stakeholder interview guide, decision-matrix and scale-assumption templates, logbook page, 40 judge questions with pointers to the honest facts, mock-judging scoresheet, poster checklist, abstract structure and paper outline (structures only), communication protocol for an unsafe reading, budget, field-day sheet, photo log, usability and comprehension sheet, carry-over / hold-time, enclosure and drop tests, power log, electrode log, standards, interference, hand-peaks, letter templates, safety panel, future work, limitations.
+
+**What is left, honest status, clearer screens, current dependencies** (Nalin Aggarwal, branch `aquasentry-v5.10`, merged)
+- `Docs/REMAINING_WORK.md` generated with the status page by `Analysis/roadmap_status.py`: the open items as one checklist, the must-do (P0) items first, then laboratory, field, run-the-ready-tools, finish-what-software-started and team work; a test keeps it in sync.
+- Honest status: 29 items that were "Done" only because their software existed (blanks, check standards, spike recovery, blind and randomised runs, sensor checks, control charts, confusion matrices, Deming/Bland–Altman, ROC, CV %, interference regression, AquaNet field evaluation, offline buffering, OTA, QR, figure standards) are **Tooling ready** until real samples or hardware have gone through them. Roadmap title corrected to 267 items; CSV rows with unquoted commas fixed; README counts checked by a test.
+- Screens: practice controls grouped under "Practise without a sensor", apart from the real result; lab summary in words ("reads 21.7 µg/L lower than the lab"); device list with the age of the newest measurement; QR page "195 ± 15 µg/L (limit 10)"; trend warnings no longer project years ahead; phone layout fixes (WCAG 2.2 SC 2.4.11); one version label everywhere with a test; OSM credit link; service-worker cache renamed for v5.10.
+- Demo: every reading names the calibration that produced it (Bhojpur uses its own standard addition).
+- Dependencies: FastAPI ≥ 0.162, Uvicorn ≥ 0.54, httpx ≥ 0.28.1, pypdf ≥ 6.21.4, langchain-community ≥ 0.4.2; GitHub Actions checkout / setup-python / upload-artifact bumped.
+
+**Tests**: 327 server tests (new: nine analysis-script tests, scan export, export columns, workbook coverage, remaining-work sync, README counts, UI wording tests), browser suite, firmware host build with the new QC bit; ruff clean.
+
+## v5.9 — the ISEF roadmap, item by item
+- Status register for all 267 items (`Docs/planning/isef_roadmap_status.csv` → `Docs/ISEF_ROADMAP_STATUS.md`).
+- Sample metadata with every reading and scan (source kind, depth, purge, bottle, preservation, collector initials, collection time, custody note, split for the lab); migration 0005.
+- QC run types: field blank, spike recovery (80–120 %), pH buffer, conductivity, turbidity and temperature checks; `/api/qc/status` reports which sensors are verified.
+- Judging mode (`?mode=judging` or the podium button) hides market, sales, impact and the assistant.
+- Analysis scripts: AquaNet field evaluation, interference, blinded run order, control chart, peak check, project figures (Gantt, design history, cost, landscape, QR), one-command poster figures; paired validation adds the 50 µg/L cutoff, per-lot and per-site tables, replicate CV and sample sizes.
+- Documents: AI-use statement template, credits, decision log, FMEA, requirements traceability, measurement SOP, pinout, hardware changelog, privacy and performance, demo script.
+- Firmware 5.9.0 reports time to first result; certificates name firmware, model, analysis and calibration versions; export coordinates rounded to about 100 m unless asked.
+
 ## v5.8 — one outcome per test, scans kept as evidence, validation tooling
 
 Use: `AquaSentry_v5.8.zip` / branch `main`. Built from the Research and Engineering Review of 8 Nov 2026 (60 items) and the ISEF list; `Docs/ROADMAP_COVERAGE.md` maps every item to code, tests or "needs the lab". Nothing here claims the sensor works: it makes every result traceable and every claim checkable.

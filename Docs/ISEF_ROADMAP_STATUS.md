@@ -4,8 +4,8 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 
 | status | meaning | items |
 |---|---|---|
-| **Done** | software implemented and tested | 86 |
-| **Tooling ready** | software exists; closes when real data or measurements go through it | 38 |
+| **Done** | software implemented and tested; nothing left to measure for this item | 57 |
+| **Tooling ready** | software exists but has not been run on real samples or hardware; closes when the team's data go through it | 67 |
 | **Partial** | software did its part; the rest is the team's | 29 |
 | **Worksheet** | team, laboratory or field work with its steps, template or calculator in `Docs/TEAM_WORKBOOK.md` | 114 |
 | | **total** | **267** (153 with a software share) |
@@ -19,21 +19,21 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 | 0 Rules | 11 | 1 | 0 | 2 | 8 |
 | A Pathway | 10 | 2 | 0 | 3 | 5 |
 | B Need | 14 | 2 | 0 | 4 | 8 |
-| C Prior art | 12 | 2 | 0 | 3 | 7 |
+| C Prior art | 12 | 1 | 1 | 3 | 7 |
 | D Design | 16 | 4 | 4 | 2 | 6 |
 | E Sensor | 24 | 0 | 17 | 0 | 7 |
-| F Metrology | 20 | 13 | 2 | 2 | 3 |
-| G Field | 22 | 7 | 3 | 3 | 9 |
-| H Statistics | 18 | 13 | 1 | 2 | 2 |
-| I AquaNet | 16 | 13 | 1 | 2 | 0 |
+| F Metrology | 20 | 6 | 9 | 2 | 3 |
+| G Field | 22 | 2 | 8 | 3 | 9 |
+| H Statistics | 18 | 6 | 8 | 2 | 2 |
+| I AquaNet | 16 | 8 | 6 | 2 | 0 |
 | J Hardware | 18 | 3 | 3 | 2 | 10 |
-| K Firmware | 10 | 6 | 2 | 0 | 2 |
+| K Firmware | 10 | 4 | 4 | 0 | 2 |
 | L Software | 10 | 6 | 1 | 1 | 2 |
 | M Users | 8 | 1 | 0 | 0 | 7 |
 | N Impact | 10 | 1 | 3 | 0 | 6 |
 | O Safety | 6 | 0 | 0 | 0 | 6 |
 | P Logbook | 5 | 0 | 0 | 1 | 4 |
-| Q Poster | 10 | 4 | 1 | 0 | 5 |
+| Q Poster | 10 | 2 | 3 | 0 | 5 |
 | R Interview | 10 | 0 | 0 | 0 | 10 |
 | S Credibility | 6 | 0 | 0 | 1 | 5 |
 | T Cut | 6 | 5 | 0 | 0 | 1 |
@@ -106,7 +106,7 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 | 44 | P2 | Cite WHO and BIS documents directly | team | **Partial** | Docs/IMPROVEMENT_LOG.md and app/standards.py cite the documents used by the code; cite them in your paper. Workbook §44. |
 | 45 | P2 | Note reused code/designs and licences | software | **Done** | Docs/CREDITS.md. |
 | 46 | P2 | List what you deliberately did not do | team | **Worksheet** | Not software (Docs/DECISION_LOG.md has a place for it). Workbook §46: Docs/TEAM_WORKBOOK.md. |
-| 47 | P2 | Landscape figure: cost vs LOD | software | **Done** | Analysis/project_figures.py landscape from Data/field/landscape_template.csv (numbers to fill). |
+| 47 | P2 | Landscape figure: cost vs LOD | software | **Tooling ready** | Analysis/project_figures.py landscape from Data/field/landscape_template.csv (numbers to fill). Counts as done only once real samples or hardware have gone through it. |
 
 ### D Design
 
@@ -163,17 +163,17 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 | # | P | item | owner | status | where / next step |
 |---|---|---|---|---|---|
 | 88 | P0 | Certified reference material and recovery % | lab | **Tooling ready** | check_standard QC runs with a CRM; recovery in the QC log and control chart. Workbook §88. |
-| 89 | P0 | Blanks with every batch | software | **Done** | POST /api/qc/runs blank and field_blank (v5.7/v5.9); low readings are gated on recent blanks. |
-| 90 | P0 | 10 µg/L check standard start and end of each field day; reject if > 20 % drift | software | **Done** | v5.7 check-standard gate (80-120 %); Analysis/control_chart.py (v5.9) shows drift before it fails a day; run_order.py puts the opening and closing checks on every sheet. |
-| 91 | P0 | Spike recovery on real samples (80-120 %) | software | **Done** | spike_recovery QC run type (v5.9) with baseline and recovery %. |
+| 89 | P0 | Blanks with every batch | software | **Tooling ready** | POST /api/qc/runs blank and field_blank (v5.7/v5.9); low readings are gated on recent blanks. Counts as done only once real samples or hardware have gone through it. |
+| 90 | P0 | 10 µg/L check standard start and end of each field day; reject if > 20 % drift | software | **Tooling ready** | v5.7 check-standard gate (80-120 %); Analysis/control_chart.py (v5.9) shows drift before it fails a day; run_order.py puts the opening and closing checks on every sheet. Counts as done only once real samples or hardware have gone through it. |
+| 91 | P0 | Spike recovery on real samples (80-120 %) | software | **Tooling ready** | spike_recovery QC run type (v5.9) with baseline and recovery %. Counts as done only once real samples or hardware have gone through it. |
 | 92 | P1 | Record every calibration; print the ID on each result | software | **Done** | Calibration records (v5.6); calibration ID on the PDF, public page and exports (v5.7-v5.9). |
 | 93 | P1 | Measurement uncertainty shown as ± | software | **Done** | ± U (k = 2) per reading (v5.8); the 5 % calibration term is assumed until replicates give a measured value. |
 | 94 | P1 | Decision rule with a guard band | software | **Done** | screening_outcome: retest when the interval crosses the detection limit (v5.8). |
-| 95 | P1 | Blind samples | software | **Done** | Analysis/run_order.py: coded run sheet for the operator, sealed key for the supervisor (v5.9). |
-| 96 | P1 | Randomise run order | software | **Done** | run_order.py (seeded shuffle; opening and closing checks fixed). |
+| 95 | P1 | Blind samples | software | **Tooling ready** | Analysis/run_order.py: coded run sheet for the operator, sealed key for the supervisor (v5.9). Counts as done only once real samples or hardware have gone through it. |
+| 96 | P1 | Randomise run order | software | **Tooling ready** | run_order.py (seeded shuffle; opening and closing checks fixed). Counts as done only once real samples or hardware have gone through it. |
 | 97 | P1 | Written cleaning protocol | team | **Worksheet** | Not software; Docs/SOP_MEASUREMENT.md has the slot. Workbook §97: Docs/TEAM_WORKBOOK.md. |
-| 98 | P1 | Calibrate pH / EC / temperature / turbidity sensors or drop them from claims | software | **Done** | QC run types ph_buffer, conductivity_standard, turbidity_standard, temperature_reference (v5.9); /api/qc/status reports sensor_checks.verified per sensor. |
-| 99 | P2 | Shewhart control charts for the check standard | software | **Done** | Analysis/control_chart.py (v5.9) with Western Electric rules. |
+| 98 | P1 | Calibrate pH / EC / temperature / turbidity sensors or drop them from claims | software | **Tooling ready** | QC run types ph_buffer, conductivity_standard, turbidity_standard, temperature_reference (v5.9); /api/qc/status reports sensor_checks.verified per sensor. Counts as done only once real samples or hardware have gone through it. |
+| 99 | P2 | Shewhart control charts for the check standard | software | **Tooling ready** | Analysis/control_chart.py (v5.9) with Western Electric rules. Counts as done only once real samples or hardware have gone through it. |
 | 100 | P2 | Inter-device comparison | lab | **Tooling ready** | Same sample_code on readings from 2-3 devices; paired_validation groups by device via the site table. |
 | 101 | P2 | Store every raw scan with metadata | software | **Done** | RawVoltammetryTrace with checksum, calibration, firmware, analysis version, electrode lot, sample code (v5.8). |
 | 102 | P2 | SOP for a measurement | software | **Partial** | Docs/SOP_MEASUREMENT.md: instrument and software steps written; chemistry steps are placeholders for the supervisor. Workbook §102. |
@@ -189,9 +189,9 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 |---|---|---|---|---|---|
 | 108 | P0 | Replace simulated data with >= 40 real samples / 15 sources / 2 districts | field | **Tooling ready** | Data/field/README.md + paired_template.csv; /api/scans; bridge --file; GET /api/data/export/paired. Needs the field programme. |
 | 109 | P0 | Pre-register the analysis | team | **Partial** | The analysis is fixed in code: paired_validation.py (end points, cutoffs, statistics). Write the pre-registration in the logbook citing the script version (git commit). Workbook §109. |
-| 110 | P0 | Confusion matrix at 10 and 50 µg/L with Wilson CIs; missed unsafe count | software | **Done** | paired_validation.py cutoffs 10 / 20 / 50 (v5.9) with Wilson intervals and missed-unsafe counts; /api/validation endpoint (v5.6). |
-| 111 | P0 | Proper sample collection; split; chain of custody | software | **Done** | SampleMeta (purge, bottle, preservation, custody note, split_for_lab, collected_at) stored with readings/scans and exported (v5.9). Procedure in Data/field/README.md. |
-| 112 | P0 | Record GPS / source type / depth / date-time per sample | software | **Done** | Device site (lat/long) + SampleMeta source_kind, depth_m, collected_at (v5.9). |
+| 110 | P0 | Confusion matrix at 10 and 50 µg/L with Wilson CIs; missed unsafe count | software | **Tooling ready** | paired_validation.py cutoffs 10 / 20 / 50 (v5.9) with Wilson intervals and missed-unsafe counts; /api/validation endpoint (v5.6). Counts as done only once real samples or hardware have gone through it. |
+| 111 | P0 | Proper sample collection; split; chain of custody | software | **Tooling ready** | SampleMeta (purge, bottle, preservation, custody note, split_for_lab, collected_at) stored with readings/scans and exported (v5.9). Procedure in Data/field/README.md. Counts as done only once real samples or hardware have gone through it. |
+| 112 | P0 | Record GPS / source type / depth / date-time per sample | software | **Tooling ready** | Device site (lat/long) + SampleMeta source_kind, depth_m, collected_at (v5.9). Counts as done only once real samples or hardware have gone through it. |
 | 113 | P1 | Sample set covers the range | field | **Worksheet** | Not software; paired_validation reports the distribution so gaps are visible. Workbook §113: Docs/TEAM_WORKBOOK.md. |
 | 114 | P1 | 30-day continuous deployment with weekly lab samples | field | **Tooling ready** | Firmware + Analysis/deployment_report.py on GET /api/data/export (uptime, gaps, late deliveries, QC, outcomes, battery). Workbook §114. |
 | 115 | P1 | Report uptime / missed readings / battery / false alarms | software | **Done** | Analysis/deployment_report.py (v5.10): expected vs received, uptime %, longest gap, late deliveries, QC and outcome counts, battery slope, unrepeated positives. Workbook §115. |
@@ -201,29 +201,29 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 | 119 | P1 | Photograph every site | team | **Worksheet** | Workbook §119: Docs/TEAM_WORKBOOK.md. |
 | 120 | P1 | Letter from the lab | team | **Worksheet** | Workbook §120: Docs/TEAM_WORKBOOK.md. |
 | 121 | P1 | Budget the lab costs | team | **Worksheet** | Workbook §121: Docs/TEAM_WORKBOOK.md. |
-| 122 | P2 | Share results back with owners and the district lab | software | **Done** | QR public page per source (v5.6), PDF certificate, JJM export. |
+| 122 | P2 | Share results back with owners and the district lab | software | **Tooling ready** | QR public page per source (v5.6), PDF certificate, JJM export. Counts as done only once real samples or hardware have gone through it. |
 | 123 | P2 | Responsible communication plan for a high result | team | **Worksheet** | Not software; alert channels exist and are off by default for practice data. Workbook §123: Docs/TEAM_WORKBOOK.md. |
 | 124 | P2 | Use the JJM export | software | **Done** | GET /api/data/export/jjm (v5.6). |
 | 125 | P2 | Time per test measured with a stopwatch | software | **Partial** | Firmware prints time to first result (v5.9) and the scan duration is in scan settings; the hands-on part is a stopwatch. Workbook §125. |
 | 126 | P2 | Cost actually spent per sample | team | **Tooling ready** | scale_estimate.py rows field_samples_collected / field_total_spend_inr. Workbook §126. |
 | 127 | P2 | Keep odd samples for retest | software | **Partial** | The retest outcome flags them; sample_code links the retest to the original. Workbook §127. |
 | 128 | P2 | Usability trial with a non-expert | team | **Worksheet** | Not software (IRB). Workbook §128: Docs/TEAM_WORKBOOK.md. |
-| 129 | P2 | Map the field results and screenshot for the poster | software | **Done** | Dashboard map (v5.6); demo data has no coordinates so only real sites appear (v5.7). |
+| 129 | P2 | Map the field results and screenshot for the poster | software | **Tooling ready** | Dashboard map (v5.6); demo data has no coordinates so only real sites appear (v5.7). |
 
 ### H Statistics
 
 | # | P | item | owner | status | where / next step |
 |---|---|---|---|---|---|
-| 130 | P0 | Scatter with 1:1 line and Bland-Altman | software | **Done** | paired_validation.py (v5.8). |
-| 131 | P0 | Regression slope/intercept with CIs (Deming) | software | **Done** | paired_validation.py Deming with bootstrap CIs (v5.8). |
-| 132 | P0 | Justify the sample size (CI width) | software | **Done** | paired_validation.py sample-size table (v5.9): Wilson CI width vs n unsafe. |
-| 133 | P1 | ROC curve and threshold choice | software | **Done** | paired_validation.py ROC/AUC at 10 / 20 / 50; aquanet_v2_pipeline referral curve. |
-| 134 | P1 | Precision as CV % at low / medium / high | software | **Done** | paired_validation.py replicate CV by band (v5.9). |
+| 130 | P0 | Scatter with 1:1 line and Bland-Altman | software | **Tooling ready** | paired_validation.py (v5.8). Counts as done only once real samples or hardware have gone through it. |
+| 131 | P0 | Regression slope/intercept with CIs (Deming) | software | **Tooling ready** | paired_validation.py Deming with bootstrap CIs (v5.8). Counts as done only once real samples or hardware have gone through it. |
+| 132 | P0 | Justify the sample size (CI width) | software | **Tooling ready** | paired_validation.py sample-size table (v5.9): Wilson CI width vs n unsafe. Counts as done only once real samples or hardware have gone through it. |
+| 133 | P1 | ROC curve and threshold choice | software | **Tooling ready** | paired_validation.py ROC/AUC at 10 / 20 / 50; aquanet_v2_pipeline referral curve. Counts as done only once real samples or hardware have gone through it. |
+| 134 | P1 | Precision as CV % at low / medium / high | software | **Tooling ready** | paired_validation.py replicate CV by band (v5.9). Counts as done only once real samples or hardware have gone through it. |
 | 135 | P1 | Handle values below LOD as censored | software | **Done** | Censored lab results kept with qualifier (v5.8); Mann-Kendall censors at LOD (v5.4); paired_validation never substitutes zeros. |
-| 136 | P1 | Uncertainty for every number on the poster | software | **Done** | Every metric in the analysis reports carries an interval and n. |
+| 136 | P1 | Uncertainty for every number on the poster | software | **Tooling ready** | Every metric in the analysis reports carries an interval and n. Counts as done only once real samples or hardware have gone through it. |
 | 137 | P1 | Significance tests only with a hypothesis | software | **Done** | The scripts report effect sizes and intervals; interference.py tests the one hypothesis (slope ≠ 0). |
 | 138 | P1 | Reproducible analysis script | software | **Done** | Analysis/make_poster_figures.py regenerates every figure from the raw files (v5.9). |
-| 139 | P1 | Interference by regression with CI | software | **Done** | Analysis/interference.py (v5.9). |
+| 139 | P1 | Interference by regression with CI | software | **Tooling ready** | Analysis/interference.py (v5.9). Counts as done only once real samples or hardware have gone through it. |
 | 140 | P1 | Explain outliers individually | software | **Partial** | paired_validation and peak_check list the largest disagreements; the explanation goes in the logbook. Workbook §140. |
 | 141 | P2 | Power / sample-size estimate for a larger study | software | **Done** | paired_validation.py sample-size table includes 100 and 200 unsafe samples. |
 | 142 | P2 | Mixed model for repeated readings per source | software | **Partial** | Grouped-by-site evaluation in aquanet_v2_pipeline avoids the independence error; a mixed model is future work once there are repeated visits. Workbook §142. |
@@ -237,19 +237,19 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 
 | # | P | item | owner | status | where / next step |
 |---|---|---|---|---|---|
-| 148 | P0 | Be honest that V3 was trained on simulated readings; evaluate on real data | software | **Done** | Docs/CLAIMS_REGISTER.md N1; Analysis/aquanet_v3_field_eval.py (v5.9) evaluates the deployed network on paired rows. |
-| 149 | P0 | Baseline: threshold rule and logistic regression | software | **Done** | aquanet_v3_field_eval.py reports both baselines on the same rows. |
+| 148 | P0 | Be honest that V3 was trained on simulated readings; evaluate on real data | software | **Tooling ready** | Docs/CLAIMS_REGISTER.md N1; Analysis/aquanet_v3_field_eval.py (v5.9) evaluates the deployed network on paired rows. Counts as done only once real samples or hardware have gone through it. |
+| 149 | P0 | Baseline: threshold rule and logistic regression | software | **Tooling ready** | aquanet_v3_field_eval.py reports both baselines on the same rows. Counts as done only once real samples or hardware have gone through it. |
 | 150 | P0 | Confusion matrix on held-out real data | software | **Tooling ready** | aquanet_v3_field_eval.py; needs the paired dataset. |
 | 151 | P1 | Why a network at all | software | **Partial** | The ablation in aquanet_v3_field_eval.py answers it with data; the argument is yours to write. Workbook §151. |
-| 152 | P1 | Feature importance / ablation | software | **Done** | aquanet_v3_field_eval.py ablation table. |
-| 153 | P1 | Calibration / reliability diagram | software | **Done** | aquanet_v3_field_eval.py reliability.svg + ECE; aquanet_v2_pipeline reliability. |
+| 152 | P1 | Feature importance / ablation | software | **Tooling ready** | aquanet_v3_field_eval.py ablation table. Counts as done only once real samples or hardware have gone through it. |
+| 153 | P1 | Calibration / reliability diagram | software | **Tooling ready** | aquanet_v3_field_eval.py reliability.svg + ECE; aquanet_v2_pipeline reliability. Counts as done only once real samples or hardware have gone through it. |
 | 154 | P1 | Hard safety rule can never be overridden to safe; test | software | **Done** | tests/test_aquanet_v3.py, test_ui_safety_gates.py; checked again on every real row by aquanet_v3_field_eval.py. |
 | 155 | P1 | Parameter count / memory / inference time measured | software | **Done** | 352 parameters and 1 408 bytes counted from the weight file (field_eval); inference time measured by the firmware boot self-test (v5.8) - record it from a real board. |
 | 156 | P1 | Document the training-data generation | software | **Partial** | Docs/neural/AQUANET_V3_REPORT.md and scripts/train_aquanet_v2.py describe the distributions and noise; the 'why realistic' citation is yours. Workbook §156. |
 | 157 | P2 | Tiny CNN on raw voltammograms | software | **Done** | aquanet_v2_pipeline.py TraceCNN (numpy 1-D conv on raw voltammograms resampled to the 121-point grid; grouped CV; kept only if it beats the line); GET /api/scans/export feeds it (--scans). Runs on the demo today. |
 | 158 | P2 | INT8 vs float accuracy | software | **Done** | Parity tests between the Python, JS and C engines (v5.2+). |
 | 159 | P2 | Cross-validation not one split | software | **Done** | Leave-one-site-out in aquanet_v2_pipeline.py and aquanet_v3_field_eval.py. |
-| 160 | P2 | Describe the failure cases | software | **Done** | aquanet_v3_field_eval.py lists the rows the network gets wrong. |
+| 160 | P2 | Describe the failure cases | software | **Tooling ready** | aquanet_v3_field_eval.py lists the rows the network gets wrong. Counts as done only once real samples or hardware have gone through it. |
 | 161 | P2 | Version the model; record it per result | software | **Done** | model_version stored per reading (v5.5) and printed on the certificate 'Versions' line (v5.9). |
 | 162 | P2 | Drop 'AI' wording unless the network matters | software | **Done** | No 'AI-powered' wording; 'AquaNet model' is one nav item among the science screens. |
 | 163 | P2 | Keep the chatbot out of the main pitch | software | **Done** | Judging mode hides the assistant (v5.9). |
@@ -282,8 +282,8 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 | # | P | item | owner | status | where / next step |
 |---|---|---|---|---|---|
 | 182 | P1 | 14-day soak test | field | **Tooling ready** | deployment_report.py on the 14-day export. Workbook §182. |
-| 183 | P1 | Offline buffering demo (3 days off, all readings arrive once) | software | **Done** | Firmware ring buffer + idempotent uploads; bridge outbox tests; deployment_report.py counts late deliveries as the evidence. Run on a board and log it (Workbook §183). |
-| 184 | P1 | Safe OTA with rollback | software | **Done** | OTA with rollback and signed manifests (v5.5-v5.6); demonstrate on a board. |
+| 183 | P1 | Offline buffering demo (3 days off, all readings arrive once) | software | **Tooling ready** | Firmware ring buffer + idempotent uploads; bridge outbox tests; deployment_report.py counts late deliveries as the evidence. Run on a board and log it (Workbook §183). Counts as done only once real samples or hardware have gone through it. |
+| 184 | P1 | Safe OTA with rollback | software | **Tooling ready** | OTA with rollback and signed manifests (v5.5-v5.6); demonstrate on a board. Counts as done only once real samples or hardware have gone through it. |
 | 185 | P1 | Watchdog and brown-out tested | lab | **Worksheet** | Provoke a hang and a sag; reset counters in /status.json. Workbook §185. |
 | 186 | P2 | Time to first result after power-on | software | **Done** | Firmware 5.9.0 prints [TIMING] first result and reports first_result_ms in /status.json. |
 | 187 | P2 | Flash and test on two boards | lab | **Worksheet** | Flash two boards; inter-device comparison (item 100). Workbook §187. |
@@ -362,10 +362,10 @@ Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_stat
 |---|---|---|---|---|---|
 | 231 | P0 | One clear story; title states the result | team | **Worksheet** | Workbook §231: Docs/TEAM_WORKBOOK.md. |
 | 232 | P0 | Results panel largest: scatter / confusion / LOD | software | **Tooling ready** | make_poster_figures.py produces them from the paired CSV. |
-| 233 | P1 | Every graph: units; n; error bars; source | software | **Done** | svg_plots subtitles carry n and the fit; axes carry units. |
+| 233 | P1 | Every graph: units; n; error bars; source | software | **Tooling ready** | svg_plots subtitles carry n and the fit; axes carry units. Counts as done only once real samples or hardware have gone through it. |
 | 234 | P1 | Supporting documents on the table | team | **Worksheet** | Workbook §234: Docs/TEAM_WORKBOOK.md. |
 | 235 | P1 | Prototype opened on the table + used electrode | team | **Worksheet** | Workbook §235: Docs/TEAM_WORKBOOK.md. |
-| 236 | P1 | Printed QR code to the repository / DOI | software | **Done** | Analysis/project_figures.py qr -> qr.svg / qr.pdf. |
+| 236 | P1 | Printed QR code to the repository / DOI | software | **Tooling ready** | Analysis/project_figures.py qr -> qr.svg / qr.pdf. Counts as done only once real samples or hardware have gone through it. |
 | 237 | P2 | Check display and safety rules | team | **Worksheet** | Workbook §237: Docs/TEAM_WORKBOOK.md. |
 | 238 | P2 | 3 colours + neutrals; one typeface | software | **Done** | svg_plots palette and one font family. |
 | 239 | P2 | Short English labels; Hindi alert screen as example | software | **Done** | Dashboard language switch (5 languages) for the example screenshot. |

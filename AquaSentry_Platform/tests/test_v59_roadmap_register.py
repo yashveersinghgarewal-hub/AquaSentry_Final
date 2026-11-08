@@ -9,6 +9,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CSV = os.path.join(ROOT, "Docs", "planning", "isef_roadmap_status.csv")
 MD = os.path.join(ROOT, "Docs", "ISEF_ROADMAP_STATUS.md")
+REMAINING = os.path.join(ROOT, "Docs", "REMAINING_WORK.md")
 STATUSES = {"Done", "Tooling ready", "Partial", "Worksheet"}
 OWNERS = {"team", "software", "lab", "field", "firmware", "external"}
 PATH_RE = re.compile(r"(?<![\w/])((?:Docs|Analysis|Data|Firmware|AquaSentry_Platform|scripts|app|tests|bridge|frontend|models_3d)/[\w./-]+)")
@@ -59,8 +60,31 @@ def test_every_non_done_item_has_a_workbook_entry():
 
 def test_rendered_markdown_matches_csv(tmp_path):
     before = open(MD, encoding="utf-8").read()
+    before_left = open(REMAINING, encoding="utf-8").read()
     r = subprocess.run([sys.executable, os.path.join(ROOT, "Analysis", "roadmap_status.py")], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     after = open(MD, encoding="utf-8").read()
     assert before == after, "Docs/ISEF_ROADMAP_STATUS.md is stale: run Analysis/roadmap_status.py and commit"
+    assert before_left == open(REMAINING, encoding="utf-8").read(), "Docs/REMAINING_WORK.md is stale: run Analysis/roadmap_status.py"
     assert "267" in after and after.count("| **Done** | software implemented") == 1
+
+
+def test_csv_rows_have_no_unquoted_commas():
+    # a comma outside quotes splits the next-step text into an extra column that the renderer silently drops (v5.10 fix)
+    with open(CSV, encoding="utf-8-sig", newline="") as f:
+        bad = [r["item"] for r in csv.DictReader(f) if None in r]
+    assert bad == []
+
+
+def test_remaining_work_lists_every_open_item_once():
+    text = open(REMAINING, encoding="utf-8").read()
+    open_items = [int(r["item"]) for r in _rows() if r["status"] != "Done"]
+    listed = [int(n) for n in re.findall(r"^- \[ \] \*\*(\d+)\*\*", text, flags=re.M)]
+    assert sorted(listed) == sorted(open_items)
+
+
+def test_readme_counts_match_the_register():
+    from collections import Counter
+    c = Counter(r["status"] for r in _rows())
+    readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
+    assert f"**{c['Done']} done in software, {c['Tooling ready']} with the tooling ready for real data, {c['Partial']} partly done, {c['Worksheet']} team / laboratory / field items" in readme

@@ -71,7 +71,7 @@ def main():
 
         # v5.7: a node's LOW readings are only trusted with an electrode calibration and a passing check standard
         # in the last 7 days, so the demo programme has both, like a real one would (weekly 50 ug/L check).
-        post("/api/admin/calibrations/external", {
+        ext = post("/api/admin/calibrations/external", {
             "standards": [{"ug_l": c_, "peak_ua": round(0.0096 + 0.0008563 * c_ + e_, 5)}
                           for c_, e_ in ((0, 0.0003), (10, -0.0002), (20, 0.0002), (50, -0.0001), (100, 0.0002))],
             "electrode_lot": "MAS-G1-2611", "approved_by": "Demo lab lead", "notes": "SIMULATED FIELD DEMO"})
@@ -84,6 +84,7 @@ def main():
 
         for code, name, village, district, state, lat, lon, kind, profile in NODES:
             first = True
+            cal_ref = ext["calibration_id"]          # v5.10: every reading names the calibration that produced it
             for h in range(args.days * 24, -1, -6):           # every 6 hours
                 t = now - timedelta(hours=h)
                 if profile == "silent" and h < 5 * 24:        # stopped reporting 5 days ago
@@ -91,7 +92,7 @@ def main():
                 v = level(profile, (args.days * 24 - h) / 24, rnd)
                 body = {"device_code": code, "arsenic_ppb": round(v, 1), "source_type": "hardware",
                         "source_label": "SIMULATED FIELD DEMO", "recorded_at": t.isoformat(),
-                        "idempotency_key": f"{code}-{h}", "firmware_version": "5.7.0",
+                        "idempotency_key": f"{code}-{h}", "firmware_version": "5.9.0",
                         "qc_status": "pass", "scans_averaged": 3,
                         "ph": round(7.4 + rnd.gauss(0, 0.15), 2), "temperature_c": round(26 + rnd.gauss(0, 1), 1),
                         "conductivity_us_cm": round(620 + rnd.gauss(0, 40)), "turbidity_ntu": round(abs(rnd.gauss(1.5, 0.6)), 1),
@@ -100,13 +101,18 @@ def main():
                         "peak_current_ua": round(0.0096 + 0.0008563 * v, 4)}
                 if profile == "copper":
                     body["cu_peak_ua"] = round(0.2 + abs(rnd.gauss(0, 0.05)), 3)
-                if profile in ("clean", "hazardous"):
-                    body["calibration_ref"] = "CAL-DEMO-SA"
+                body["calibration_ref"] = cal_ref
                 post("/api/readings", body)
                 if first:
                     post(f"/api/admin/devices/{code}/site", {"name": name, "village": village, "district": district,
                                                             "state": state, "latitude": lat, "longitude": lon,
                                                             "source_kind": kind}, method="put")
+                    if code == "DEMO-BHOJ-01":
+                        # a standard addition in this well's own water: its later readings use the matrix-matched slope
+                        cal_ref = post("/api/admin/calibrations/standard-addition", {
+                            "device_code": code, "electrode_lot": "MAS-G1-2611", "approved_by": "Demo lab lead",
+                            "sample_peak_ua": 0.0405, "additions": [{"ug_l": 20, "peak_ua": 0.0577}, {"ug_l": 40, "peak_ua": 0.0748}],
+                            "notes": "SIMULATED FIELD DEMO"})["calibration_id"]
                     first = False
 
         # lab confirmations: ICP-MS at a NABL lab, paired with the nearest node reading
@@ -116,10 +122,6 @@ def main():
             post("/api/lab-results", {"device_code": code, "arsenic_ug_l": total, "as3_ug_l": as3, "lab_method": "ICP-MS",
                                       "lab_name": "PHED District Water Testing Laboratory (demo)", "nabl_accredited": True,
                                       "sampled_at": (now - timedelta(days=days_ago, hours=2)).isoformat()})
-        post("/api/admin/calibrations/standard-addition", {
-            "device_code": "DEMO-BHOJ-01", "electrode_lot": "MAS-G1-2611", "approved_by": "Demo lab lead",
-            "sample_peak_ua": 0.0405, "additions": [{"ug_l": 20, "peak_ua": 0.0577}, {"ug_l": 40, "peak_ua": 0.0748}],
-            "notes": "SIMULATED FIELD DEMO"})
         v = c.get("/api/validation").json()
     print(f"Demo field programme written to {db}")
     print(f"  {len(NODES)} nodes, {v['n_pairs']} lab pairs, missed unsafe samples: {v['missed_unsafe']}")

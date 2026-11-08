@@ -422,3 +422,69 @@ Do: write those four documents from your logbook; use this repository as notes o
 **265 — Tag the fair version.** Do: at the freeze, `git tag -a isef-2027 -m "version shown at ISEF 2027" && git push origin isef-2027`. Record: `DECISION_LOG.md`.
 
 **267 — Names and roles in the README.** Do: complete the Team table. Record: README.
+
+---
+
+## Ready-made software that still has to meet real data
+
+These items were marked "done" in v5.9 because their code and tests exist; Nalin Aggarwal's v5.10 review moved them to
+*Tooling ready*: they count as done only once real samples or hardware have gone through them. For each, Do = the real
+run; Use = the tool; Record = where the result goes.
+
+**47 — Landscape figure (cost vs LOD).** Do: fill `Data/field/landscape_template.csv` with datasheet/quote numbers. Use: `project_figures.py landscape`. Record: figure + literature rows.
+
+**89 — Blanks with every batch.** Do: run a reagent blank at the start of every batch of real samples. Use: `POST /api/qc/runs` `run_type=blank`. Record: QC log; the server gates low readings on it.
+
+**90 — Check standard start and end of each field day.** Do: a real 10 µg/L standard, opening and closing. Use: `run_order.py` sheet rows; `control_chart.py` weekly. Record: QC log + chart.
+
+**91 — Spike recovery on real samples.** Do: spike one real sample per matrix per day. Use: `run_type=spike_recovery` with `baseline_ug_l`. Record: QC log.
+
+**95 — Blind samples.** Do: run a real day from a sealed-key sheet. Use: `run_order.py`. Record: sheet + key in the logbook.
+
+**96 — Randomised run order.** Do: same sheet; note the seed. Record: logbook.
+
+**98 — Auxiliary-sensor calibration.** Do: pH buffers, conductivity standard, turbidity standard, reference thermometer on the real node. Use: QC run types `ph_buffer` … Record: `/api/qc/status sensor_checks`.
+
+**99 — Control chart.** Do: ≥ 10 real check-standard runs, then weekly. Use: `control_chart.py`. Record: chart in the logbook.
+
+**110 — Confusion matrices at 10 / 20 / 50 with CIs.** Do: run on the real paired export. Use: `paired_validation.py`. Record: report + poster.
+
+**111 — Chain of custody.** Do: fill `SampleMeta` for every real bottle. Use: `/api/scans` or `/api/readings` `sample` object; `field_day_sheet.csv`. Record: paired export.
+
+**112 — GPS / source type / depth / time per sample.** Do: same, at the pump. Record: same.
+
+**122 — Share results back.** Do: hand the QR sticker and the PDF certificate to the owner and the district lab for real sources. Use: public page, `/api/reports/certificate/pdf`. Record: communication log.
+
+**129 — Map of field results.** Do: set real site coordinates (`PUT /api/admin/devices/{code}/site`); screenshot the dashboard map. Record: poster.
+
+**130 — Scatter with 1:1 line and Bland–Altman.** Do: real paired export. Use: `paired_validation.py`. Record: report figures.
+
+**131 — Deming slope and intercept with CIs.** Do: same run. Record: report.
+
+**132 — Sample-size justification.** Do: read the sample-size table of the real report; state the CI width. Record: paper methods.
+
+**133 — ROC and threshold.** Do: real report. Record: poster.
+
+**134 — CV % at low / medium / high.** Do: repeat real samples under the same `sample_code`. Use: `paired_validation.py` replicate table; `electrode_study.py`. Record: report.
+
+**136 — Uncertainty for every poster number.** Do: take every figure from the real reports with its interval. Record: poster.
+
+**139 — Interference by regression.** Do: real interferent series. Use: `interference.py`. Record: report.
+
+**148 — AquaNet evaluated on real data.** Do: `aquanet_v3_field_eval.py paired.csv`. Record: report; `CLAIMS_REGISTER` N1.
+
+**149 — Baselines (threshold rule, logistic regression).** Do: same run; compare the three tables. Record: report + poster.
+
+**152 — Ablation.** Do: same run; read the ablation table. Record: report.
+
+**153 — Reliability diagram.** Do: same run; `reliability.svg` and the ECE. Record: poster.
+
+**160 — Failure cases.** Do: read the "rows the network got wrong" table; explain each. Record: logbook.
+
+**183 — Offline buffering demo.** Do: 3 days unplugged on a real node; `deployment_report.py` late deliveries. Record: report.
+
+**184 — OTA with rollback.** Do: push a deliberately broken build; confirm rollback on a real board. Record: logbook.
+
+**233 — Figure standards.** Do: check every poster figure has units, n, intervals, source. Use: `poster_checklist.md`. Record: checklist.
+
+**236 — Printed QR.** Do: `project_figures.py qr --url <repository or DOI>`; print. Record: poster.
