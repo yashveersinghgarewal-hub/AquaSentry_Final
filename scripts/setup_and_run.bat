@@ -1,4 +1,6 @@
 @echo off
+REM scripts\ lives one level below the repository root
+cd /d "%~dp0.."
 REM ==============================================================================
 REM AquaSentry Universal All-In-One Launcher (Windows)
 REM ==============================================================================

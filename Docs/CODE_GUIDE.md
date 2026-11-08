@@ -5,6 +5,8 @@
 
 Nov 7, 2026 · @Suri
 
+> **Note (v5.7):** this guide was first written as a code review of an early version (v2/v3), so some numbers (test counts, line counts, the issues table) describe that version; every issue in its table was fixed in v3. Current run steps: [`HOW_TO_RUN.md`](HOW_TO_RUN.md); current changes: [`IMPROVEMENT_LOG.md`](IMPROVEMENT_LOG.md) and `CHANGELOG.md`. Paths were updated for the v5.7 layout (launchers in `scripts/`, documents in `Docs/`).
+
 ## 1. What AquaSentry is
 
 AquaSentry is a water-safety system that measures arsenic electrochemically, reads four other water sensors, and labels the water **Safe, Caution, Unsafe or Hazardous** using a small neural network (AquaNet-V1) wrapped in hard safety rules.
@@ -45,8 +47,8 @@ The code that matters lives in about 25 files; the rest are copies, PDFs of the 
 | File | What it does |
 | --- | --- |
 | `main.py` | The master command line. `--serve` starts the web API, `--test` runs both test suites, `--csv <file>` analyses a voltammetry scan and prints the verdict as JSON, `--neural` runs six demo water scenarios, `--version` prints the architecture. |
-| `setup_and_run.sh` / `.bat` | One-click setup: finds Python, makes a `.venv`, installs `requirements.txt`, then runs `main.py --serve` and opens the browser. |
-| `run_all_tests.sh` / `.bat` | Activates the venv and runs `main.py --test`. |
+| `scripts/setup_and_run.sh` / `.bat` | One-click setup: finds Python, makes a `.venv`, installs `requirements.txt`, then runs `main.py --serve` and opens the browser. |
+| `scripts/run_all_tests.sh` / `.bat` | Activates the venv and runs `main.py --test`. |
 | `requirements.txt` | Python packages: fastapi, uvicorn, sqlalchemy, pydantic, pyserial, requests, google-genai, python-dotenv, pytest, httpx, numpy, reportlab. |
 | `Dockerfile`, `docker-compose.yml` | Builds a container (Python 3.11), compiles the C engine as a check, exposes port 8000 with a health check on `/api/health`. |
 | `.github/workflows/ci.yml` | GitHub Actions: on every push, installs deps on Python 3.10 and 3.11, compiles the C file with `-Werror`, runs all tests. |
@@ -146,7 +148,7 @@ This is the brain of the web platform. Requests come in through `main.py`, get v
 - **`Data/`** — `example_data.csv` (81 points from −1000 to −600 mV, columns `potential_mV,current_uA`), two more arsenic scans, and `calibration.json` (slope 0.856 µA per mg/L, intercept 0.0096 µA, R² 0.997 from four standards: 0.03, 0.10, 0.25, 0.50 mg/L).
 - **`Analysis/`** — `generate_arsenic_data.py` makes fake scans (noisy baseline + Gaussian peak at −800 mV); `mas_g1_arsenic_analysis.py` is a standalone calibrate/quantify tool for the MAS-G1 reader using SciPy.
 - **`AI_Agent/`** — `main.py` builds a LangChain agent on Claude 3.5 Sonnet that answers a research question in a fixed JSON shape; `tools.py` gives it DuckDuckGo search, Wikipedia and save-to-file. It is not connected to the platform.
-- **`Docs/`** — the long neural-network guide, stress-test and retraining reports, catamaran and household-tank hardware specs, and a home assembly manual.
+- **`Docs/`** — `neural/` (the long neural-network guide, V3 report, stress-test and retraining reports), `hardware/` (catamaran and household-tank specs, home assembly manual), `media/` (video, screenshots), `archive/` (older documents), plus this guide, the run guide and the ISEF roadmap.
 - **`models_3d/`** — STL/3MF files for the 120 mm electronics shell, lid, tank bracket, 15 mL sample well and suction strainer.
 
 ## 3. How a water test flows through the system
@@ -377,7 +379,7 @@ The project runs with one command, but a code review turned up one urgent securi
 
 ### How to run it
 
-1. **Set up:** `./setup_and_run.sh` (Mac/Linux) or double-click `setup_and_run.bat` (Windows). This makes a `.venv`, installs packages and starts the API on port 8000.
+1. **Set up:** `./scripts/setup_and_run.sh` (Mac/Linux) or double-click `scripts\setup_and_run.bat` (Windows). This makes a `.venv`, installs packages and starts the API on port 8000.
 2. **See the API:** open `http://localhost:8000/docs` for the interactive Swagger page where you can try every route.
 3. **See the dashboard:** open `AquaSentry_Platform/frontend/index.html` in a browser, or run `AquaSentry_Platform/START_AQUASENTRY.bat` / `start_aquasentry.sh`, which also serves it at `http://localhost:8001/index.html`. (Opening `localhost:8000` itself shows "Not Found" — see issue 4.)
 4. **Analyse a scan without the server:** `python3 main.py --csv Data/example_data.csv --ph 7.4 --ec 450 --turb 1.8 --temp 25`.
@@ -388,7 +390,7 @@ I read every file but couldn't execute the project's own code here, so the numbe
 
 ### Issues I found
 
-> **Fixed in v3:** everything in this table has been fixed. See `FIXES_v3.md` for each file and line.
+> **Fixed in v3:** everything in this table has been fixed. See `Docs/archive/FIXES_v3.md` for each file and line.
 
 **Key points at a glance**
 

@@ -278,7 +278,7 @@ Before installing in the tank, perform this 5-minute electrical verification on 
 * Connect the ESP32 to your computer using a Micro-USB or USB-C data cable.
 * In the Arduino IDE or PlatformIO:
   * Select Board: **ESP32 Dev Module** (CPU Frequency: 240MHz).
-  * Copy the verified ANSI C99 files: [`aquanet_v1.h`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/aquanet_v1.h) and [`aquanet_v1.c`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/aquanet_v1.c) into your project's `src/` directory.
+  * Copy the verified ANSI C99 files: [`Neural_Network/aquanet_v1.h`](../../Neural_Network/aquanet_v1.h) and [`Neural_Network/aquanet_v1.c`](../../Neural_Network/aquanet_v1.c) into your project's `src/` directory.
   * Enter your home 2.4 GHz Wi-Fi SSID and Password in `config.h`.
   * Click **Upload**.
 * Open the Serial Monitor at **115200 baud**. You should observe:

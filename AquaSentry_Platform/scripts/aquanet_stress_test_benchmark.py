@@ -32,7 +32,7 @@ from app.neural_classifier import forward_pass, check_bounds, CLASSES, NODES_COU
 from app.signal_processing import process_voltammetry_trace, generate_synthetic_asv_trace
 
 RESULTS_JSON = os.path.join(APP_DIR, "tests", "stress_test_results.json")
-REPORT_MD = os.path.join(os.path.dirname(PROJECT_ROOT), "Docs", "AQUANET_V1_STRESS_TEST_REPORT.md")  # package-level Docs/
+REPORT_MD = os.path.join(os.path.dirname(PROJECT_ROOT), "Docs", "neural", "AQUANET_V1_STRESS_TEST_REPORT.md")  # package-level Docs/neural/
 
 
 def get_ground_truth_label(arsenic_mg_l: float) -> str:

@@ -30,7 +30,7 @@
 
 > **CRITICAL HUMAN SAFETY AUDIT:**  
 > The cells for `Ground Truth [Unsafe] -> Predicted [Safe]` and `Ground Truth [Hazardous] -> Predicted [Safe]` are **EXACTLY ZERO**.  
-> The deterministic conservative precedence override in [`AquaSentry_Complete_System/app/neural_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/neural_classifier.py) successfully intercepted every attempt to under-report water that violates the BIS 10500 limit ($50\ \mu\text{g/L}$).
+> The deterministic conservative precedence override in [`AquaSentry_Platform/app/neural_classifier.py`](../../AquaSentry_Platform/app/neural_classifier.py) successfully intercepted every attempt to under-report water that violates the BIS 10500 limit ($50\ \mu\text{g/L}$).
 
 ---
 

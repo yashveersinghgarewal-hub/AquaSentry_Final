@@ -22,6 +22,7 @@ Tests: **110 → 139 → 167 → 185 → 206 → 236** (22 neural toolkit + 214 
 4. [v5.4: backend hardening, live data, trends, UX](#4-v54-backend-hardening-live-data-trends-ux)
 4b. [v5.5: alerts, metrics, low-power ESP32, Docker, GitHub](#4b-v55-alerts-metrics-low-power-esp32-docker-github)
 4c. [v5.6: can the reading be trusted, and who hears about it](#4c-v56-can-the-reading-be-trusted-and-who-hears-about-it)
+4d. [v5.7: competition roadmap and repository clean-up](#4d-v57-competition-roadmap-and-repository-clean-up)
 5. [API reference: everything added or changed](#5-api-reference-everything-added-or-changed)
 6. [Settings added](#6-settings-added)
 7. [Upgrade notes (behaviour that changed)](#7-upgrade-notes-behaviour-that-changed)
@@ -248,6 +249,15 @@ This round started from a research pass (web + code) that produced 19 findings; 
 - The Docker smoke test then found a worse one in the same mode: upgrading an existing database at start-up held the only connection while the old column patches asked for another, so **the container never started**. The patches now run before the migration takes its connection; a test starts a fresh process on a copy of the shipped v5.5 database in both connection modes (it fails on the old code), and the image was rebuilt and checked: migrated to 0002, push key in `/data`, 30 parallel uploads, integrity check ok.
 
 ---
+
+## 4d. v5.7: competition roadmap and repository clean-up
+
+**Why:** the project is aimed at Regeneron ISEF (through IRIS). ISEF judges score the research problem (10), design and methodology (15), execution and testing (20), creativity and impact (20) and presentation (35, of which the interview is 25). The software already goes far beyond what those criteria reward; the gaps are evidence (real samples against a laboratory), the detection limit (20 µg/L, above the 10 µg/L limit) and paperwork that can disqualify a project.
+
+- **`Docs/ISEF_ROADMAP.md`:** 267 items, each P0/P1/P2, with a "first 30 days" list. Sources: Society for Science judging criteria and Rules for All Projects (2026–27), the IRIS timeline, ISEF risk-assessment guidance, IIT Madras (Stockholm Junior Water Prize India).
+- **Demo data that cannot be mistaken for field data:** `scripts/seed_field_demo.py` writes only to a separate database, prefixes every node with `DEMO-` and labels every reading *SIMULATED FIELD DEMO*. The validation panel deliberately includes a missed sample (a 14 µg/L lab result the sensor cannot see), so a demonstration shows the honest picture.
+- **Clean-up rules used:** a file was deleted only if a byte-identical copy remains (checked with checksums) or it is a PDF render whose words are all in its Markdown source (checked by text extraction); anything with unique content was moved to `Docs/archive/` unchanged. Deliberate copies that let each part run alone (the C engine inside the Arduino sketch folder, the V3 weights inside the server, the example data) were kept and are now guarded by a test. `Docs/` keeps its capital D because a case-only rename breaks Git on Windows and macOS.
+- **Verification:** 22 neural-toolkit tests, 216 platform tests (2 fewer parse checks because two unused scripts were removed, 4 new layout tests), 9 browser tests including the WCAG 2.2 AA audit, `ruff check .` clean.
 
 ## 5. API reference: everything added or changed
 

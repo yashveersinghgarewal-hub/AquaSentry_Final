@@ -1,7 +1,7 @@
 # AquaNet-V3 training code
 
 Everything needed to retrain, test and install the V3 network. Needs only Python 3 and NumPy (plus `gcc` for the C check).
-Results and explanation: `Docs/AQUANET_V3_REPORT.md`.
+Results and explanation: `Docs/neural/AQUANET_V3_REPORT.md`.
 
 | File | What it does |
 | --- | --- |
@@ -10,7 +10,7 @@ Results and explanation: `Docs/AQUANET_V3_REPORT.md`.
 | `eval_adaptive.py` | Tests the ESP32's adaptive re-scan rule (3 scans, more only near a limit) against fixed 3 / 6 / 9 scans. |
 | `add_test_metrics.py` | Copies a model and attaches its test results (the dashboard shows these). |
 | `parity_v3.py` | Compiles the generated C engine and checks it gives the same answers as Python on 100,000 inputs. |
-| `make_v3_report.py` | Writes `Docs/AQUANET_V3_REPORT.md` from the evaluation results. |
+| `make_v3_report.py` | Writes `Docs/neural/AQUANET_V3_REPORT.md` from the evaluation results. |
 | `models/` | The installed model and the alternatives, ready to install. |
 | `results/` | Evaluation output and training logs from this round. |
 

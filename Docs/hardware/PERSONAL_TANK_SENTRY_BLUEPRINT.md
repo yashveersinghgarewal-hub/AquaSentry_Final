@@ -134,7 +134,7 @@ flowchart TD
    * Before the household begins morning cooking/bathing, the ESP32 activates the peristaltic pump for 6 seconds.
    * 15 mL of water is drawn into the internal sealed chamber.
    * Anodic Stripping Voltammetry (ASV) is performed: deposition at $-0.8\text{ V}$ followed by an anodic stripping ramp to $+0.4\text{ V}$.
-   * The [`AquaNet-V1`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/neural_classifier.py) neural model computes risk:
+   * The [`AquaSentry_Platform/app/neural_classifier.py`](../../AquaSentry_Platform/app/neural_classifier.py) neural model computes risk:
      * **If Safe**: NeoPixel glows serene Green. App updates: *"Arsenic: 0.007 mg/L — Water is safe for domestic use."*
      * **If Unsafe**: NeoPixel turns flashing Red, piezo buzzer sounds, and your phone receives an urgent alert: *"High Arsenic Detected (0.058 mg/L)! Do not drink or cook before filtration."*
    * The pump reverses, purging the 15 mL sample back out, keeping the sensor strip dry until the next test.

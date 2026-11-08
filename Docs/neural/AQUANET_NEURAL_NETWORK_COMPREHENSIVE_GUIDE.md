@@ -188,7 +188,7 @@ To solve these fundamental flaws, we separated the problem into two distinct eng
 
 ### 2.1 The Electrochemical Signal Processing Pipeline
 
-Located in [`AquaSentry_Complete_System/app/signal_processing.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/signal_processing.py):
+Located in [`AquaSentry_Platform/app/signal_processing.py`](../../AquaSentry_Platform/app/signal_processing.py):
 
 #### Step 1: Savitzky-Golay Denoising Filter
 Raw voltammetric sweeps suffer from high-frequency Johnson-Nyquist noise and potentiostat switching ripple. A standard moving average flattens the sharp arsenic oxidation peak, destroying measurement accuracy.
@@ -236,7 +236,7 @@ $$I_p = \text{sensitivity} \cdot [As] + \text{offset} \implies [As] = \frac{I_p 
 
 With physical signal processing extracting a clean, drift-free arsenic measurement, the neural network no longer needs to process 81 noisy voltage points.
 
-Instead, we designed **AquaNet-V1**: an ultra-compact, 5-input, 2-hidden-layer feed-forward Multi-Layer Perceptron (MLP) deployed in [`app/neural_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/neural_classifier.py) and [`frontend/neural.js`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/frontend/neural.js).
+Instead, we designed **AquaNet-V1**: an ultra-compact, 5-input, 2-hidden-layer feed-forward Multi-Layer Perceptron (MLP) deployed in [`AquaSentry_Platform/app/neural_classifier.py`](../../AquaSentry_Platform/app/neural_classifier.py) and [`AquaSentry_Platform/frontend/neural.js`](../../AquaSentry_Platform/frontend/neural.js).
 
 ```
 ====================================================================================================
@@ -382,7 +382,7 @@ $$w_i^T \mathbf{x} + b_i = 0$$
 
 ### 4.3 Training Algorithm & Optimization (Adam + Cosine Annealing)
 
-The network was trained using the pipeline in [`scripts/train_and_deploy_aquanet_v2.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/scripts/train_and_deploy_aquanet_v2.py) across 200,000 stratified hydrogeochemical profiles.
+The network was trained using the pipeline in [`AquaSentry_Platform/scripts/train_and_deploy_aquanet_v2.py`](../../AquaSentry_Platform/scripts/train_and_deploy_aquanet_v2.py) across 200,000 stratified hydrogeochemical profiles.
 
 #### The Asymmetric Cross-Entropy Loss Function
 In medical diagnostics and environmental sensing, **Type II errors (False Negatives) are far more dangerous than Type I errors (False Positives)**. Classifying toxic water as "Safe" can poison human populations.
@@ -695,7 +695,7 @@ bool aquanet_check_bounds(float arsenic, float ph, float cond, float turb, float
 
 ### 5.4 Standalone ASV Voltammetry Extraction & Neural Pipeline (`asv_extractor.py`)
 
-To bridge physical potentiostat sweeps directly into the neural network, [`asv_extractor.py`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/asv_extractor.py) provides a complete, self-contained electrochemical inversion pipeline:
+To bridge physical potentiostat sweeps directly into the neural network, [`Neural_Network/asv_extractor.py`](../../Neural_Network/asv_extractor.py) provides a complete, self-contained electrochemical inversion pipeline:
 
 ```
 [Raw ASV Sweep CSV] ──> [Savitzky-Golay 5-pt Smoothing]
@@ -797,7 +797,7 @@ Real drinking water safety requires holistic water quality:
 
 ## Part 8: The 2.4-Million Scan Benchmark & Real-World Metrology Limits
 
-To rigorously validate AquaNet under realistic operational conditions, we executed the **AquaNet Stress Test Benchmark** ([`scripts/aquanet_stress_test_benchmark.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/scripts/aquanet_stress_test_benchmark.py)).
+To rigorously validate AquaNet under realistic operational conditions, we executed the **AquaNet Stress Test Benchmark** ([`AquaSentry_Platform/scripts/aquanet_stress_test_benchmark.py`](../../AquaSentry_Platform/scripts/aquanet_stress_test_benchmark.py)).
 
 ### 8.1 The Benchmark Architecture
 The benchmark ran continuously for **9.04 minutes**, executing **2,412,500 full physical scans** ($4,449.4\text{ scans/second}$) across three testing phases:
@@ -880,7 +880,7 @@ The transition from the beginner 820,000-parameter regressor to **AquaNet-V1** d
 3. **Statutory legal guardrails** converted a statistical model into a legally compliant, fail-safe water surveillance instrument with verified **zero toxic false negatives**.
 
 All source code, weights, test suites, and documentation are synchronized across:
-* **Backend API**: [`AquaSentry_Complete_System/app/neural_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/neural_classifier.py)
-* **Frontend Web App**: [`AquaSentry_Complete_System/frontend/neural.js`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/frontend/neural.js)
-* **Standalone Research Repo**: [`/Users/nehalmathur/Desktop/Projects/Neural Network/aquanet_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/aquanet_classifier.py)
-* **Sync Engine & Test Suite**: [`scripts/sync_neural_network.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/scripts/sync_neural_network.py) and [`scripts/run_tests.sh`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/scripts/run_tests.sh)
+* **Backend API**: [`AquaSentry_Platform/app/neural_classifier.py`](../../AquaSentry_Platform/app/neural_classifier.py)
+* **Frontend Web App**: [`AquaSentry_Platform/frontend/neural.js`](../../AquaSentry_Platform/frontend/neural.js)
+* **Standalone Research Repo**: [`Neural_Network/aquanet_classifier.py`](../../Neural_Network/aquanet_classifier.py)
+* **Sync Engine & Test Suite**: [`AquaSentry_Platform/scripts/sync_neural_network.py`](../../AquaSentry_Platform/scripts/sync_neural_network.py) and [`AquaSentry_Platform/scripts/run_tests.sh`](../../AquaSentry_Platform/scripts/run_tests.sh)
