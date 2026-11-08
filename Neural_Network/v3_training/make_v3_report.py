@@ -1,4 +1,4 @@
-"""Write Docs/AQUANET_V3_REPORT.md from eval_v3.py results.
+"""Write Docs/neural/AQUANET_V3_REPORT.md from eval_v3.py results.
 Usage: make_v3_report.py <eval_s1.json> <eval_s3.json> <chosen_name> <safety_first_name> <out.md>
                           <adaptive.json> <chosen model json>"""
 import json, sys

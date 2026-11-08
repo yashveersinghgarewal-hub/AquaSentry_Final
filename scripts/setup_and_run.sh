@@ -14,7 +14,7 @@ set -e
 
 # Change to script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/.."   # scripts/ lives one level below the repository root
 
 echo "======================================================================"
 echo "    AquaSentry Universal All-In-One Automated Launcher"

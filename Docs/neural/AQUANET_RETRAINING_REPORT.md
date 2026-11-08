@@ -57,7 +57,7 @@ Real-world physical relationships were coupled into the training profiles:
 
 The new weights and biases ($W_1, B_1, W_2, B_2, W_3, B_3$) were injected and verified across all project targets:
 
-1. **Python API Backend**: [`AquaSentry_Complete_System/app/neural_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/app/neural_classifier.py)
-2. **Client Web Interface**: [`AquaSentry_Complete_System/frontend/neural.js`](file:///Users/nehalmathur/Desktop/Projects/Arsenic%20sensor(HKU)/AquaSentry_Complete_System/frontend/neural.js)
-3. **Standalone Suite**: [`Projects/Neural Network/aquanet_classifier.py`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/aquanet_classifier.py) and [`Projects/Neural Network/aquanet_v1_weights.json`](file:///Users/nehalmathur/Desktop/Projects/Neural%20Network/aquanet_v1_weights.json)
+1. **Python API Backend**: [`AquaSentry_Platform/app/neural_classifier.py`](../../AquaSentry_Platform/app/neural_classifier.py)
+2. **Client Web Interface**: [`AquaSentry_Platform/frontend/neural.js`](../../AquaSentry_Platform/frontend/neural.js)
+3. **Standalone Suite**: [`Neural_Network/aquanet_classifier.py`](../../Neural_Network/aquanet_classifier.py) and [`Neural_Network/aquanet_v1_weights.json`](../../Neural_Network/aquanet_v1_weights.json)
 4. **Automated Verification**: **72 of 72 automated pytest tests passed**.

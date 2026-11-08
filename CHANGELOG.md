@@ -1,10 +1,23 @@
 # Changelog
 
-Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
+Full story of every change since v5.1, with reasons and sources: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
-## v5.7 — harm review: fail-safe measurements, nothing assumed, practice data kept out of reports
+## v5.7 (part 1, PR #3 by Nalin Aggarwal) — competition roadmap, tidy repository, demo data
+**Competition**
+- `Docs/ISEF_ROADMAP.md`: 267 prioritised changes for Regeneron ISEF / IRIS judging, grouped by the official engineering criteria, starting with the rules that can disqualify a project (no generative AI for the research plan, abstract, poster or citations; AI-use disclosure; the 12-month window from January 2026; Form 7 for continuations; SRC review and Form 3 for arsenic standards; human-participant approval for surveys; a booth that works without power or internet).
+- `AquaSentry_Platform/scripts/seed_field_demo.py`: fills a **separate** database with a clearly labelled demo field programme (6 nodes, 30 days, lab pairs including one missed sample, a standard-addition calibration, a low battery and a silent node). It refuses to write to `aquasentry.db`.
 
-Use: `AquaSentry_v5.7.zip` / branch `main` (tag v5.7). Builds on v5.6 (Nalin Aggarwal's v5.2–v5.6 work is kept in full).
+**Repository clean-up (nothing lost: older documents are in `Docs/archive/`, word for word; the last commit before the clean-up is `c803547`)**
+- Top level now holds only the README, changelog, security policy, the two Windows double-click launchers, `run_desktop.sh`, `main.py`, `desktop_app.py`, requirements and Docker files. `setup_and_run.*`, `run_all_tests.*` and `build_desktop_exe.bat` moved to `scripts/` (they change to the repository root first, so they work as before).
+- `Docs/` regrouped: `HOW_TO_RUN.md` (one current run guide replacing `WHATS_NEW_AND_HOW_TO_RUN.md` and `START_HERE_OPERATIONS_GUIDE.md`), `CODE_GUIDE.md` (was `AQUASENTRY_CODE_GUIDE.md`), `IMPROVEMENT_LOG.md`, `neural/`, `hardware/`, `media/`, `archive/`, and an index (`Docs/README.md`).
+- `AquaSentry_Platform/README.md` rewritten for the current server (the v1 text, which still gave the withdrawn 50 µg/L limit, is archived with the old `QUICK_START.txt`).
+- Removed byte-identical duplicates (second copy of the neural-network guide, logo, materials note; `frontend/chat.js`, `audio.js`, `data.json`, which no current page loaded) and the PDF renders of Markdown files (`scripts/convert_all_md_to_pdf.py` makes them again). The old README PDF, which had older wording, is archived. `frontend/data.csv` (an 81-point scan) moved to `Data/sample_scan_81pt.csv`.
+- Links to the original author's computer (`file:///Users/...`) in the neural and hardware documents now point at the files in this repository.
+- New `tests/test_repo_layout.py`: the deliberate copies (AquaNet C engine and V3 weights, example data, prototype renders) must stay identical, every relative documentation link must resolve, and the moved launchers must start from the repository root.
+
+## v5.7 (part 2) — harm review: fail-safe measurements, nothing assumed, practice data kept out of reports
+
+Use: `AquaSentry_v5.7.zip` / branch `main`. Builds on v5.6 and part 1 (Nalin Aggarwal's v5.2–v5.7 part 1 work is kept in full).
 
 **Server**
 - `app/signal_processing.py`: new scan checks FLAT_SIGNAL, NOISE_ABOVE_LOD, PEAK_AT_WINDOW_EDGE (rejected) and PEAK_SHIFTED, LOW_SNR (warnings); BASELINE_UNSTABLE and ADC_SATURATION_LOW now reject; peak searched ±100 mV (expected ±60).

@@ -2,6 +2,8 @@
 > **Edge Deep Learning & Multimodal Geochemical Risk Classifier for Autonomous Water Safety Surveillance.**
 > **Last Synced from AquaSentry Core**: 2026-10-29 00:14:35
 
+> **Where things are (v5.7):** the model in use everywhere is **AquaNet-V3** (`aquanet_v3.py`, `aquanet_v3_weights.json`, training in `v3_training/`; results in [`Docs/neural/AQUANET_V3_REPORT.md`](../Docs/neural/AQUANET_V3_REPORT.md)). This page describes V1, kept for comparison. The long guide is [`Docs/neural/AQUANET_NEURAL_NETWORK_COMPREHENSIVE_GUIDE.md`](../Docs/neural/AQUANET_NEURAL_NETWORK_COMPREHENSIVE_GUIDE.md). Note: V1's weights were set by hand from the arsenic limits, not trained.
+
 ---
 
 ## 🧠 Architecture & Neural Topology

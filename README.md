@@ -6,15 +6,21 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 | Part | Folder | What it does |
 | --- | --- | --- |
-| Web platform + dashboard | `AquaSentry_Platform/` | FastAPI server, SQLite database, PDF screening reports, and the v5 UI: live dashboard (what to do if arsenic is high, contact local authorities, 3D device model), market research, sales & ROI calculator and a device simulator — English/Hindi, carbon-black or light, works offline |
-| ESP32 firmware | `Firmware/esp32_firmware/` | Runs the voltammetry scan (3 scans, up to 9 when a reading is close to a limit), runs AquaNet-V3 on the chip, sends readings to the server over Wi-Fi |
-| Neural network | `Neural_Network/` | AquaNet-V1 (original), V2 and V3 (current) + training code in `v3_training/` |
+| Web platform + dashboard | [`AquaSentry_Platform/`](AquaSentry_Platform/) | FastAPI server, SQLite database, lab confirmations and calibration, sensor map and QR pages, alerts (push / WhatsApp / SMS), PDF screening reports, and the dashboard (English, Hindi, Bengali, Assamese, Punjabi; works offline) |
+| ESP32 firmware | [`Firmware/`](Firmware/) | Runs the voltammetry scan (3 scans, up to 9 near a limit), pH / conductivity / turbidity / temperature, AquaNet-V3 on the chip, offline buffer, Wi-Fi upload, updates with rollback |
+| Neural network | [`Neural_Network/`](Neural_Network/) | AquaNet-V1 (original), V2 and V3 (in use), training code in `v3_training/` |
+| Hardware | [`models_3d/`](models_3d/), [`Docs/hardware/`](Docs/hardware/) | Printable enclosure, assembly manual, tank and catamaran versions |
+| Data and analysis | [`Data/`](Data/), [`Analysis/`](Analysis/) | Example scans and calibration, scan generator and analysis scripts |
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
-| Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
+| Docs | [`Docs/`](Docs/) | **[Documentation index](Docs/README.md)**: run guide, ISEF roadmap, code guide, neural-network reports, video |
+
+## For competitions (ISEF / IRIS)
+
+**[`Docs/ISEF_ROADMAP.md`](Docs/ISEF_ROADMAP.md)** lists 267 prioritised changes for Regeneron ISEF-level judging, grouped by the official criteria, starting with the rules that can disqualify a project (generative-AI use, the 12-month window, hazardous-chemical forms). The two biggest gaps it targets: the results so far come from **simulated data**, and the arsenic detection limit (**20 µg/L**) is above the **10 µg/L** legal limit.
 
 ## What changed in v5.7
 
-Safety release from a harm review of v5.6. Nothing here needs new hardware; it makes the software refuse to look reassuring when it cannot know.
+Two parts. **Part 1** (PR #3): the ISEF / IRIS roadmap above, a tidier repository (`Docs/` index, launchers in `scripts/`, older documents in `Docs/archive/`) and a clearly labelled demo field programme (`AquaSentry_Platform/scripts/seed_field_demo.py`). **Part 2**: a safety release from a harm review of v5.6. Nothing in it needs new hardware; it makes the software refuse to look reassuring when it cannot know.
 
 - **A dead or drifting electrode can no longer look like clean water.** Every scan is checked on the ESP32 and on the server: a flat signal (disconnected, dry or worn electrode), too much noise to see the 20 µg/L detection limit, or a peak outside the search window rejects the scan. A reading needs at least 2 good scans that agree, or it is reported as **Test failed**, never as a low value.
 - **Check standards.** A low reading from a device is only trusted if the sensor passed a check standard (a known arsenic solution, 80–120 % recovery) in the last 7 days and has a calibration made on its electrode. Run one from the device's new `/qc` page or `POST /api/qc/runs`. Detected arsenic is always kept, with a warning, even from an unverified sensor.
@@ -37,220 +43,66 @@ Safety release from a harm review of v5.6. Nothing here needs new hardware; it m
 - **ESP32 firmware 5.6.0:** pH, conductivity, turbidity and temperature drivers, the copper scan, calibration from the server, server-pulled updates with rollback.
 - **Engineering:** database migrations (Alembic), routers, JSON logs with request IDs, optional read protection, a strict style CSP on the dashboard, lazy-loaded 3D model, browser tests + WCAG audit + Lighthouse in CI.
 
-## What changed in v5.5
-
-- **Alerts you can trust:** webhooks are signed (Standard Webhooks HMAC-SHA256) and retried on failure; low-battery notices for battery-powered nodes.
-- **Monitoring:** `/api/metrics` in Prometheus format (readings, devices by status, alerts, webhook deliveries, request latency per route).
-- **Faster, more honest trends:** hourly readings are reduced to daily medians before the Mann-Kendall test (hourly values are correlated and overstate trends); 90 days of hourly data takes 3 ms instead of 570 ms, and results are cached.
-- **Chat works offline:** with no Gemini key or no internet, the assistant answers from your own readings, devices and trends.
-- **ESP32 (firmware 5.5.0), all optional:** HTTPS with certificate checking, a battery monitor, and a low-power mode that deep-sleeps between tests.
-- **Docker:** non-root, read-only container, database in a volume, health check; automatic protection against the SQLite WAL-reset bug on older SQLite builds.
-- **GitHub:** lint in CI, ESP32 builds with the optional features on, Dependabot, security policy, PR and issue templates.
-
-## What changed in v5.4
-
-- **Backend:** per-device API keys, rate limiting, security headers with a hash-based Content-Security-Policy, SQLite tuning and online backups, live updates over Server-Sent Events, real CSV export, and an **arsenic trend early warning** (Mann-Kendall + Sen's slope) that flags a source getting worse before it crosses a limit.
-- **Dashboard:** live indicator and toasts, a warnings list (rising arsenic, silent devices, unsafe readings), trend notes, accessible chart with a table view, offline mode.
-- Every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
-
-## What changed in v5.3
-
-- **ESP32:** offline buffer moved to LittleFS (the NVS one silently overflowed), ESP32-S3 and ESP32-C3 support, a setup hotspot so Wi-Fi and the server address can be changed without reflashing, a `/status.json` page, and a CI job that compiles the firmware with Espressif's core for all three chips.
-- **Dashboard:** redesigned around the arsenic test-kit colour chart, painted verdict panel, and a new Devices and history section backed by `/api/devices` and `/api/readings/history`. Details in `CHANGELOG.md`.
-
-## What changed in v5.2 (audit release)
-
-- **Arsenic limit corrected.** India's IS 10500 arsenic limit has been 10 µg/L with *no relaxation* since Amendment No. 1 (2015); the old 50 µg/L "permissible" value was withdrawn. Every engine (server, browser, ESP32 C, Neural_Network copy) now treats any arsenic the sensor detects (≥ 20 µg/L LOD) as at least **Unsafe**, 10–20 µg/L as **Caution** (unconfirmed, lab test), and > 150 µg/L as **Hazardous**. Alerts fire on every Unsafe/Hazardous verdict.
-- **No more "Safe to drink" below the detection limit.** The sensor cannot see 10 µg/L, so a clean reading now says **"No arsenic detected"** and asks for one lab test.
-- **Write protection** with `AQUASENTRY_API_KEY` (the ESP32 sends it as `X-API-Key`); admin endpoints are never open to the network.
-- Fixes: real zeros (0 NTU, 0 °C) were replaced by defaults; CSV import read columns like `class` or `recorded_at` as arsenic/conductivity; timestamps lacked a time zone; the firmware retried a rejected reading forever and stamped offline readings with upload time; OTA accepted the default password; health/PDF named the wrong model.
-- **AquaNet-V3 retrained** on the corrected edges: its own vote now matches the rules 98.6% of the time (was 88.6%), and with the firmware's adaptive re-scan it misses 11% fewer dangerous samples in simulation. Same 352-parameter size; C ↔ Python parity 0 mismatches on 100,000 inputs.
-- `scripts/reclassify_readings.py` re-applies the current rules to stored readings.
-- 29 new regression and cross-engine parity tests (Python ↔ browser JS ↔ ESP32 C). Details: `CHANGELOG.md`.
+Older release notes (v2 → v5.5): **[`CHANGELOG.md`](CHANGELOG.md)**. Every change since v5.1 with its reason and source: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
 ## Screenshots
 
 | Live dashboard | Contact local authorities |
 | --- | --- |
-| ![Dashboard](Docs/screenshots/dashboard.jpg) | ![Authorities](Docs/screenshots/authorities.jpg) |
+| ![Dashboard](Docs/media/screenshots/dashboard.jpg) | ![Authorities](Docs/media/screenshots/authorities.jpg) |
 | **3D device model** | **Market research** |
-| ![3D device](Docs/screenshots/device-3d.jpg) | ![Market research](Docs/screenshots/market.jpg) |
+| ![3D device](Docs/media/screenshots/device-3d.jpg) | ![Market research](Docs/media/screenshots/market.jpg) |
 
 ## Quick start
 
 **Windows:** install Python 3.10+ (tick *Add python.exe to PATH*), then double-click **`Start AquaSentry Desktop.bat`**.
-**macOS / Linux:** `./run_desktop.sh` (or `./setup_and_run.sh` for the browser version).
+**macOS / Linux:** `./run_desktop.sh` (or `./scripts/setup_and_run.sh` for the browser version).
+**Docker:** `docker compose up -d`, then open http://localhost:8000.
 
-The first run creates a `.venv` folder and installs packages (needs internet). Full steps: **`WHATS_NEW_AND_HOW_TO_RUN.md`**.
+The first run creates a `.venv` folder and installs packages (needs internet). Every other way to run it (ESP32 on your Wi-Fi, demo data for presentations, VS Code, troubleshooting): **[`Docs/HOW_TO_RUN.md`](Docs/HOW_TO_RUN.md)**.
 
-**Docker:** `docker compose up -d`, then open http://localhost:8000. Data is kept in the `aquasentry-data` volume; put `AQUASENTRY_API_KEY` and other settings in a `.env` file next to `docker-compose.yml`.
+**Tests:** `python main.py --test` (neural toolkit + platform). Browser tests: `cd AquaSentry_Platform && python -m pytest tests_e2e`. Lint: `ruff check .` GitHub Actions also builds the ESP32 firmware for 8 board/option combinations and runs an accessibility audit and Lighthouse.
 
-Run all tests: `python main.py --test` (236 tests: 22 neural toolkit + 214 platform). Browser tests: `cd AquaSentry_Platform && python -m pytest tests_e2e` (needs `pip install playwright` and `python -m playwright install chromium`). Lint: `ruff check .`
-
-**With an ESP32:** start the server with **`Start AquaSentry for ESP32.bat`** (or `python main.py --serve --host 0.0.0.0 --port 8000`), then open `Firmware/esp32_firmware/esp32_firmware.ino` in the Arduino IDE, fill in Wi-Fi and server address, and upload. See `Firmware/README.md`.
-
-**AI chatbot (optional):** copy `AquaSentry_Platform/.env.example` to `.env` and add your own Gemini key. `.env` is in `.gitignore` — never commit API keys.
+**AI assistant (optional):** copy `AquaSentry_Platform/.env.example` to `.env` and add your own Gemini key. `.env` is in `.gitignore`; never commit API keys.
 
 ## AquaNet-V3 in one paragraph
 
-V3 is a 5-16-12-4 network (352 weights, 1.4 KB on the ESP32). It was trained on simulated readings **with realistic sensor noise**, so it learns to be careful when a measurement sits close to a limit. Results and method: **`Docs/AQUANET_V3_REPORT.md`**. All numbers come from simulated data; the model still needs to be checked against real lab-tested water samples before anyone relies on it.
+V3 is a 5-16-12-4 network (352 weights, 1.4 KB on the ESP32). It was trained on simulated readings **with realistic sensor noise**, so it learns to be careful when a measurement sits close to a limit. Results and method: **[`Docs/neural/AQUANET_V3_REPORT.md`](Docs/neural/AQUANET_V3_REPORT.md)**. All numbers come from simulated data; the model still needs to be checked against real lab-tested water samples before anyone relies on it.
 
----
-
-## 1. Package Directory Layout
-
-When unzipped on any computer, this package contains everything organized into clear, dedicated directories:
+## Folder layout
 
 ```text
-AquaSentry_Universal/
-├── setup_and_run.sh            # 1-Click launcher for macOS & Linux (auto venv + pip + server)
-├── setup_and_run.bat           # 1-Click launcher for Windows (auto venv + pip + server)
-├── run_all_tests.sh            # 1-Click test runner for macOS & Linux (236 tests)
-├── run_all_tests.bat           # 1-Click test runner for Windows
-├── main.py                     # Root universal command-line interface
-├── requirements.txt            # Unified project dependencies
-├── Dockerfile                  # Production container image
-├── docker-compose.yml          # One-click Docker container deployment
-├── README.md                   # This documentation guide
-├── README.pdf                  # Formatted PDF publication
+AquaSentry_Final/
+├── README.md, CHANGELOG.md, SECURITY.md
+├── main.py                       command line: --serve, --test, --csv, --neural, --version
+├── desktop_app.py                desktop window (pywebview); --browser, --lan
+├── Start AquaSentry Desktop.bat  Windows double-click: desktop app (first run installs .venv)
+├── Start AquaSentry for ESP32.bat  Windows: server reachable from the ESP32 on your Wi-Fi
+├── run_desktop.sh                macOS / Linux desktop app
+├── requirements.txt, requirements-desktop.txt, ruff.toml
+├── Dockerfile, docker-compose.yml, docker-entrypoint.sh
+├── scripts/                      setup_and_run (browser version), run_all_tests, build_desktop_exe
 │
-├── AquaSentry_Platform/        # Universal Fullstack Web Application
-│   ├── app/                    # FastAPI backend (WebSocket, PDF certs, alerts, WAL DB)
-│   ├── frontend/               # Interactive PWA dashboard with real-time UI & manifest
-│   ├── bridge/                 # ADS1115 / ESP32 serial bridge and microcontroller bindings
-│   ├── tests/                  # 214 automated API, safety, parity, firmware and scientific tests
-│   ├── aquasentry.db           # Pre-configured SQLite database (WAL mode enabled)
-│   ├── main.py                 # Platform-specific runner
-│   └── run_tests.py            # Platform test runner with auto-venv detection
-│
-├── Neural_Network/             # Standalone AquaNet-V1 Neural Toolkit
-│   ├── aquanet_classifier.py   # Python inference with Shannon entropy & INT8 Q10 mode
-│   ├── aquanet_neural.js       # Pure-JavaScript browser inference engine
-│   ├── aquanet_v1.h            # C99 header (Float32 + INT8 fixed-point forward passes)
-│   ├── aquanet_v1.c            # C99 embedded engine (zero dynamic malloc, 148 bytes ROM)
-│   ├── aquanet_v1_weights.json # Canonical 112 weight and bias floating-point matrices
-│   ├── asv_extractor.py        # Multi-analyte deconvolution (As, Cd, Pb, Cu) & standard addition
-│   ├── test_aquanet_parity.py  # 22-point neural topology, INT8 & strict parity test suite
-│   ├── main.py                 # Standalone ML CLI
-│   └── AQUANET_NEURAL_NETWORK_COMPREHENSIVE_GUIDE.pdf
-│
-├── Firmware/                   # ESP32 Production Microcontroller Firmware
-│   ├── esp32_firmware/         # Arduino sketch folder (open the .ino from here)
-│   │   ├── esp32_firmware.ino  # FreeRTOS dual-core tasks, adaptive 3-9 scan averaging, NVS buffer, Web OTA
-│   │   ├── aquanet_v3.h/.c     # AquaNet-V3 edge AI (generated float32 C99, 1.4 KB)
-│   │   └── aquanet_v1.h/.c     # V1 engine (shared result type + entropy)
-│   └── README.md               # Pinout diagram, flashing & OTA guide
-│
-├── models_3d/                  # 3D Print CAD Models (Watertight STLs & 3MF)
-│   ├── aquasentry_shell_base_full_120mm.stl # 120x85mm full-fit electronics shell base
-│   ├── aquasentry_shell_lid_full_120mm.stl  # Lid with 2.5mm overhang drip skirt & gasket groove
-│   ├── aquasentry_tank_bracket.stl          # Rigid dual-clamp overhead water tank bracket
-│   ├── aquasentry_sample_well_15ml.stl      # 15 mL fluidic reaction & sensor well
-│   ├── aquasentry_suction_strainer.stl      # 100-mesh weighted intake suction strainer
-│   ├── aquasentry_complete_slicer_plate_120mm.stl # All components on single 3D printer bed
-│   ├── aquasentry_complete_slicer_plate_120mm.3mf # Multi-part slicer project with print settings
-│   └── aquasentry_shell_3d_rendering.png    # High-resolution photorealistic CAD rendering
-│
-├── AI_Agent/                   # AI Water Quality Research Agent
-│   ├── main.py                 # Research agent: Claude (Anthropic) or GPT (OpenAI), chosen by which API key is set
-│   ├── tools.py                # Specialized search & toxicology query tools
-│   └── requirements.txt        # Agent dependencies
-│
-├── Data/                       # Raw Analytical Datasets & Calibration Curves
-│   ├── example_data.csv        # Standard 81-point ASV square-wave scan
-│   ├── arsenic_voltammetry_example.csv
-│   ├── voltammetry2_arsenic_example.csv
-│   └── example_calibration.json# Slope and intercept calibration constants
-│
-├── Analysis/                   # Signal Processing & Trace Generators
-│   ├── generate_arsenic_data.py# Synthetic voltammogram generation with noise models
-│   └── mas_g1_arsenic_analysis.py # Historical baseline subtractor
-│
-└── Docs/                       # Complete Engineering Specifications & Blueprints
-    ├── AQUANET_NEURAL_NETWORK_COMPREHENSIVE_GUIDE.pdf
-    ├── CATAMARAN_PROTOTYPE_SPEC.pdf
-    ├── PERSONAL_TANK_SENTRY_BLUEPRINT.pdf
-    ├── AQUASENTRY_HOME_ASSEMBLY_MANUAL.pdf
-    ├── AQUANET_RETRAINING_REPORT.pdf
-    └── AQUANET_V1_STRESS_TEST_REPORT.pdf
+├── AquaSentry_Platform/          FastAPI server, dashboard, tests (see its README)
+│   ├── app/                      API, rules, AquaNet-V3, signal processing, alerts, migrations
+│   ├── frontend/                 dashboard and other pages, translations, vendored libraries
+│   ├── tests/, tests_e2e/        unit/API tests; browser + accessibility tests
+│   ├── scripts/                  training, model install, demo data, stress test, PDF export
+│   ├── data/, bridge/            example data; serial bridge
+│   └── aquasentry.db             starter database (test and demo readings only)
+├── Firmware/                     ESP32 sketch (esp32_firmware/), host build check, PlatformIO config
+├── Neural_Network/               AquaNet V1–V3 toolkit, weights, v2/v3 training, parity tests
+├── models_3d/                    enclosure, lid, tank bracket, sample well, strainer (STL / 3MF)
+├── Data/                         example scans, calibration
+├── Analysis/                     scan generator, MAS-G1 analysis
+├── AI_Agent/                     separate research assistant (command line, not part of the platform)
+└── Docs/                         index, run guide, ISEF roadmap, code guide, improvement log,
+                                  neural/, hardware/, media/ (video, screenshots), archive/ (older documents)
 ```
 
----
+Some files exist in two or three places on purpose, so that each part runs on its own: the AquaNet C engine (`Neural_Network/` and `Firmware/esp32_firmware/`), the AquaNet-V3 code and weights (`Neural_Network/` and `AquaSentry_Platform/app/`), the example data (`Data/`, `AquaSentry_Platform/data/`, `Neural_Network/`) and the two prototype renders (`Docs/hardware/` and the dashboard). A test (`AquaSentry_Platform/tests/test_repo_layout.py`) fails if any copy drifts, and checks that every relative link in the documentation still works.
 
-## 2. Quick Start on Any New Computer
-
-### macOS & Linux (1-Click)
-In your terminal, navigate to the unzipped folder and run:
-```bash
-chmod +x setup_and_run.sh
-./setup_and_run.sh
-```
-*What this does automatically:*
-1. Detects system `python3`.
-2. Creates an isolated local virtual environment (`.venv`).
-3. Installs all required packages from `requirements.txt`.
-4. Launches the AquaSentry web platform on `http://localhost:8000` and opens your browser.
-
-### Windows (1-Click)
-Simply double-click:
-```bat
-setup_and_run.bat
-```
-or from the Command Prompt:
-```cmd
-setup_and_run.bat
-```
-
----
-
-## 3. Universal Command-Line Interface (`main.py`)
-
-The root `main.py` provides immediate access to all subsystems:
-
-```bash
-# 1. Start the interactive web dashboard and REST API
-python3 main.py --serve --port 8000
-
-# 2. Run the complete automated test suite (all 236 tests)
-python3 main.py --test
-
-# 3. Analyze raw ASV voltammetric scan CSV and classify water safety
-python3 main.py --csv Data/example_data.csv
-
-# 4. Supply specific geochemical field parameters along with CSV
-python3 main.py --csv Data/example_data.csv --ph 7.4 --ec 450 --turb 1.8 --temp 25.0
-
-# 5. Run standalone AquaNet-V1 neural network evaluation scenarios
-python3 main.py --neural
-
-# 6. Display system architecture topology and versions
-python3 main.py --version
-```
-
----
-
-## 4. Running the Complete Test Suite
-
-You can run all 236 tests across the entire platform in a single command:
-```bash
-./run_all_tests.sh
-```
-*Test Coverage Breakdown:*
-* **22 Standalone Neural Parity Tests** ([`Neural_Network/test_aquanet_parity.py`](Neural_Network/test_aquanet_parity.py)):
-  * Exact 23-node, 112-synapse topology verification.
-  * Out-of-bounds (OOB) physical sensor fail-safes.
-  * Multi-parameter WHO/BIS 10500 potability downgrades (pH, Turbidity, Conductivity).
-  * Conservative precedence overrides for arsenic limits.
-  * Numerical stability (softmax sum = 1.0, float64 scaling).
-* **214 Platform Tests** ([`AquaSentry_Platform/run_tests.py`](AquaSentry_Platform/run_tests.py)):
-  * REST API endpoints, health checks, reading ingestion, deduplication.
-  * Signal processing (Savitzky-Golay filters, baseline tilt subtraction).
-  * Chat policy prompt-injection filters & emergency toxicology gates.
-  * Data export/import schema integrity.
-
----
-
-## 5. Microcontroller (ESP32) Deployment
+## The neural network in C (ESP32)
 
 The ESP32 runs **AquaNet-V3** from `Firmware/esp32_firmware/aquanet_v3.c`. It is generated from the trained weights, uses float32 only (the ESP32 has a hardware FPU), keeps all weights in flash, never calls `malloc`, and only needs `<math.h>`. It also compiles for STM32, Arduino-class ARM boards and any C99 compiler.
 
@@ -274,7 +126,7 @@ To install a newly trained model everywhere at once (server, dashboard and ESP32
 
 ---
 
-## 6. Standards Compliance
+## Limits used
 
 * **WHO Guideline Limit**: $0.010\text{ mg/L}$ ($10\ \mu\text{g/L}$).
 * **IS 10500 Limit (acceptable = permissible, no relaxation since Amendment No. 1, 2015)**: $0.010\text{ mg/L}$ ($10\ \mu\text{g/L}$). The older 0.050 mg/L "permissible" value is withdrawn and is not used anywhere.
