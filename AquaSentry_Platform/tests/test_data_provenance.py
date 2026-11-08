@@ -83,7 +83,7 @@ class TestDataExport:
         assert resp.status_code == 200
         data = resp.json()
         meta = data["export_metadata"]
-        assert meta["schema_version"] == "1.3.0"
+        assert meta["schema_version"] == "1.4.0"
         assert meta["coordinates_redacted"] is True
         for rec in data["records"]:
             assert rec["latitude"] is None

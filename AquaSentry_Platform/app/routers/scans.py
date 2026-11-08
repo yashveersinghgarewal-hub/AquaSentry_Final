@@ -173,6 +173,33 @@ def create_scan(payload: schemas.ScanCreate, request: Request, db: Session = Dep
                          "calibration_provenance": CALIBRATION_PROVENANCE if cal.get("source") == "factory" else None}}
 
 
+@router.get("/api/scans/export", tags=["Scans"])
+def export_scans(device_code: Optional[str] = None, include_demo: bool = False, limit: int = Query(5000, ge=1, le=20000),
+                 db: Session = Depends(get_db)):
+    """v5.10 (ISEF item 157): every stored scan WITH its points, the reading ids it produced and the sample code, so the
+    research pipeline can train on raw voltammograms (`Analysis/aquanet_v2_pipeline.py --scans scans.json`). Simulated
+    and practice scans are left out unless asked for."""
+    q = db.query(models.RawVoltammetryTrace)
+    if device_code:
+        dev = db.query(models.Device).filter_by(device_code=device_code).first()
+        if dev is None:
+            raise HTTPException(status_code=404, detail="No such device.")
+        q = q.filter(models.RawVoltammetryTrace.device_id == dev.id)
+    if not include_demo:
+        q = q.filter(models.RawVoltammetryTrace.source_type.in_(["hardware", "recorded_replay", "manual_import"]))
+    rows = q.order_by(models.RawVoltammetryTrace.id.asc()).limit(limit).all()
+    out = []
+    for t in rows:
+        readings = db.query(models.Reading).filter(models.Reading.trace_id == t.id).order_by(models.Reading.id.asc()).all()
+        out.append({"scan_id": t.id, "trace_uuid": t.trace_uuid, "device_id": t.device_id, "sample_code": t.sample_code,
+                    "source_type": t.source_type, "recorded_at": _utc(t.recorded_at).isoformat() if t.recorded_at else None,
+                    "checksum_sha256": t.checksum_sha256, "calibration_id": t.calibration_id, "analysis_version": t.analysis_version,
+                    "qc_status": t.qc_status, "estimated_ug_l": t.estimated_ug_l,
+                    "reading_ids": [r.id for r in readings],
+                    "potentials_mv": json.loads(t.raw_potentials_json), "currents_ua": json.loads(t.raw_currents_json)})
+    return {"count": len(out), "scans": out}
+
+
 @router.get("/api/scans/{scan_id}", tags=["Scans"])
 def get_scan(scan_id: int, processed: bool = Query(True, description="also return smoothed / baseline / subtracted arrays"),
              db: Session = Depends(get_db)):

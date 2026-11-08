@@ -120,3 +120,74 @@ def test_project_figures_and_poster_builder(tmp_path):
     _run_script("make_poster_figures.py", ["--demo", "--out", poster], timeout=600)
     idx = open(os.path.join(poster, "index.md"), encoding="utf-8").read()
     assert "SYNTHETIC" in idx and "FAILED" not in idx
+
+
+# ---------------------------------------------------------------- v5.10 scripts (lab / field items)
+def test_linearity_reports_lod_and_lack_of_fit(tmp_path):
+    out = str(tmp_path / "lin")
+    _run_script("linearity.py", ["--demo", "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    c = m["calibration"]
+    assert c["n_levels"] >= 6 and c["slope_ci95"][0] < c["slope"] < c["slope_ci95"][1] and c["r_squared"] > 0.98
+    assert m["lod"]["n_blanks"] >= 10 and m["lod"]["reported_lod_ug_l"] > 0 and m["lack_of_fit"]["available"]
+    assert "deposition" in m and os.path.exists(os.path.join(out, "residuals.svg"))
+
+
+def test_doe_plan_and_effects(tmp_path):
+    out = str(tmp_path / "doe")
+    _run_script("doe_factorial.py", ["--plan", "--factors", "a:0:1", "b:0:1", "--replicates", "2", "--out", out])
+    plan = open(os.path.join(out, "doe_plan.csv"), encoding="utf-8").read().splitlines()
+    assert len(plan) == 1 + 8 and "a_coded" in plan[0]
+    _run_script("doe_factorial.py", ["--demo", "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert m["effects"]["dep_s"]["significant"] is True and m["effects"]["dep_s"]["effect"] > 0
+    assert "dep_s×freq_hz" in m["effects"] and m["df_error"] > 0
+
+
+def test_power_budget_numbers(tmp_path):
+    out = str(tmp_path / "pw")
+    _run_script("power_budget.py", ["--demo", "--out", out, "--battery-mah", "3000", "--sun-hours", "4"])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert 100 < m["mah_per_day"] < 1000 and m["battery_life_days"] > 1 and m["solar_panel_w_min"] > 0
+    assert abs(sum(m["share_by_mode"].values()) - 1) < 1e-6
+
+
+def test_deployment_report_detects_gaps_and_late_deliveries(tmp_path):
+    out = str(tmp_path / "dep")
+    _run_script("deployment_report.py", ["--demo", "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert 95 < m["uptime_pct"] < 100 and m["late_deliveries"]["count"] >= 25 and m["gaps_over_2_intervals"]
+    assert m["qc"]["fail"] > 0 and m["battery"]["slope_pct_per_day"] < 0
+
+
+def test_decision_matrix_and_sensitivity(tmp_path):
+    out = str(tmp_path / "dm")
+    _run_script("decision_matrix.py", ["--demo", "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert m["ranking"][0] == "gold screen-printed strip" and 0 <= m["win_rate_under_30pct_weight_noise"][m["ranking"][0]] <= 1
+    assert abs(sum(m["normalised_weights"]) - 1) < 1e-9
+
+
+def test_electrode_study(tmp_path):
+    out = str(tmp_path / "el")
+    _run_script("electrode_study.py", ["--demo", "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert len(m["lifetime"]) == 6 and any(d["end_of_life_scan"] for d in m["lifetime"].values())
+    assert m["variability"]["n_electrodes"] == 6 and m["variability"]["by_lot"]["LOT-B"]["cv_pct"] is not None
+    assert m["precision"]["repeatability_within_session"]["median_cv_pct"] is not None
+
+
+def test_scale_estimate_names_missing_assumptions(tmp_path):
+    out = str(tmp_path / "sc")
+    tpl = os.path.join(ROOT, "Docs", "templates", "scale_assumptions_template.csv")
+    _run_script("scale_estimate.py", [tpl, "--out", out])
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert "habitations_affected" in m["missing"] and m["maintenance_per_device_year"]["check_standard_visits"] > 50
+
+
+def test_pipeline_includes_trace_cnn_on_demo(tmp_path):
+    out = str(tmp_path / "cnn")
+    _run_script("aquanet_v2_pipeline.py", ["--demo", "--out", out], timeout=600)
+    m = json.load(open(os.path.join(out, "metrics.json"), encoding="utf-8"))
+    assert "trace CNN" in m["models"] and m["trace_cnn"].startswith("included")
+    assert m["models"]["trace CNN"]["mae_ug_l"] > 0

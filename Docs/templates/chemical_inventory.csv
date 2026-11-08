@@ -1,0 +1,11 @@
+chemical,cas,form,concentration,quantity_on_hand,hazard_class,sds_file,storage,disposal_route,approved_by_supervisor_date
+Arsenic(III) standard (As2O3 in dilute acid),1327-53-3,solution,1000 mg/L,,acute toxic / carcinogen,,locked cabinet; secondary container,licensed hazardous-waste route,
+Arsenic(V) standard (sodium arsenate),7778-43-0,solution,1000 mg/L,,acute toxic / carcinogen,,,,
+Hydrochloric acid,7647-01-0,solution,,,corrosive,,,,
+Supporting electrolyte (specify),,,,,,,,,
+Pre-reduction reagent (specify; e.g. L-cysteine or thiosulfate),,,,,,,,,
+Copper standard (interference study),7440-50-8,solution,1000 mg/L,,,,,,
+Iron standard (interference study),7439-89-6,solution,1000 mg/L,,,,,,
+pH buffers 4.01 / 7.00 / 10.01,,solution,,,low,,,,
+Conductivity standard 1413 uS/cm,,solution,,,low,,,,
+Deionised water,7732-18-5,liquid,,,none,,,,

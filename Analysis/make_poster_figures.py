@@ -3,6 +3,7 @@
 Recreate every poster figure from the raw files in one command (ISEF items 138, 264).
 
     python Analysis/make_poster_figures.py --paired Data/field/paired.csv [--interference ...] [--qc-runs ...] [--hand-peaks ... --scans ...]
+                                           [--standards ...] [--electrodes ...] [--power ...] [--deployment ...]
     python Analysis/make_poster_figures.py --demo        (every script on its labelled SYNTHETIC demo data)
 
 Writes Analysis/out/poster/<figure>/... and an index.md listing what was produced, from which input, with which
@@ -34,6 +35,10 @@ def main(argv=None) -> int:
     ap.add_argument("--qc-runs", help="JSON or CSV of check-standard runs")
     ap.add_argument("--hand-peaks")
     ap.add_argument("--scans", default=".")
+    ap.add_argument("--standards", help="standards CSV for linearity.py")
+    ap.add_argument("--electrodes", help="electrode log for electrode_study.py")
+    ap.add_argument("--power", help="power log for power_budget.py")
+    ap.add_argument("--deployment", help="readings export for deployment_report.py")
     ap.add_argument("--demo", action="store_true")
     ap.add_argument("--out", default=os.path.join(HERE, "out", "poster"))
     a = ap.parse_args(argv)
@@ -51,6 +56,14 @@ def main(argv=None) -> int:
         steps.append(("control_chart", [PY, os.path.join(HERE, "control_chart.py"), *(["--demo"] if a.demo else [a.qc_runs])]))
     if a.demo or a.hand_peaks:
         steps.append(("peak_check", [PY, os.path.join(HERE, "peak_check.py"), *(["--demo"] if a.demo else [a.hand_peaks, "--scans", a.scans])]))
+    if a.demo or a.standards:
+        steps.append(("linearity", [PY, os.path.join(HERE, "linearity.py"), *(["--demo"] if a.demo else [a.standards])]))
+    if a.demo or a.electrodes:
+        steps.append(("electrodes", [PY, os.path.join(HERE, "electrode_study.py"), *(["--demo"] if a.demo else [a.electrodes])]))
+    if a.demo or a.power:
+        steps.append(("power", [PY, os.path.join(HERE, "power_budget.py"), *(["--demo"] if a.demo else [a.power])]))
+    if a.demo or a.deployment:
+        steps.append(("deployment", [PY, os.path.join(HERE, "deployment_report.py"), *(["--demo"] if a.demo else [a.deployment])]))
     steps.append(("project", [PY, os.path.join(HERE, "project_figures.py"), "all"]))
     ok_all = True
     for name, cmd in steps:

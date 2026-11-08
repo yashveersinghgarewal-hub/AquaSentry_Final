@@ -1,0 +1,13 @@
+form,who_signs,when,status,notes
+Checklist for Adult Sponsor (1),adult sponsor,before experimentation,,
+Student Checklist (1A),student,before experimentation,,research start date = first data collection
+Research Plan / Project Summary (attached to 1A),student,before experimentation,,written by the student; addendum for any change (item 6)
+Approval Form (1B),student + parent + sponsor,before experimentation; SRC/IRB signatures where required,,
+Qualified Scientist Form (2),qualified scientist,before experimentation,,needed for hazardous chemicals (arsenic standards)
+Risk Assessment Form (3),student + designated supervisor,before experimentation,,hazardous chemicals / devices; attach SDS list
+Continuation / Research Progression (7),student,at registration,,if any part of the project was done in an earlier year (item 5)
+Human Participants Form (4) + informed consent,IRB,before any survey or interview,,needed for stakeholder interviews and usability trials (items 8 and 202)
+Regulated Research Institutional / Industrial Setting Form (1C),supervising scientist,after experimentation,,if work was done in an institutional lab
+Abstract (250 words),student,at registration,,own words; see abstract_structure.md
+Display and safety checklist,team,before setup,,no arsenic at the booth; dummy cell only
+Media / photo consent for people in photos,people photographed,before use,,item 208

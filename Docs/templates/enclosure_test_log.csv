@@ -1,0 +1,7 @@
+test,date,specimen_version,procedure,result,pass_fail,photo_file,note
+water ingress (IP),,,"spray / submersion for __ min per IEC 60529 class __; inspect for water inside",,,,item 168
+UV exposure,,,"__ days outdoor sun; check colour, brittleness, lid fit",,,,
+heat soak,,,"__ h at 50 °C; check warping, electronics function",,,,
+drop,,,"1 m drop onto concrete x3 orientations; function test after each",,,,item 169
+vibration,,,"__ km on a motorbike carrier; function test",,,,
+print fit,,,"lid/base fit, screw bosses, tube clearance; measured gaps mm",,,,item 180

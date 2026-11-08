@@ -18,7 +18,11 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 **[`Docs/ISEF_ROADMAP.md`](Docs/ISEF_ROADMAP.md)** lists 267 prioritised changes for Regeneron ISEF-level judging, grouped by the official criteria, starting with the rules that can disqualify a project (generative-AI use, the 12-month window, hazardous-chemical forms). The two biggest gaps it targets: the results so far come from **simulated data**, and the arsenic detection limit (**20 µg/L**) is above the **10 µg/L** legal limit.
 
-**[`Docs/ISEF_ROADMAP_STATUS.md`](Docs/ISEF_ROADMAP_STATUS.md)** is the status of all 267 items: 83 done in software, 22 with the tooling ready and waiting for real data, 38 partly done, 2 deliberately open, 103 for the team's logbook and writing, 19 for the laboratory and the field. Every row says where the code or the next step is.
+**[`Docs/ISEF_ROADMAP_STATUS.md`](Docs/ISEF_ROADMAP_STATUS.md)** is the status of all 267 items — **86 done in software, 38 with the tooling ready for real data, 29 partly done, 114 team / laboratory / field items each with its worksheet** in [`Docs/TEAM_WORKBOOK.md`](Docs/TEAM_WORKBOOK.md) (steps, template in `Docs/templates/`, script in `Analysis/`, where to record). No item is unaddressed.
+
+## What changed in v5.10
+
+Every roadmap item not closed by v5.9 is addressed: the two open software items are implemented (a 1-D CNN on raw voltammograms in the research pipeline, item 157; a reference-electrode settle test in firmware 5.10.0, item 174); the laboratory and field items get analysis scripts (`linearity.py`, `doe_factorial.py`, `electrode_study.py`, `power_budget.py`, `deployment_report.py`, `decision_matrix.py`, `scale_estimate.py`) and data-capture templates; every team item gets a worksheet in `Docs/TEAM_WORKBOOK.md` with 29 templates in `Docs/templates/`. Details in `CHANGELOG.md`.
 
 ## What changed in v5.9
 

@@ -9,7 +9,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CSV = os.path.join(ROOT, "Docs", "planning", "isef_roadmap_status.csv")
 MD = os.path.join(ROOT, "Docs", "ISEF_ROADMAP_STATUS.md")
-STATUSES = {"Done", "Tooling ready", "Partial", "Open", "Team", "Lab", "Field"}
+STATUSES = {"Done", "Tooling ready", "Partial", "Worksheet"}
 OWNERS = {"team", "software", "lab", "field", "firmware", "external"}
 PATH_RE = re.compile(r"(?<![\w/])((?:Docs|Analysis|Data|Firmware|AquaSentry_Platform|scripts|app|tests|bridge|frontend|models_3d)/[\w./-]+)")
 
@@ -43,6 +43,18 @@ def test_register_paths_exist():
             if not any(os.path.exists(c) for c in candidates):
                 missing.append((r["item"], p))
     assert not missing, missing
+
+
+def test_every_non_done_item_has_a_workbook_entry():
+    wb = open(os.path.join(ROOT, "Docs", "TEAM_WORKBOOK.md"), encoding="utf-8").read()
+    have = {int(m) for m in re.findall(r"^\*\*(\d+) — ", wb, re.M)}
+    missing = [r["item"] for r in _rows() if r["status"] != "Done" and int(r["item"]) not in have]
+    assert not missing, missing
+    # every template the workbook names exists
+    for name in set(re.findall(r"`(?:Docs/templates/)?([A-Za-z0-9_]+\.(?:csv|md))`", wb)):
+        assert os.path.exists(os.path.join(ROOT, "Docs", "templates", name)) or os.path.exists(os.path.join(ROOT, "Data", "field", name)) \
+            or os.path.exists(os.path.join(ROOT, "Docs", "planning", name)) or os.path.exists(os.path.join(ROOT, "Docs", name)) \
+            or os.path.exists(os.path.join(ROOT, name)), name
 
 
 def test_rendered_markdown_matches_csv(tmp_path):

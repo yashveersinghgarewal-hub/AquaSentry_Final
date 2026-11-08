@@ -1,0 +1,4 @@
+citation_key,year,title,authors,journal_or_source,method,electrode,lod_ug_l,range_ug_l,interferents_studied,sample_type,field_tested,cost_per_test,what_we_take_from_it,verified_by_reading_full_text
+WHO_GDWQ_2022,2022,Guidelines for drinking-water quality (4th ed. incorporating addenda),WHO,WHO,guideline,,,,,,,,10 ug/L provisional guideline value,
+BIS_IS10500_A1_2015,2015,IS 10500:2012 Drinking Water Specification - Amendment 1,BIS,BIS,standard,,,,,,,,10 ug/L; relaxation removed,
+Bullen_2022_PLoSONE,2022,(fill exact title) open-source potentiostat for arsenic by ASV on gold,Bullen et al.,PLoS ONE,SWASV,gold,,,,,,,comparison instrument; verify LOD from the paper,

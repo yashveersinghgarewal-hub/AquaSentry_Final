@@ -1,268 +1,268 @@
 item,section,priority,title,owner,status,where_or_next_step
-1,0 Rules,P0,No generative AI for the research plan / abstract / poster / citations,team,Team,"Rule. Everything in this repository was AI-assisted: use it as notes; write your own documents. Docs/AI_USE_STATEMENT_TEMPLATE.md lists what was AI-assisted so the disclosure is accurate."
-2,0 Rules,P0,Disclose AI use (one-page statement),team,Partial,"Docs/AI_USE_STATEMENT_TEMPLATE.md: factual inventory of AI-assisted files, tools and versions; the 'what we checked / designed ourselves' sections are yours to write."
-3,0 Rules,P0,Be able to explain every file you show,team,Team,"Docs/CODE_GUIDE.md walks the code; Docs/DEMO_SCRIPT.md names the 3 screens to show. Rewrite or drop anything you cannot explain."
-4,0 Rules,P0,12-month rule: research window from Jan 2026,team,Team,"Write the start date in the logbook; Docs/planning/timeline.csv has the window; git history dates every software change."
-5,0 Rules,P0,Continuation: Form 7 and 'previous work' labels,team,Team,"Not software. CHANGELOG.md separates versions by date for the 'what is new this year' table."
-6,0 Rules,P0,Research plan before experimenting; addenda,team,Team,"Not software. Analysis/run_order.py and Data/field/README.md give the procedures section concrete steps."
-7,0 Rules,P0,SRC review; Form 3 risk assessment; SDS for every chemical,team,Team,"Not software. See section O."
-8,0 Rules,P0,IRB approval before any survey or interview,team,Team,Not software.
-9,0 Rules,P0,Team rules (up to 3; fixed for the year),team,Team,Not software. README 'Team' section to be completed (item 267).
-10,0 Rules,P0,Booth must work without electricity or internet,team,Partial,"Poster figures are SVG/PDF from Analysis/make_poster_figures.py; QR code prints (project_figures.py qr). Print the figures; the dashboard is a bonus."
+1,0 Rules,P0,No generative AI for the research plan / abstract / poster / citations,team,Worksheet,Rule. Everything in this repository was AI-assisted: use it as notes; write your own documents. Docs/AI_USE_STATEMENT_TEMPLATE.md lists what was AI-assisted so the disclosure is accurate. Workbook §1: Docs/TEAM_WORKBOOK.md.
+2,0 Rules,P0,Disclose AI use (one-page statement),team,Partial,"Docs/AI_USE_STATEMENT_TEMPLATE.md: factual inventory of AI-assisted files, tools and versions; the 'what we checked / designed ourselves' sections are yours to write. Workbook §2."
+3,0 Rules,P0,Be able to explain every file you show,team,Worksheet,Docs/CODE_GUIDE.md walks the code; Docs/DEMO_SCRIPT.md names the 3 screens to show. Rewrite or drop anything you cannot explain. Workbook §3: Docs/TEAM_WORKBOOK.md.
+4,0 Rules,P0,12-month rule: research window from Jan 2026,team,Worksheet,Write the start date in the logbook; Docs/planning/timeline.csv has the window; git history dates every software change. Workbook §4: Docs/TEAM_WORKBOOK.md.
+5,0 Rules,P0,Continuation: Form 7 and 'previous work' labels,team,Worksheet,Not software. CHANGELOG.md separates versions by date for the 'what is new this year' table. Workbook §5: Docs/TEAM_WORKBOOK.md.
+6,0 Rules,P0,Research plan before experimenting; addenda,team,Worksheet,Not software. Analysis/run_order.py and Data/field/README.md give the procedures section concrete steps. Workbook §6: Docs/TEAM_WORKBOOK.md.
+7,0 Rules,P0,SRC review; Form 3 risk assessment; SDS for every chemical,team,Worksheet,Not software. See section O. Workbook §7: Docs/TEAM_WORKBOOK.md.
+8,0 Rules,P0,IRB approval before any survey or interview,team,Worksheet,Workbook §8: Docs/TEAM_WORKBOOK.md.
+9,0 Rules,P0,Team rules (up to 3; fixed for the year),team,Worksheet,Not software. README 'Team' section to be completed (item 267). Workbook §9: Docs/TEAM_WORKBOOK.md.
+10,0 Rules,P0,Booth must work without electricity or internet,team,Partial,Poster figures are SVG/PDF from Analysis/make_poster_figures.py; QR code prints (project_figures.py qr). Print the figures; the dashboard is a bonus. Workbook §10.
 11,0 Rules,P0,Credit every contribution and library,software,Done,"Docs/CREDITS.md: libraries (from requirements and the frontend), methods, contributors, data sources; add labs and mentors as they join."
-12,A Pathway,P0,Confirm IRIS 2026-27 submission status,team,Team,Not software. Record the answer in the logbook.
-13,A Pathway,P0,All real dates in one calendar,team,Partial,"Docs/planning/timeline.csv seeded with the published dates; Analysis/project_figures.py gantt draws it. Confirm the IRIS dates on iris.exstemplar.com."
-14,A Pathway,P1,Enter Stockholm Junior Water Prize India,team,Team,Not software.
-15,A Pathway,P1,Pick the ISEF category on purpose,team,Team,Not software (ENEV recommended by the roadmap).
-16,A Pathway,P1,Work backwards from the fair date,team,Partial,"Milestones (field data -8 weeks, poster -6 weeks, 3 mocks) are rows in Docs/planning/timeline.csv."
-17,A Pathway,P1,Scope freeze date (15 March 2027),team,Partial,"Row in timeline.csv. In software: tag the frozen version (git tag isef-2027, item 265)."
-18,A Pathway,P2,Travel documents early,team,Team,Row in timeline.csv.
-19,A Pathway,P2,Two reviews with a statistics mentor,team,Team,Row in timeline.csv; Analysis/*/report.md are what to review.
-20,A Pathway,P2,Decision log,software,Done,"Docs/DECISION_LOG.md seeded with the dated software decisions; add yours."
-21,A Pathway,P2,One-page Gantt chart,software,Done,"Analysis/project_figures.py gantt -> gantt.svg from Docs/planning/timeline.csv."
-22,B Need,P0,One sentence of need with a number and source,team,Team,Write it yourself from JJM / CGWB; cite the year.
-23,B Need,P0,State who the primary user is,team,Team,"Not software. The platform supports district-lab, panchayat and household views; pick one for the story."
-24,B Need,P0,Design criteria as measurable targets,team,Partial,"Docs/REQUIREMENTS_TRACEABILITY.md lists each criterion with the test that proves it and the current result/target."
-25,B Need,P0,Constraints written down,team,Partial,"Docs/REQUIREMENTS_TRACEABILITY.md 'Constraints' section (power, network, languages, hard water, iron/manganese, temperature) with what the software does about each."
-26,B Need,P0,Why current options fail the criteria (comparison table),team,Partial,"Data/field/landscape_template.csv + project_figures.py landscape give the figure once the numbers are filled from datasheets."
-27,B Need,P1,Quantify the gap (time to lab result; retest frequency),team,Team,Not software. The paired export's pair_gap_hours measures it for your own samples.
-28,B Need,P1,Why continuous monitoring matters (seasonal change),team,Team,Not software; the trend endpoint (Mann-Kendall) shows it on real data later.
-29,B Need,P1,Health end point in plain words,team,Team,Not software.
+12,A Pathway,P0,Confirm IRIS 2026-27 submission status,team,Worksheet,Not software. Record the answer in the logbook. Workbook §12: Docs/TEAM_WORKBOOK.md.
+13,A Pathway,P0,All real dates in one calendar,team,Partial,Docs/planning/timeline.csv seeded with the published dates; Analysis/project_figures.py gantt draws it. Confirm the IRIS dates on iris.exstemplar.com. Workbook §13.
+14,A Pathway,P1,Enter Stockholm Junior Water Prize India,team,Worksheet,Workbook §14: Docs/TEAM_WORKBOOK.md.
+15,A Pathway,P1,Pick the ISEF category on purpose,team,Worksheet,Not software (ENEV recommended by the roadmap). Workbook §15: Docs/TEAM_WORKBOOK.md.
+16,A Pathway,P1,Work backwards from the fair date,team,Partial,"Milestones (field data -8 weeks, poster -6 weeks, 3 mocks) are rows in Docs/planning/timeline.csv. Workbook §16."
+17,A Pathway,P1,Scope freeze date (15 March 2027),team,Partial,"Row in timeline.csv. In software: tag the frozen version (git tag isef-2027, item 265). Workbook §17."
+18,A Pathway,P2,Travel documents early,team,Worksheet,Row in timeline.csv. Workbook §18: Docs/TEAM_WORKBOOK.md.
+19,A Pathway,P2,Two reviews with a statistics mentor,team,Worksheet,Row in timeline.csv; Analysis/*/report.md are what to review. Workbook §19: Docs/TEAM_WORKBOOK.md.
+20,A Pathway,P2,Decision log,software,Done,Docs/DECISION_LOG.md seeded with the dated software decisions; add yours.
+21,A Pathway,P2,One-page Gantt chart,software,Done,Analysis/project_figures.py gantt -> gantt.svg from Docs/planning/timeline.csv.
+22,B Need,P0,One sentence of need with a number and source,team,Worksheet,Write it yourself from JJM / CGWB; cite the year. Workbook §22: Docs/TEAM_WORKBOOK.md.
+23,B Need,P0,State who the primary user is,team,Worksheet,"Not software. The platform supports district-lab, panchayat and household views; pick one for the story. Workbook §23: Docs/TEAM_WORKBOOK.md."
+24,B Need,P0,Design criteria as measurable targets,team,Partial,Docs/REQUIREMENTS_TRACEABILITY.md lists each criterion with the test that proves it and the current result/target. Workbook §24.
+25,B Need,P0,Constraints written down,team,Partial,"Docs/REQUIREMENTS_TRACEABILITY.md 'Constraints' section (power, network, languages, hard water, iron/manganese, temperature) with what the software does about each. Workbook §25."
+26,B Need,P0,Why current options fail the criteria (comparison table),team,Partial,Data/field/landscape_template.csv + project_figures.py landscape give the figure once the numbers are filled from datasheets. Workbook §26.
+27,B Need,P1,Quantify the gap (time to lab result; retest frequency),team,Worksheet,Not software. The paired export's pair_gap_hours measures it for your own samples. Workbook §27: Docs/TEAM_WORKBOOK.md.
+28,B Need,P1,Why continuous monitoring matters (seasonal change),team,Worksheet,Not software; the trend endpoint (Mann-Kendall) shows it on real data later. Workbook §28: Docs/TEAM_WORKBOOK.md.
+29,B Need,P1,Health end point in plain words,team,Worksheet,Workbook §29: Docs/TEAM_WORKBOOK.md.
 30,B Need,P1,Legal limits stated correctly,software,Done,"app/standards.py; dashboard, PDF, chatbot: IS 10500 Amendment 1 (2015) 10 µg/L no relaxation; WHO 10 µg/L (v5.2, v5.7)."
-31,B Need,P1,One testable research question,team,Team,Not software. Analysis/paired_validation.py computes the sensitivity it asks about.
-32,B Need,P2,Map of affected habitations next to test sites,team,Partial,"Dashboard map shows tested sites; the affected-habitation layer needs the government source (item 49)."
-33,B Need,P2,One stakeholder quote,team,Team,Not software.
+31,B Need,P1,One testable research question,team,Worksheet,Not software. Analysis/paired_validation.py computes the sensitivity it asks about. Workbook §31: Docs/TEAM_WORKBOOK.md.
+32,B Need,P2,Map of affected habitations next to test sites,team,Partial,Dashboard map shows tested sites; the affected-habitation layer needs the government source (item 49). Workbook §32.
+33,B Need,P2,One stakeholder quote,team,Worksheet,Workbook §33: Docs/TEAM_WORKBOOK.md.
 34,B Need,P2,Avoid 'AI-powered' as the problem statement,software,Done,"No 'AI-powered' / 'revolutionary' / '100 % accurate' wording anywhere in the dashboard, docs or chatbot prompt (checked by grep in v5.9)."
-35,B Need,P2,Why arsenic first and where the design extends,team,Team,Not software.
-36,C Prior art,P0,Literature review (20+ papers; table),team,Team,"Not software. Keep the table as a CSV (method, LOD, interferents, cost, field-tested) next to Data/field/landscape_template.csv so the landscape figure draws from it."
-37,C Prior art,P0,One sentence of what is new,team,Team,Not software; Docs/CLAIMS_REGISTER.md shows what is and is not demonstrated.
-38,C Prior art,P1,Compare with open-source and commercial potentiostats,team,Partial,"Rows for Bullen et al. and commercial instruments in landscape_template.csv; fill the numbers."
-39,C Prior art,P1,Past ISEF projects on arsenic / water sensing,team,Team,Not software.
-40,C Prior art,P1,Patent search,team,Team,Not software.
-41,C Prior art,P1,Cite the Indian field-testing ecosystem (JJM kits; WQMIS; NABL),team,Partial,"JJM/WQMIS export exists (GET /api/data/export/jjm); cite the documents yourself."
-42,C Prior art,P2,Earlier Indian student / startup efforts,team,Team,Not software.
-43,C Prior art,P2,BibTeX/Zotero library; one citation style,team,Team,Not software.
-44,C Prior art,P2,Cite WHO and BIS documents directly,team,Partial,"Docs/IMPROVEMENT_LOG.md and app/standards.py cite the documents used by the code; cite them in your paper."
+35,B Need,P2,Why arsenic first and where the design extends,team,Worksheet,Workbook §35: Docs/TEAM_WORKBOOK.md.
+36,C Prior art,P0,Literature review (20+ papers; table),team,Worksheet,"Not software. Keep the table as a CSV (method, LOD, interferents, cost, field-tested) next to Data/field/landscape_template.csv so the landscape figure draws from it. Workbook §36: Docs/TEAM_WORKBOOK.md."
+37,C Prior art,P0,One sentence of what is new,team,Worksheet,Not software; Docs/CLAIMS_REGISTER.md shows what is and is not demonstrated. Workbook §37: Docs/TEAM_WORKBOOK.md.
+38,C Prior art,P1,Compare with open-source and commercial potentiostats,team,Partial,Rows for Bullen et al. and commercial instruments in landscape_template.csv; fill the numbers. Workbook §38.
+39,C Prior art,P1,Past ISEF projects on arsenic / water sensing,team,Worksheet,Workbook §39: Docs/TEAM_WORKBOOK.md.
+40,C Prior art,P1,Patent search,team,Worksheet,Workbook §40: Docs/TEAM_WORKBOOK.md.
+41,C Prior art,P1,Cite the Indian field-testing ecosystem (JJM kits; WQMIS; NABL),team,Partial,JJM/WQMIS export exists (GET /api/data/export/jjm); cite the documents yourself. Workbook §41.
+42,C Prior art,P2,Earlier Indian student / startup efforts,team,Worksheet,Workbook §42: Docs/TEAM_WORKBOOK.md.
+43,C Prior art,P2,BibTeX/Zotero library; one citation style,team,Worksheet,Workbook §43: Docs/TEAM_WORKBOOK.md.
+44,C Prior art,P2,Cite WHO and BIS documents directly,team,Partial,Docs/IMPROVEMENT_LOG.md and app/standards.py cite the documents used by the code; cite them in your paper. Workbook §44.
 45,C Prior art,P2,Note reused code/designs and licences,software,Done,Docs/CREDITS.md.
-46,C Prior art,P2,List what you deliberately did not do,team,Team,Not software (Docs/DECISION_LOG.md has a place for it).
-47,C Prior art,P2,Landscape figure: cost vs LOD,software,Done,"Analysis/project_figures.py landscape from Data/field/landscape_template.csv (numbers to fill)."
-48,D Design,P0,Alternatives considered with decision matrices,team,Team,Not software. Docs/DECISION_LOG.md records the software choices and their alternatives.
-49,D Design,P0,Weighted criteria and scores per matrix,team,Team,Not software.
-50,D Design,P0,Design-history figure (v1 -> v5.x),software,Done,"Analysis/project_figures.py history -> design_history.svg from Docs/planning/design_history.csv (seeded from CHANGELOG)."
-51,D Design,P1,Separate chemistry / instrument / system,team,Partial,"Docs/REQUIREMENTS_TRACEABILITY.md and ROADMAP_COVERAGE.md are organised by those three layers; use the same split on the poster."
-52,D Design,P1,Block diagram of the instrument with part numbers,team,Partial,"Firmware/PINOUT.md gives every pin and part; draw the block diagram from it."
+46,C Prior art,P2,List what you deliberately did not do,team,Worksheet,Not software (Docs/DECISION_LOG.md has a place for it). Workbook §46: Docs/TEAM_WORKBOOK.md.
+47,C Prior art,P2,Landscape figure: cost vs LOD,software,Done,Analysis/project_figures.py landscape from Data/field/landscape_template.csv (numbers to fill).
+48,D Design,P0,Alternatives considered with decision matrices,software,Tooling ready,Analysis/decision_matrix.py (weighted scores + ±30 % weight-sensitivity) from Docs/templates/decision_matrix_template.csv; reasons in Docs/DECISION_LOG.md. Workbook §48.
+49,D Design,P0,Weighted criteria and scores per matrix,software,Tooling ready,"Same script: normalised weights, ranking, robustness of the winner. Workbook §49."
+50,D Design,P0,Design-history figure (v1 -> v5.x),software,Done,Analysis/project_figures.py history -> design_history.svg from Docs/planning/design_history.csv (seeded from CHANGELOG).
+51,D Design,P1,Separate chemistry / instrument / system,team,Partial,Docs/REQUIREMENTS_TRACEABILITY.md and ROADMAP_COVERAGE.md are organised by those three layers; use the same split on the poster. Workbook §51.
+52,D Design,P1,Block diagram of the instrument with part numbers,team,Partial,Firmware/PINOUT.md gives every pin and part; draw the block diagram from it. Workbook §52.
 53,D Design,P1,Failure-mode table (FMEA),software,Done,"Docs/FMEA.md: each failure mode, how the device/software detects it, what it reports, which test proves it."
 54,D Design,P1,Requirements traceability table,software,Done,Docs/REQUIREMENTS_TRACEABILITY.md.
-55,D Design,P1,Choose one competition prototype,team,Team,Not software (recommendation recorded in CLAIMS_REGISTER S6).
-56,D Design,P1,Design rationale for sample well and pump volumes,team,Lab,Not software.
-57,D Design,P1,Justify electrode choice with own measurements,team,Lab,Not software.
-58,D Design,P2,Bill of materials with prices; cost per test,software,Tooling ready,"Data/field/bom_template.csv + Analysis/project_figures.py cost -> cost.md; prices from receipts."
-59,D Design,P2,Design for manufacture; assembly time,team,Team,Not software.
-60,D Design,P2,What you'd change for a production unit,team,Team,Not software.
-61,D Design,P2,Safety-by-design choices written down,software,Done,"Docs/FMEA.md 'Safety by design' section (software and electrical parts); add the chemistry parts."
-62,D Design,P2,Exploded view of the enclosure,team,Team,Not software (STL files in models_3d/).
-63,D Design,P2,Keep the old prototypes,team,Team,Not software.
-64,E Sensor,P0,Get the LOD below 10 µg/L,lab,Lab,"Not software. The platform reads LOD from the calibration record and never claims below the validated LOD (v5.8 floor)."
-65,E Sensor,P0,Measure LOD and LOQ properly (>= 10 blanks),lab,Tooling ready,"POST /api/qc/runs (blank) stores every blank; the calibration endpoints compute 3.3 s/slope; Analysis/paired_validation.py reports it. Needs real blanks."
-66,E Sensor,P0,As(III) vs As(V) pre-reduction and recovery,lab,Tooling ready,"arsenic_species on every reading; lab_species on results; spike_recovery QC runs (v5.9). Chemistry is lab work."
-67,E Sensor,P0,Copper interference measured and mitigated,lab,Tooling ready,"Analysis/interference.py (recovery vs Cu with CI); robust baseline + secondary-peak flag in the pipeline (v5.8). Measurement is lab work."
+55,D Design,P1,Choose one competition prototype,team,Worksheet,Not software (recommendation recorded in CLAIMS_REGISTER S6). Workbook §55: Docs/TEAM_WORKBOOK.md.
+56,D Design,P1,Design rationale for sample well and pump volumes,lab,Worksheet,"Measure dead volume, fill and rinse volumes; Docs/templates/carryover_holdtime_sheet.csv. Workbook §56."
+57,D Design,P1,Justify electrode choice with own measurements,lab,Tooling ready,Analysis/electrode_study.py + decision_matrix.py on your electrode measurements. Workbook §57.
+58,D Design,P2,Bill of materials with prices; cost per test,software,Tooling ready,Data/field/bom_template.csv -> Analysis/project_figures.py cost. Workbook §58.
+59,D Design,P2,Design for manufacture; assembly time,team,Worksheet,Workbook §59: Docs/TEAM_WORKBOOK.md.
+60,D Design,P2,What you'd change for a production unit,team,Worksheet,Workbook §60: Docs/TEAM_WORKBOOK.md.
+61,D Design,P2,Safety-by-design choices written down,software,Done,Docs/FMEA.md 'Safety by design' section (software and electrical parts); add the chemistry parts.
+62,D Design,P2,Exploded view of the enclosure,team,Worksheet,Not software (STL files in models_3d/). Workbook §62: Docs/TEAM_WORKBOOK.md.
+63,D Design,P2,Keep the old prototypes,team,Worksheet,Workbook §63: Docs/TEAM_WORKBOOK.md.
+64,E Sensor,P0,Get the LOD below 10 µg/L,lab,Worksheet,Not software. The platform reads LOD from the calibration record and never claims below the validated LOD (v5.8 floor). Workbook §64: Docs/TEAM_WORKBOOK.md.
+65,E Sensor,P0,Measure LOD and LOQ properly (>= 10 blanks),lab,Tooling ready,"Docs/templates/standards_template.csv (>= 10 blanks, 6 standards) -> Analysis/linearity.py: LOD 3.3 s/slope from residual and blank SD, LOQ, lack-of-fit. Workbook §65."
+66,E Sensor,P0,As(III) vs As(V) pre-reduction and recovery,lab,Tooling ready,spike_recovery QC runs for As(V) recovery with/without pre-reduction; arsenic_species per reading. Chemistry with the supervisor. Workbook §66.
+67,E Sensor,P0,Copper interference measured and mitigated,lab,Tooling ready,Analysis/interference.py (recovery vs Cu with CI); robust baseline + secondary-peak flag in the pipeline (v5.8). Measurement is lab work.
 68,E Sensor,P1,"Other interferents (Fe, Mn, phosphate, silicate, humics, chloride, hardness)",lab,Tooling ready,Analysis/interference.py takes any interferent.
-69,E Sensor,P1,pH and temperature effects and corrections,lab,Tooling ready,"interference.py accepts pH / temperature as the x variable; the node logs both; a correction would go into app/signal_processing.py after measurement."
-70,E Sensor,P1,Electrode lifetime (scans until slope drops 10 %),lab,Tooling ready,"Calibration records per device + electrode_lot on readings; Analysis/control_chart.py shows the fade. Measurement is lab work."
-71,E Sensor,P1,Electrode-to-electrode variability (>= 5 electrodes; 2 lots),lab,Tooling ready,"paired_validation.py 'By electrode lot' table (v5.9). Measurement is lab work."
-72,E Sensor,P1,Repeatability and intermediate precision,lab,Tooling ready,"paired_validation.py replicate CV % by band (v5.9) from repeated sample codes."
-73,E Sensor,P1,Linearity with >= 6 standards and residual plot,lab,Partial,"External calibration endpoint accepts any number of standards and returns residuals; add the residual plot once real standards exist."
-74,E Sensor,P1,Explain the electrochemistry on a poster panel,team,Team,Not software (Docs/IMPROVEMENT_LOG.md §4 has the method text to start from).
+69,E Sensor,P1,pH and temperature effects and corrections,lab,Tooling ready,Analysis/interference.py with pH / temperature as the x variable (Docs/templates/interference_template.csv). Workbook §69.
+70,E Sensor,P1,Electrode lifetime (scans until slope drops 10 %),lab,Tooling ready,"Docs/templates/electrode_log_template.csv -> Analysis/electrode_study.py: scans to -10 %, drift per 100 scans. Workbook §70."
+71,E Sensor,P1,Electrode-to-electrode variability (>= 5 electrodes; 2 lots),lab,Tooling ready,"electrode_study.py: slope per electrode, CV across electrodes, lot comparison (F ratio); paired_validation by lot. Workbook §71."
+72,E Sensor,P1,Repeatability and intermediate precision,lab,Tooling ready,electrode_study.py repeatability (within session) and intermediate precision (across sessions/operators); paired_validation replicate CV. Workbook §72.
+73,E Sensor,P1,Linearity with >= 6 standards and residual plot,lab,Tooling ready,"Analysis/linearity.py: >= 6 standards, residual plot, pure-error lack-of-fit test. Workbook §73."
+74,E Sensor,P1,Explain the electrochemistry on a poster panel,team,Worksheet,Not software (Docs/IMPROVEMENT_LOG.md §4 has the method text to start from). Workbook §74: Docs/TEAM_WORKBOOK.md.
 75,E Sensor,P1,Raw voltammograms for blank / 10 / 50 / 100 on one plot,software,Tooling ready,"Every scan is stored (v5.8) and GET /api/scans/{id} returns raw, smoothed and baseline arrays; the dashboard shows the trace. Real scans needed."
 76,E Sensor,P1,Validate peak finding against >= 50 hand-measured scans,software,Tooling ready,"Analysis/peak_check.py (v5.9): bias, limits of agreement, Deming slope, worst disagreements."
-77,E Sensor,P1,Matrix effects: real water vs DI slopes,lab,Tooling ready,"Standard-addition endpoint per device; spike_recovery QC; paired_validation 'By site'."
-78,E Sensor,P1,External calibration vs standard addition against ICP-MS,lab,Tooling ready,"Both calibration types are stored with IDs; reprocess any stored scan with either (v5.8) and compare in paired_validation."
-79,E Sensor,P1,Dissolved oxygen effect,lab,Lab,Not software (the reading schema has dissolved_oxygen_mg_l).
-80,E Sensor,P2,Cheaper electrode comparison,lab,Lab,Not software; electrode_lot distinguishes them in the data.
-81,E Sensor,P2,Electrode surface characterisation,lab,Lab,Not software.
-82,E Sensor,P2,Sample stability / hold time,lab,Partial,"SampleMeta.collection_to_analysis_min and preservation are stored (v5.9) so the effect can be analysed."
-83,E Sensor,P2,Reagent consumption and waste per test,lab,Partial,bom_template.csv has per-test reagent rows.
-84,E Sensor,P2,Potentiostat noise floor with a dummy cell,lab,Partial,"The pipeline reports noise_sigma_ua per scan; run a dummy-cell scan through /api/scans to record it."
-85,E Sensor,P2,Speciation as an extension,lab,Lab,Not software.
-86,E Sensor,P2,SWASV parameter DoE (2^3 factorial),lab,Partial,"Scan settings are stored with every scan (scan_settings_json), so a factorial run is analysable; run_order.py randomises it."
-87,E Sensor,P2,Peak current vs deposition time plot,lab,Partial,"Deposition time is stored per scan; plot from the paired/scan export."
-88,F Metrology,P0,Certified reference material and recovery %,lab,Tooling ready,"check_standard and spike_recovery QC runs record recovery; the CRM itself must be bought."
-89,F Metrology,P0,Blanks with every batch,software,Done,"POST /api/qc/runs blank and field_blank (v5.7/v5.9); low readings are gated on recent blanks."
-90,F Metrology,P0,10 µg/L check standard start and end of each field day; reject if > 20 % drift,software,Done,"v5.7 check-standard gate (80-120 %); Analysis/control_chart.py (v5.9) shows drift before it fails a day; run_order.py puts the opening and closing checks on every sheet."
-91,F Metrology,P0,Spike recovery on real samples (80-120 %),software,Done,"spike_recovery QC run type (v5.9) with baseline and recovery %."
+77,E Sensor,P1,Matrix effects: real water vs DI slopes,lab,Tooling ready,Standard-addition endpoint per device; spike_recovery QC; paired_validation 'By site'.
+78,E Sensor,P1,External calibration vs standard addition against ICP-MS,lab,Tooling ready,Both calibration types are stored with IDs; reprocess any stored scan with either (v5.8) and compare in paired_validation.
+79,E Sensor,P1,Dissolved oxygen effect,lab,Worksheet,interference_template.csv with dissolved oxygen as the interferent; dissolved_oxygen_mg_l field. Workbook §79.
+80,E Sensor,P2,Cheaper electrode comparison,lab,Tooling ready,electrode_log by electrode_lot -> electrode_study.py; decision_matrix.py. Workbook §80.
+81,E Sensor,P2,Electrode surface characterisation,lab,Worksheet,Microscope photos before/after N scans; photo_log.csv; HARDWARE_CHANGELOG. Workbook §81.
+82,E Sensor,P2,Sample stability / hold time,lab,Tooling ready,carryover_holdtime_sheet.csv hold_time rows; SampleMeta.collection_to_analysis_min stored. Workbook §82.
+83,E Sensor,P2,Reagent consumption and waste per test,lab,Worksheet,Measured volumes into bom_template.csv reagent rows and the safety panel. Workbook §83.
+84,E Sensor,P2,Potentiostat noise floor with a dummy cell,lab,Worksheet,Dummy-cell scan through /api/scans; noise_sigma_ua recorded per scan. Workbook §84.
+85,E Sensor,P2,Speciation as an extension,team,Worksheet,Docs/templates/future_work_template.md. Workbook §85.
+86,E Sensor,P2,SWASV parameter DoE (2^3 factorial),lab,Tooling ready,"Analysis/doe_factorial.py --plan (randomised 2^k plan) and analysis (effects, 95 % CIs, Pareto). Workbook §86."
+87,E Sensor,P2,Peak current vs deposition time plot,lab,Tooling ready,linearity.py deposition_s column -> peak vs deposition time per standard. Workbook §87.
+88,F Metrology,P0,Certified reference material and recovery %,lab,Tooling ready,check_standard QC runs with a CRM; recovery in the QC log and control chart. Workbook §88.
+89,F Metrology,P0,Blanks with every batch,software,Done,POST /api/qc/runs blank and field_blank (v5.7/v5.9); low readings are gated on recent blanks.
+90,F Metrology,P0,10 µg/L check standard start and end of each field day; reject if > 20 % drift,software,Done,v5.7 check-standard gate (80-120 %); Analysis/control_chart.py (v5.9) shows drift before it fails a day; run_order.py puts the opening and closing checks on every sheet.
+91,F Metrology,P0,Spike recovery on real samples (80-120 %),software,Done,spike_recovery QC run type (v5.9) with baseline and recovery %.
 92,F Metrology,P1,Record every calibration; print the ID on each result,software,Done,"Calibration records (v5.6); calibration ID on the PDF, public page and exports (v5.7-v5.9)."
-93,F Metrology,P1,Measurement uncertainty shown as ±,software,Done,"± U (k = 2) per reading (v5.8); the 5 % calibration term is assumed until replicates give a measured value."
-94,F Metrology,P1,Decision rule with a guard band,software,Done,"screening_outcome: retest when the interval crosses the detection limit (v5.8)."
+93,F Metrology,P1,Measurement uncertainty shown as ±,software,Done,± U (k = 2) per reading (v5.8); the 5 % calibration term is assumed until replicates give a measured value.
+94,F Metrology,P1,Decision rule with a guard band,software,Done,screening_outcome: retest when the interval crosses the detection limit (v5.8).
 95,F Metrology,P1,Blind samples,software,Done,"Analysis/run_order.py: coded run sheet for the operator, sealed key for the supervisor (v5.9)."
 96,F Metrology,P1,Randomise run order,software,Done,run_order.py (seeded shuffle; opening and closing checks fixed).
-97,F Metrology,P1,Written cleaning protocol,team,Team,"Not software; Docs/SOP_MEASUREMENT.md has the slot."
+97,F Metrology,P1,Written cleaning protocol,team,Worksheet,Not software; Docs/SOP_MEASUREMENT.md has the slot. Workbook §97: Docs/TEAM_WORKBOOK.md.
 98,F Metrology,P1,Calibrate pH / EC / temperature / turbidity sensors or drop them from claims,software,Done,"QC run types ph_buffer, conductivity_standard, turbidity_standard, temperature_reference (v5.9); /api/qc/status reports sensor_checks.verified per sensor."
 99,F Metrology,P2,Shewhart control charts for the check standard,software,Done,Analysis/control_chart.py (v5.9) with Western Electric rules.
-100,F Metrology,P2,Inter-device comparison,lab,Tooling ready,"Same sample_code on readings from 2-3 devices; paired_validation groups by device via the site table."
+100,F Metrology,P2,Inter-device comparison,lab,Tooling ready,Same sample_code on readings from 2-3 devices; paired_validation groups by device via the site table.
 101,F Metrology,P2,Store every raw scan with metadata,software,Done,"RawVoltammetryTrace with checksum, calibration, firmware, analysis version, electrode lot, sample code (v5.8)."
-102,F Metrology,P2,SOP for a measurement,software,Partial,"Docs/SOP_MEASUREMENT.md: instrument and software steps written; chemistry steps are placeholders for the supervisor."
-103,F Metrology,P2,Independent person repeats the SOP,team,Team,Not software.
-104,F Metrology,P2,Track electrode lots; report per lot,software,Done,"electrode_lot on readings and scans; paired_validation 'By electrode lot' (v5.9)."
-105,F Metrology,P2,Balance and pipette calibration checks,team,Team,Not software (logbook).
-106,F Metrology,P2,Show what happens without the controls,lab,Partial,"Reprocess stored scans with another calibration (v5.8) shows the calibration control; temperature correction needs item 69 first."
+102,F Metrology,P2,SOP for a measurement,software,Partial,Docs/SOP_MEASUREMENT.md: instrument and software steps written; chemistry steps are placeholders for the supervisor. Workbook §102.
+103,F Metrology,P2,Independent person repeats the SOP,team,Worksheet,Workbook §103: Docs/TEAM_WORKBOOK.md.
+104,F Metrology,P2,Track electrode lots; report per lot,software,Done,electrode_lot on readings and scans; paired_validation 'By electrode lot' (v5.9).
+105,F Metrology,P2,Balance and pipette calibration checks,team,Worksheet,Not software (logbook). Workbook §105: Docs/TEAM_WORKBOOK.md.
+106,F Metrology,P2,Show what happens without the controls,lab,Partial,Reprocess stored scans with another calibration (v5.8) shows the calibration control; temperature correction needs item 69 first. Workbook §106.
 107,F Metrology,P2,Units consistent (µg/L),software,Done,"µg/L everywhere in UI, PDF and exports (v5.8 review item 43)."
-108,G Field,P0,Replace simulated data with >= 40 real samples / 15 sources / 2 districts,field,Tooling ready,"Data/field/README.md + paired_template.csv; /api/scans; bridge --file; GET /api/data/export/paired. Needs the field programme."
-109,G Field,P0,Pre-register the analysis,team,Partial,"The analysis is fixed in code: paired_validation.py (end points, cutoffs, statistics). Write the pre-registration in the logbook citing the script version (git commit)."
-110,G Field,P0,Confusion matrix at 10 and 50 µg/L with Wilson CIs; missed unsafe count,software,Done,"paired_validation.py cutoffs 10 / 20 / 50 (v5.9) with Wilson intervals and missed-unsafe counts; /api/validation endpoint (v5.6)."
+108,G Field,P0,Replace simulated data with >= 40 real samples / 15 sources / 2 districts,field,Tooling ready,Data/field/README.md + paired_template.csv; /api/scans; bridge --file; GET /api/data/export/paired. Needs the field programme.
+109,G Field,P0,Pre-register the analysis,team,Partial,"The analysis is fixed in code: paired_validation.py (end points, cutoffs, statistics). Write the pre-registration in the logbook citing the script version (git commit). Workbook §109."
+110,G Field,P0,Confusion matrix at 10 and 50 µg/L with Wilson CIs; missed unsafe count,software,Done,paired_validation.py cutoffs 10 / 20 / 50 (v5.9) with Wilson intervals and missed-unsafe counts; /api/validation endpoint (v5.6).
 111,G Field,P0,Proper sample collection; split; chain of custody,software,Done,"SampleMeta (purge, bottle, preservation, custody note, split_for_lab, collected_at) stored with readings/scans and exported (v5.9). Procedure in Data/field/README.md."
 112,G Field,P0,Record GPS / source type / depth / date-time per sample,software,Done,"Device site (lat/long) + SampleMeta source_kind, depth_m, collected_at (v5.9)."
-113,G Field,P1,Sample set covers the range,field,Field,Not software; paired_validation reports the distribution so gaps are visible.
-114,G Field,P1,30-day continuous deployment with weekly lab samples,field,Tooling ready,"Firmware offline buffer, OTA, QC gates, trend detection; GET /api/metrics for uptime. Needs the deployment."
-115,G Field,P1,Report uptime / missed readings / battery / false alarms,software,Partial,"/api/metrics and /api/devices give uptime, battery and alert counts; a 30-day summary script is a small addition once data exist."
-116,G Field,P1,"Multiple conditions (hot/cold, turbidity, iron, operators, rain)",field,Field,Not software; SampleMeta.collector and the sensors record the conditions.
-117,G Field,P1,Compare with the government field test kit,field,Field,"Not software; add a kit_result column to the paired CSV for the comparison."
-118,G Field,P1,Repeat sources in a second season,field,Field,Not software; readings are timestamped and the trend endpoint shows change.
-119,G Field,P1,Photograph every site,team,Team,Not software.
-120,G Field,P1,Letter from the lab,team,Team,Not software.
-121,G Field,P1,Budget the lab costs,team,Team,Not software.
+113,G Field,P1,Sample set covers the range,field,Worksheet,Not software; paired_validation reports the distribution so gaps are visible. Workbook §113: Docs/TEAM_WORKBOOK.md.
+114,G Field,P1,30-day continuous deployment with weekly lab samples,field,Tooling ready,"Firmware + Analysis/deployment_report.py on GET /api/data/export (uptime, gaps, late deliveries, QC, outcomes, battery). Workbook §114."
+115,G Field,P1,Report uptime / missed readings / battery / false alarms,software,Done,"Analysis/deployment_report.py (v5.10): expected vs received, uptime %, longest gap, late deliveries, QC and outcome counts, battery slope, unrepeated positives. Workbook §115."
+116,G Field,P1,"Multiple conditions (hot/cold, turbidity, iron, operators, rain)",field,Worksheet,Not software; SampleMeta.collector and the sensors record the conditions. Workbook §116: Docs/TEAM_WORKBOOK.md.
+117,G Field,P1,Compare with the government field test kit,field,Worksheet,Not software; add a kit_result column to the paired CSV for the comparison. Workbook §117: Docs/TEAM_WORKBOOK.md.
+118,G Field,P1,Repeat sources in a second season,field,Worksheet,Not software; readings are timestamped and the trend endpoint shows change. Workbook §118: Docs/TEAM_WORKBOOK.md.
+119,G Field,P1,Photograph every site,team,Worksheet,Workbook §119: Docs/TEAM_WORKBOOK.md.
+120,G Field,P1,Letter from the lab,team,Worksheet,Workbook §120: Docs/TEAM_WORKBOOK.md.
+121,G Field,P1,Budget the lab costs,team,Worksheet,Workbook §121: Docs/TEAM_WORKBOOK.md.
 122,G Field,P2,Share results back with owners and the district lab,software,Done,"QR public page per source (v5.6), PDF certificate, JJM export."
-123,G Field,P2,Responsible communication plan for a high result,team,Team,Not software; alert channels exist and are off by default for practice data.
+123,G Field,P2,Responsible communication plan for a high result,team,Worksheet,Not software; alert channels exist and are off by default for practice data. Workbook §123: Docs/TEAM_WORKBOOK.md.
 124,G Field,P2,Use the JJM export,software,Done,GET /api/data/export/jjm (v5.6).
-125,G Field,P2,Time per test measured with a stopwatch,software,Partial,"Firmware prints time to first result (v5.9) and the scan duration is in scan settings; the hands-on part is a stopwatch."
-126,G Field,P2,Cost actually spent per sample,team,Team,Not software (cost model takes receipts).
-127,G Field,P2,Keep odd samples for retest,software,Partial,"The retest outcome flags them; sample_code links the retest to the original."
-128,G Field,P2,Usability trial with a non-expert,team,Team,Not software (IRB).
+125,G Field,P2,Time per test measured with a stopwatch,software,Partial,Firmware prints time to first result (v5.9) and the scan duration is in scan settings; the hands-on part is a stopwatch. Workbook §125.
+126,G Field,P2,Cost actually spent per sample,team,Tooling ready,scale_estimate.py rows field_samples_collected / field_total_spend_inr. Workbook §126.
+127,G Field,P2,Keep odd samples for retest,software,Partial,The retest outcome flags them; sample_code links the retest to the original. Workbook §127.
+128,G Field,P2,Usability trial with a non-expert,team,Worksheet,Not software (IRB). Workbook §128: Docs/TEAM_WORKBOOK.md.
 129,G Field,P2,Map the field results and screenshot for the poster,software,Done,Dashboard map (v5.6); demo data has no coordinates so only real sites appear (v5.7).
 130,H Statistics,P0,Scatter with 1:1 line and Bland-Altman,software,Done,paired_validation.py (v5.8).
 131,H Statistics,P0,Regression slope/intercept with CIs (Deming),software,Done,paired_validation.py Deming with bootstrap CIs (v5.8).
-132,H Statistics,P0,Justify the sample size (CI width),software,Done,"paired_validation.py sample-size table (v5.9): Wilson CI width vs n unsafe."
+132,H Statistics,P0,Justify the sample size (CI width),software,Done,paired_validation.py sample-size table (v5.9): Wilson CI width vs n unsafe.
 133,H Statistics,P1,ROC curve and threshold choice,software,Done,paired_validation.py ROC/AUC at 10 / 20 / 50; aquanet_v2_pipeline referral curve.
 134,H Statistics,P1,Precision as CV % at low / medium / high,software,Done,paired_validation.py replicate CV by band (v5.9).
-135,H Statistics,P1,Handle values below LOD as censored,software,Done,"Censored lab results kept with qualifier (v5.8); Mann-Kendall censors at LOD (v5.4); paired_validation never substitutes zeros."
-136,H Statistics,P1,Uncertainty for every number on the poster,software,Done,"Every metric in the analysis reports carries an interval and n."
-137,H Statistics,P1,Significance tests only with a hypothesis,software,Done,"The scripts report effect sizes and intervals; interference.py tests the one hypothesis (slope ≠ 0)."
+135,H Statistics,P1,Handle values below LOD as censored,software,Done,Censored lab results kept with qualifier (v5.8); Mann-Kendall censors at LOD (v5.4); paired_validation never substitutes zeros.
+136,H Statistics,P1,Uncertainty for every number on the poster,software,Done,Every metric in the analysis reports carries an interval and n.
+137,H Statistics,P1,Significance tests only with a hypothesis,software,Done,The scripts report effect sizes and intervals; interference.py tests the one hypothesis (slope ≠ 0).
 138,H Statistics,P1,Reproducible analysis script,software,Done,Analysis/make_poster_figures.py regenerates every figure from the raw files (v5.9).
 139,H Statistics,P1,Interference by regression with CI,software,Done,Analysis/interference.py (v5.9).
-140,H Statistics,P1,Explain outliers individually,software,Partial,"paired_validation and peak_check list the largest disagreements; the explanation goes in the logbook."
+140,H Statistics,P1,Explain outliers individually,software,Partial,paired_validation and peak_check list the largest disagreements; the explanation goes in the logbook. Workbook §140.
 141,H Statistics,P2,Power / sample-size estimate for a larger study,software,Done,paired_validation.py sample-size table includes 100 and 200 unsafe samples.
-142,H Statistics,P2,Mixed model for repeated readings per source,software,Partial,"Grouped-by-site evaluation in aquanet_v2_pipeline avoids the independence error; a mixed model is future work once there are repeated visits."
+142,H Statistics,P2,Mixed model for repeated readings per source,software,Partial,Grouped-by-site evaluation in aquanet_v2_pipeline avoids the independence error; a mixed model is future work once there are repeated visits. Workbook §142.
 143,H Statistics,P2,Trend detection on the 30-day deployment,software,Tooling ready,Mann-Kendall + Sen slope endpoint (v5.4) needs the real deployment.
-144,H Statistics,P2,Check the analysis with a statistics teacher,team,Team,Not software.
+144,H Statistics,P2,Check the analysis with a statistics teacher,team,Worksheet,Workbook §144: Docs/TEAM_WORKBOOK.md.
 145,H Statistics,P2,No 3D / pie / dual-axis charts,software,Done,svg_plots.py draws none of these.
 146,H Statistics,P2,Colour-blind safe figures readable from 1.5 m,software,Done,"Okabe-Ito palette, 12-15 px labels in svg_plots.py (v5.9)."
-147,H Statistics,P2,Raw data in a public repository with a DOI,team,Team,"Not software; Data/field/README.md says what to deposit."
-148,I AquaNet,P0,Be honest that V3 was trained on simulated readings; evaluate on real data,software,Done,"Docs/CLAIMS_REGISTER.md N1; Analysis/aquanet_v3_field_eval.py (v5.9) evaluates the deployed network on paired rows."
+147,H Statistics,P2,Raw data in a public repository with a DOI,team,Worksheet,Not software; Data/field/README.md says what to deposit. Workbook §147: Docs/TEAM_WORKBOOK.md.
+148,I AquaNet,P0,Be honest that V3 was trained on simulated readings; evaluate on real data,software,Done,Docs/CLAIMS_REGISTER.md N1; Analysis/aquanet_v3_field_eval.py (v5.9) evaluates the deployed network on paired rows.
 149,I AquaNet,P0,Baseline: threshold rule and logistic regression,software,Done,aquanet_v3_field_eval.py reports both baselines on the same rows.
 150,I AquaNet,P0,Confusion matrix on held-out real data,software,Tooling ready,aquanet_v3_field_eval.py; needs the paired dataset.
-151,I AquaNet,P1,Why a network at all,software,Partial,"The ablation in aquanet_v3_field_eval.py answers it with data; the argument is yours to write."
+151,I AquaNet,P1,Why a network at all,software,Partial,The ablation in aquanet_v3_field_eval.py answers it with data; the argument is yours to write. Workbook §151.
 152,I AquaNet,P1,Feature importance / ablation,software,Done,aquanet_v3_field_eval.py ablation table.
-153,I AquaNet,P1,Calibration / reliability diagram,software,Done,"aquanet_v3_field_eval.py reliability.svg + ECE; aquanet_v2_pipeline reliability."
+153,I AquaNet,P1,Calibration / reliability diagram,software,Done,aquanet_v3_field_eval.py reliability.svg + ECE; aquanet_v2_pipeline reliability.
 154,I AquaNet,P1,Hard safety rule can never be overridden to safe; test,software,Done,"tests/test_aquanet_v3.py, test_ui_safety_gates.py; checked again on every real row by aquanet_v3_field_eval.py."
-155,I AquaNet,P1,Parameter count / memory / inference time measured,software,Done,"352 parameters and 1 408 bytes counted from the weight file (field_eval); inference time measured by the firmware boot self-test (v5.8) - record it from a real board."
-156,I AquaNet,P1,Document the training-data generation,software,Partial,"Docs/neural/AQUANET_V3_REPORT.md and scripts/train_aquanet_v2.py describe the distributions and noise; the 'why realistic' citation is yours."
-157,I AquaNet,P2,Tiny CNN on raw voltammograms,software,Open,"Only after enough real scans exist; aquanet_v2_pipeline.py is the harness to add it to."
-158,I AquaNet,P2,INT8 vs float accuracy,software,Done,Parity tests between the Python, JS and C engines (v5.2+).
+155,I AquaNet,P1,Parameter count / memory / inference time measured,software,Done,352 parameters and 1 408 bytes counted from the weight file (field_eval); inference time measured by the firmware boot self-test (v5.8) - record it from a real board.
+156,I AquaNet,P1,Document the training-data generation,software,Partial,Docs/neural/AQUANET_V3_REPORT.md and scripts/train_aquanet_v2.py describe the distributions and noise; the 'why realistic' citation is yours. Workbook §156.
+157,I AquaNet,P2,Tiny CNN on raw voltammograms,software,Done,aquanet_v2_pipeline.py TraceCNN (numpy 1-D conv on raw voltammograms resampled to the 121-point grid; grouped CV; kept only if it beats the line); GET /api/scans/export feeds it (--scans). Runs on the demo today.
+158,I AquaNet,P2,INT8 vs float accuracy,software,Done,"Parity tests between the Python, JS and C engines (v5.2+)."
 159,I AquaNet,P2,Cross-validation not one split,software,Done,Leave-one-site-out in aquanet_v2_pipeline.py and aquanet_v3_field_eval.py.
 160,I AquaNet,P2,Describe the failure cases,software,Done,aquanet_v3_field_eval.py lists the rows the network gets wrong.
-161,I AquaNet,P2,Version the model; record it per result,software,Done,"model_version stored per reading (v5.5) and printed on the certificate 'Versions' line (v5.9)."
-162,I AquaNet,P2,Drop 'AI' wording unless the network matters,software,Done,"No 'AI-powered' wording; 'AquaNet model' is one nav item among the science screens."
+161,I AquaNet,P2,Version the model; record it per result,software,Done,model_version stored per reading (v5.5) and printed on the certificate 'Versions' line (v5.9).
+162,I AquaNet,P2,Drop 'AI' wording unless the network matters,software,Done,No 'AI-powered' wording; 'AquaNet model' is one nav item among the science screens.
 163,I AquaNet,P2,Keep the chatbot out of the main pitch,software,Done,Judging mode hides the assistant (v5.9).
-164,J Hardware,P0,Working robust prototype with a dummy cell at the fair,team,Team,Not software.
-165,J Hardware,P0,Power consumption per mode; battery life,team,Lab,"Not software; firmware has the low-power build and deep-sleep strategy to measure."
-166,J Hardware,P1,Characterise the potentiostat,lab,Lab,"Not software; noise_sigma_ua per scan is logged for the comparison."
-167,J Hardware,P1,Pump and fluidics tests; carry-over,lab,Lab,Not software; field_blank QC runs record carry-over.
-168,J Hardware,P1,Enclosure IP / UV / heat tests,lab,Lab,Not software.
-169,J Hardware,P1,Drop / vibration test,lab,Lab,Not software.
-170,J Hardware,P1,PCB or neat perfboard; wiring diagram; labelled photo,team,Partial,"Firmware/PINOUT.md gives the wiring table to draw from."
-171,J Hardware,P1,Solar sizing with real insolation data,team,Team,Not software.
-172,J Hardware,P1,Tool-free electrode replacement,team,Team,Not software.
-173,J Hardware,P2,Custom PCB (KiCad),team,Team,Not software.
-174,J Hardware,P2,Reference-electrode open-circuit self-test,firmware,Open,"Boot self-test (v5.8) covers ADC/DAC/storage/calibration; an OCP check needs the analog path to be measured first - add after item 166."
-175,J Hardware,P2,Device UI usable without a phone (LED/buzzer legend),team,Partial,Firmware drives status LED patterns; print the legend on the lid.
+164,J Hardware,P0,Working robust prototype with a dummy cell at the fair,team,Worksheet,Workbook §164: Docs/TEAM_WORKBOOK.md.
+165,J Hardware,P0,Power consumption per mode; battery life,lab,Tooling ready,"Docs/templates/power_log_template.csv -> Analysis/power_budget.py: mAh/day, battery life, share by mode. Workbook §165."
+166,J Hardware,P1,Characterise the potentiostat,lab,Worksheet,"Dummy-cell noise, linearity vs resistors, step response; tune QC_REF_* thresholds. Workbook §166."
+167,J Hardware,P1,Pump and fluidics tests; carry-over,lab,Worksheet,carryover_holdtime_sheet.csv carryover rows; field_blank QC runs. Workbook §167.
+168,J Hardware,P1,Enclosure IP / UV / heat tests,lab,Worksheet,Docs/templates/enclosure_test_log.csv. Workbook §168.
+169,J Hardware,P1,Drop / vibration test,lab,Worksheet,enclosure_test_log.csv drop/vibration rows. Workbook §169.
+170,J Hardware,P1,PCB or neat perfboard; wiring diagram; labelled photo,team,Partial,Firmware/PINOUT.md gives the wiring table to draw from. Workbook §170.
+171,J Hardware,P1,Solar sizing with real insolation data,team,Tooling ready,power_budget.py --sun-hours (worst-month peak-sun hours) -> panel W and battery for autonomy. Workbook §171.
+172,J Hardware,P1,Tool-free electrode replacement,team,Worksheet,Workbook §172: Docs/TEAM_WORKBOOK.md.
+173,J Hardware,P2,Custom PCB (KiCad),team,Worksheet,Workbook §173: Docs/TEAM_WORKBOOK.md.
+174,J Hardware,P2,Reference-electrode open-circuit self-test,firmware,Done,"Firmware 5.10.0: rest-potential settle test before each cycle (QC_REF_* thresholds), REF_UNSTABLE fault bit, rest/drift in /status.json; server + dashboard text. Thresholds to tune from item 166."
+175,J Hardware,P2,Device UI usable without a phone (LED/buzzer legend),team,Partial,Firmware drives status LED patterns; print the legend on the lid. Workbook §175.
 176,J Hardware,P2,All pin assignments in one table,software,Done,Firmware/PINOUT.md (v5.9) generated from the firmware defines.
-177,J Hardware,P2,Reduce the cost; cost curve across versions,team,Team,Not software (cost model per BOM version).
-178,J Hardware,P2,Spares at the fair,team,Team,Not software.
-179,J Hardware,P2,Label 3D-printed parts with versions,team,Team,Not software.
-180,J Hardware,P2,Tolerance / fit tests for printed parts,team,Team,Not software.
-181,J Hardware,P2,Hardware changelog,software,Done,"Docs/HARDWARE_CHANGELOG.md (v5.9) seeded from the hardware docs; add physical changes as they happen."
-182,K Firmware,P1,14-day soak test,field,Lab,Not software; /api/metrics and the firmware's reset counter record it.
-183,K Firmware,P1,"Offline buffering demo (3 days off, all readings arrive once)",software,Done,"Firmware ring buffer + idempotency keys (v5.3-v5.5); bridge outbox tests (v5.8). Run it on the real board and log it."
+177,J Hardware,P2,Reduce the cost; cost curve across versions,team,Tooling ready,One BOM CSV per hardware version -> project_figures.py cost each. Workbook §177.
+178,J Hardware,P2,Spares at the fair,team,Worksheet,Workbook §178: Docs/TEAM_WORKBOOK.md.
+179,J Hardware,P2,Label 3D-printed parts with versions,team,Worksheet,Workbook §179: Docs/TEAM_WORKBOOK.md.
+180,J Hardware,P2,Tolerance / fit tests for printed parts,team,Worksheet,Workbook §180: Docs/TEAM_WORKBOOK.md.
+181,J Hardware,P2,Hardware changelog,software,Done,Docs/HARDWARE_CHANGELOG.md (v5.9) seeded from the hardware docs; add physical changes as they happen.
+182,K Firmware,P1,14-day soak test,field,Tooling ready,deployment_report.py on the 14-day export. Workbook §182.
+183,K Firmware,P1,"Offline buffering demo (3 days off, all readings arrive once)",software,Done,Firmware ring buffer + idempotent uploads; bridge outbox tests; deployment_report.py counts late deliveries as the evidence. Run on a board and log it (Workbook §183).
 184,K Firmware,P1,Safe OTA with rollback,software,Done,OTA with rollback and signed manifests (v5.5-v5.6); demonstrate on a board.
-185,K Firmware,P1,Watchdog and brown-out tested,software,Partial,"Watchdog in firmware (v5.3); brown-out behaviour must be provoked on a real board."
-186,K Firmware,P2,Time to first result after power-on,software,Done,"Firmware 5.9.0 prints [TIMING] first result and reports first_result_ms in /status.json."
-187,K Firmware,P2,Flash and test on two boards,team,Lab,Not software; CI compiles for ESP32 / S3 / C3.
+185,K Firmware,P1,Watchdog and brown-out tested,lab,Worksheet,Provoke a hang and a sag; reset counters in /status.json. Workbook §185.
+186,K Firmware,P2,Time to first result after power-on,software,Done,Firmware 5.9.0 prints [TIMING] first result and reports first_result_ms in /status.json.
+187,K Firmware,P2,Flash and test on two boards,lab,Worksheet,Flash two boards; inter-device comparison (item 100). Workbook §187.
 188,K Firmware,P2,Reproducible firmware build (CI badge),software,Done,README CI badge; 8 firmware configurations compiled in CI.
 189,K Firmware,P2,Self-test report on boot,software,Done,Firmware 5.8.0 boot self-test.
-190,K Firmware,P2,Deep-sleep strategy with numbers,team,Lab,"Strategy documented in Firmware/README.md; the numbers need a power meter."
-191,K Firmware,P2,Firmware version on every reading and the poster,software,Done,"firmware_version per reading (v5.3); on the certificate (v5.9)."
+190,K Firmware,P2,Deep-sleep strategy with numbers,lab,Tooling ready,power_log_template.csv deep_sleep row -> power_budget.py. Workbook §190.
+191,K Firmware,P2,Firmware version on every reading and the poster,software,Done,firmware_version per reading (v5.3); on the certificate (v5.9).
 192,L Software,P1,Offline demo with seeded database,software,Done,scripts/seed_field_demo.py + launchers; service worker caches the dashboard.
-193,L Software,P1,One alert reaching a real phone (video),team,Team,"Alert channels exist (v5.6); record the video yourself."
+193,L Software,P1,One alert reaching a real phone (video),team,Worksheet,Alert channels exist (v5.6); record the video yourself. Workbook §193: Docs/TEAM_WORKBOOK.md.
 194,L Software,P1,Lab-confirmation panel with real paired results,software,Tooling ready,Panel exists (v5.6); needs real pairs.
 195,L Software,P2,Keep the dashboard to 3 screens during judging,software,Done,Judging mode toggle (v5.9) hides market / sales / impact / assistant; ?mode=judging.
-196,L Software,P2,Translate alert text with a native speaker,team,Team,"Not software; the HI/BN/AS/PA strings are machine-assisted and must be checked (i18n-*.js)."
-197,L Software,P2,Page load on a cheap Android phone on 3G,software,Partial,"Docs/PRIVACY_AND_PERFORMANCE.md records a throttled headless measurement; measure on a real phone too."
-198,L Software,P2,Keep the test suite green; show the count,software,Done,"CI badge; 3xx server tests + browser + firmware (README states the count)."
-199,L Software,P2,Explain data privacy,software,Done,"Docs/PRIVACY_AND_PERFORMANCE.md; coordinates rounded in exports (v5.9); public page carries no coordinates."
+196,L Software,P2,Translate alert text with a native speaker,team,Worksheet,Not software; the HI/BN/AS/PA strings are machine-assisted and must be checked (i18n-*.js). Workbook §196: Docs/TEAM_WORKBOOK.md.
+197,L Software,P2,Page load on a cheap Android phone on 3G,software,Partial,Docs/PRIVACY_AND_PERFORMANCE.md records a throttled headless measurement; measure on a real phone too. Workbook §197.
+198,L Software,P2,Keep the test suite green; show the count,software,Done,CI badge; 3xx server tests + browser + firmware (README states the count).
+199,L Software,P2,Explain data privacy,software,Done,Docs/PRIVACY_AND_PERFORMANCE.md; coordinates rounded in exports (v5.9); public page carries no coordinates.
 200,L Software,P2,60-second software demo script,software,Done,Docs/DEMO_SCRIPT.md (click path; your words).
 201,L Software,P2,JJM/WQMIS export ready,software,Done,GET /api/data/export/jjm.
-202,M Users,P1,Interview >= 5 stakeholders (IRB),team,Team,Not software.
-203,M Users,P1,Comprehension test of the result screen,team,Team,Not software (the public QR page is the screen to test).
-204,M Users,P1,Communication protocol for an unsafe reading,team,Team,Not software; alert routing is configurable.
-205,M Users,P1,"'Screening, not a certified lab test' everywhere",software,Done,Dashboard, public page, PDF, chatbot (v5.2+).
-206,M Users,P2,Equity: who pays / maintains / owns the data,team,Team,Not software.
-207,M Users,P2,Letter of support,team,Team,Not software.
-208,M Users,P2,Consent for photos and names,team,Team,Not software; SampleMeta.collector takes initials only.
-209,M Users,P2,What happens to devices after the project,team,Team,Not software.
-210,N Impact,P0,Cost per test and per device from receipts,software,Tooling ready,Analysis/project_figures.py cost from bom_template.csv.
-211,N Impact,P1,Scale estimate with assumptions,team,Team,Not software.
-212,N Impact,P1,Health impact plainly,team,Team,Not software.
-213,N Impact,P1,Deployment model chosen,team,Team,Not software.
-214,N Impact,P1,Maintenance needs per month,team,Partial,"Calibration age (90 d) and check-standard (7 d) rules define the minimum schedule; electrode life needs item 70."
-215,N Impact,P2,Talk to a partner,team,Team,Not software.
-216,N Impact,P2,Provisional patent only if warranted,team,Team,Not software.
-217,N Impact,P2,Environmental impact of the device,team,Team,Not software.
-218,N Impact,P2,Extension to fluoride / nitrate / uranium / lead,team,Team,Not software.
+202,M Users,P1,Interview >= 5 stakeholders (IRB),team,Worksheet,Workbook §202: Docs/TEAM_WORKBOOK.md.
+203,M Users,P1,Comprehension test of the result screen,team,Worksheet,Not software (the public QR page is the screen to test). Workbook §203: Docs/TEAM_WORKBOOK.md.
+204,M Users,P1,Communication protocol for an unsafe reading,team,Worksheet,Not software; alert routing is configurable. Workbook §204: Docs/TEAM_WORKBOOK.md.
+205,M Users,P1,"'Screening, not a certified lab test' everywhere",software,Done,"Dashboard, public page, PDF, chatbot (v5.2+)."
+206,M Users,P2,Equity: who pays / maintains / owns the data,team,Worksheet,Workbook §206: Docs/TEAM_WORKBOOK.md.
+207,M Users,P2,Letter of support,team,Worksheet,Workbook §207: Docs/TEAM_WORKBOOK.md.
+208,M Users,P2,Consent for photos and names,team,Worksheet,Not software; SampleMeta.collector takes initials only. Workbook §208: Docs/TEAM_WORKBOOK.md.
+209,M Users,P2,What happens to devices after the project,team,Worksheet,Workbook §209: Docs/TEAM_WORKBOOK.md.
+210,N Impact,P0,Cost per test and per device from receipts,software,Tooling ready,bom_template.csv -> project_figures.py cost. Workbook §210.
+211,N Impact,P1,Scale estimate with assumptions,team,Tooling ready,"Docs/templates/scale_assumptions_template.csv -> Analysis/scale_estimate.py (ranges, missing assumptions named). Workbook §211."
+212,N Impact,P1,Health impact plainly,team,Worksheet,Workbook §212: Docs/TEAM_WORKBOOK.md.
+213,N Impact,P1,Deployment model chosen,team,Worksheet,Workbook §213: Docs/TEAM_WORKBOOK.md.
+214,N Impact,P1,Maintenance needs per month,team,Tooling ready,"scale_estimate.py maintenance block from the QC rules (7-day check standard, 90-day calibration) + electrode life. Workbook §214."
+215,N Impact,P2,Talk to a partner,team,Worksheet,Workbook §215: Docs/TEAM_WORKBOOK.md.
+216,N Impact,P2,Provisional patent only if warranted,team,Worksheet,Workbook §216: Docs/TEAM_WORKBOOK.md.
+217,N Impact,P2,Environmental impact of the device,team,Worksheet,Workbook §217: Docs/TEAM_WORKBOOK.md.
+218,N Impact,P2,Extension to fluoride / nitrate / uranium / lead,team,Worksheet,Workbook §218: Docs/TEAM_WORKBOOK.md.
 219,N Impact,P2,Business pages as backup only,software,Done,Judging mode hides them.
-220,O Safety,P0,Hazardous chemical list with SDS; SRC review,team,Team,Not software.
-221,O Safety,P0,All ISEF forms prepared,team,Team,Not software.
-222,O Safety,P0,Arsenic work in a proper lab; waste plan,team,Team,Not software.
-223,O Safety,P1,Lab safety log per session,team,Team,Not software.
-224,O Safety,P1,Most dilute stock that works,team,Team,Not software.
-225,O Safety,P2,Safety on the poster,team,Team,Not software.
-226,P Logbook,P0,Dated logbook,team,Team,Not software (git history is the software logbook).
-227,P Logbook,P0,250-word abstract in your own words,team,Team,Not software.
-228,P Logbook,P1,Full IMRaD paper,team,Team,Not software.
-229,P Logbook,P1,Limitations section,team,Partial,"Docs/CLAIMS_REGISTER.md lists every limit (LOD, species, Cu, sample size, simulated training) as targets; write the prose yourself."
-230,P Logbook,P1,Future work: 3 concrete experiments,team,Team,Not software.
-231,Q Poster,P0,One clear story; title states the result,team,Team,Not software.
+220,O Safety,P0,Hazardous chemical list with SDS; SRC review,team,Worksheet,Workbook §220: Docs/TEAM_WORKBOOK.md.
+221,O Safety,P0,All ISEF forms prepared,team,Worksheet,Workbook §221: Docs/TEAM_WORKBOOK.md.
+222,O Safety,P0,Arsenic work in a proper lab; waste plan,team,Worksheet,Workbook §222: Docs/TEAM_WORKBOOK.md.
+223,O Safety,P1,Lab safety log per session,team,Worksheet,Workbook §223: Docs/TEAM_WORKBOOK.md.
+224,O Safety,P1,Most dilute stock that works,team,Worksheet,Workbook §224: Docs/TEAM_WORKBOOK.md.
+225,O Safety,P2,Safety on the poster,team,Worksheet,Workbook §225: Docs/TEAM_WORKBOOK.md.
+226,P Logbook,P0,Dated logbook,team,Worksheet,Not software (git history is the software logbook). Workbook §226: Docs/TEAM_WORKBOOK.md.
+227,P Logbook,P0,250-word abstract in your own words,team,Worksheet,Workbook §227: Docs/TEAM_WORKBOOK.md.
+228,P Logbook,P1,Full IMRaD paper,team,Worksheet,Workbook §228: Docs/TEAM_WORKBOOK.md.
+229,P Logbook,P1,Limitations section,team,Partial,"Docs/CLAIMS_REGISTER.md lists every limit (LOD, species, Cu, sample size, simulated training) as targets; write the prose yourself. Workbook §229."
+230,P Logbook,P1,Future work: 3 concrete experiments,team,Worksheet,Workbook §230: Docs/TEAM_WORKBOOK.md.
+231,Q Poster,P0,One clear story; title states the result,team,Worksheet,Workbook §231: Docs/TEAM_WORKBOOK.md.
 232,Q Poster,P0,Results panel largest: scatter / confusion / LOD,software,Tooling ready,make_poster_figures.py produces them from the paired CSV.
 233,Q Poster,P1,Every graph: units; n; error bars; source,software,Done,svg_plots subtitles carry n and the fit; axes carry units.
-234,Q Poster,P1,Supporting documents on the table,team,Team,Not software.
-235,Q Poster,P1,Prototype opened on the table + used electrode,team,Team,Not software.
+234,Q Poster,P1,Supporting documents on the table,team,Worksheet,Workbook §234: Docs/TEAM_WORKBOOK.md.
+235,Q Poster,P1,Prototype opened on the table + used electrode,team,Worksheet,Workbook §235: Docs/TEAM_WORKBOOK.md.
 236,Q Poster,P1,Printed QR code to the repository / DOI,software,Done,Analysis/project_figures.py qr -> qr.svg / qr.pdf.
-237,Q Poster,P2,Check display and safety rules,team,Team,Not software.
+237,Q Poster,P2,Check display and safety rules,team,Worksheet,Workbook §237: Docs/TEAM_WORKBOOK.md.
 238,Q Poster,P2,3 colours + neutrals; one typeface,software,Done,svg_plots palette and one font family.
 239,Q Poster,P2,Short English labels; Hindi alert screen as example,software,Done,Dashboard language switch (5 languages) for the example screenshot.
-240,Q Poster,P2,Three strangers read the poster,team,Team,Not software.
-241,R Interview,P0,60-second and 3-minute pitch,team,Team,Not software.
-242,R Interview,P0,Every member explains chemistry / statistics / code,team,Team,Not software (Docs/CODE_GUIDE.md for the code).
-243,R Interview,P0,Top 40 hard questions rehearsed,team,Team,Not software; Docs/CLAIMS_REGISTER.md gives the honest answers to the first ten.
-244,R Interview,P1,3 mock judging sessions,team,Team,Row in timeline.csv.
-245,R Interview,P1,Know the numbers by heart,team,Team,Numbers come from the analysis reports once real data exist.
-246,R Interview,P1,Practise 'I don't know but here is how I'd find out',team,Team,Not software.
-247,R Interview,P1,Prepare for special-award judges,team,Team,Not software.
-248,R Interview,P2,Practise with interruptions,team,Team,Not software.
-249,R Interview,P2,One true field story,team,Team,Not software.
-250,R Interview,P2,Record a practice interview,team,Team,Not software.
-251,S Credibility,P1,Find a mentor; log meetings,team,Team,Not software.
-252,S Credibility,P1,Present at a school fair first,team,Team,Not software.
-253,S Credibility,P2,Submit the paper to a student journal,team,Team,Not software.
-254,S Credibility,P2,Publish the dataset with a DOI,team,Team,Not software.
-255,S Credibility,P2,Open-source the hardware with a licence,team,Partial,Docs/CREDITS.md lists the licence slot; choose CERN-OHL or similar.
-256,S Credibility,P2,Youth innovation programmes only with real data,team,Team,Not software.
-257,T Cut,P1,Stop adding software features,software,Done,"v5.9 adds only tooling the roadmap asks for; no new product features. Every further hour goes to measurements."
+240,Q Poster,P2,Three strangers read the poster,team,Worksheet,Workbook §240: Docs/TEAM_WORKBOOK.md.
+241,R Interview,P0,60-second and 3-minute pitch,team,Worksheet,Workbook §241: Docs/TEAM_WORKBOOK.md.
+242,R Interview,P0,Every member explains chemistry / statistics / code,team,Worksheet,Not software (Docs/CODE_GUIDE.md for the code). Workbook §242: Docs/TEAM_WORKBOOK.md.
+243,R Interview,P0,Top 40 hard questions rehearsed,team,Worksheet,Not software; Docs/CLAIMS_REGISTER.md gives the honest answers to the first ten. Workbook §243: Docs/TEAM_WORKBOOK.md.
+244,R Interview,P1,3 mock judging sessions,team,Worksheet,Row in timeline.csv. Workbook §244: Docs/TEAM_WORKBOOK.md.
+245,R Interview,P1,Know the numbers by heart,team,Worksheet,Numbers come from the analysis reports once real data exist. Workbook §245: Docs/TEAM_WORKBOOK.md.
+246,R Interview,P1,Practise 'I don't know but here is how I'd find out',team,Worksheet,Workbook §246: Docs/TEAM_WORKBOOK.md.
+247,R Interview,P1,Prepare for special-award judges,team,Worksheet,Workbook §247: Docs/TEAM_WORKBOOK.md.
+248,R Interview,P2,Practise with interruptions,team,Worksheet,Workbook §248: Docs/TEAM_WORKBOOK.md.
+249,R Interview,P2,One true field story,team,Worksheet,Workbook §249: Docs/TEAM_WORKBOOK.md.
+250,R Interview,P2,Record a practice interview,team,Worksheet,Workbook §250: Docs/TEAM_WORKBOOK.md.
+251,S Credibility,P1,Find a mentor; log meetings,team,Worksheet,Workbook §251: Docs/TEAM_WORKBOOK.md.
+252,S Credibility,P1,Present at a school fair first,team,Worksheet,Workbook §252: Docs/TEAM_WORKBOOK.md.
+253,S Credibility,P2,Submit the paper to a student journal,team,Worksheet,Workbook §253: Docs/TEAM_WORKBOOK.md.
+254,S Credibility,P2,Publish the dataset with a DOI,team,Worksheet,Workbook §254: Docs/TEAM_WORKBOOK.md.
+255,S Credibility,P2,Open-source the hardware with a licence,team,Partial,Docs/CREDITS.md lists the licence slot; choose CERN-OHL or similar. Workbook §255.
+256,S Credibility,P2,Youth innovation programmes only with real data,team,Worksheet,Workbook §256: Docs/TEAM_WORKBOOK.md.
+257,T Cut,P1,Stop adding software features,software,Done,v5.9 adds only tooling the roadmap asks for; no new product features. Every further hour goes to measurements.
 258,T Cut,P1,Separate marketing claims from the science,software,Done,Judging mode; market and sales pages are under 'Project pages' and hidden during judging.
-259,T Cut,P1,Remove or label simulated numbers in the results panel,software,Done,"Mode badge and 'simulated / demo' labels at the same size as the result (v5.7-v5.8); demo readings never alert or reach reports."
-260,T Cut,P2,Catamaran and tank prototypes as future work,team,Team,Not software (docs in Docs/hardware/ are labelled as concepts).
+259,T Cut,P1,Remove or label simulated numbers in the results panel,software,Done,Mode badge and 'simulated / demo' labels at the same size as the result (v5.7-v5.8); demo readings never alert or reach reports.
+260,T Cut,P2,Catamaran and tank prototypes as future work,team,Worksheet,Not software (docs in Docs/hardware/ are labelled as concepts). Workbook §260: Docs/TEAM_WORKBOOK.md.
 261,T Cut,P2,Avoid buzzwords,software,Done,Checked by grep (item 34).
 262,T Cut,P2,Cut the chatbot from the demo,software,Done,Judging mode.
-263,U Repository,P1,Data/field/ with README; simulated data separate,software,Done,"Data/field/README.md + templates (v5.8/v5.9); Data/ examples are labelled synthetic."
+263,U Repository,P1,Data/field/ with README; simulated data separate,software,Done,Data/field/README.md + templates (v5.8/v5.9); Data/ examples are labelled synthetic.
 264,U Repository,P1,Analysis script recreating every poster figure,software,Done,Analysis/make_poster_figures.py (v5.9).
-265,U Repository,P2,Tag the fair version (git tag isef-2027),team,Team,"Run at the scope freeze: git tag -a isef-2027 -m 'version shown at ISEF 2027' && git push origin isef-2027."
+265,U Repository,P2,Tag the fair version (git tag isef-2027),team,Worksheet,Run at the scope freeze: git tag -a isef-2027 -m 'version shown at ISEF 2027' && git push origin isef-2027. Workbook §265: Docs/TEAM_WORKBOOK.md.
 266,U Repository,P2,Keep CHANGELOG and IMPROVEMENT_LOG as design history,software,Done,Both maintained through v5.9; design_history.csv feeds the figure.
-267,U Repository,P2,Names and roles in the README,team,Partial,"README 'Team' section added with the contributors visible in git history; complete it when the team is final."
+267,U Repository,P2,Names and roles in the README,team,Partial,README 'Team' section added with the contributors visible in git history; complete it when the team is final. Workbook §267.

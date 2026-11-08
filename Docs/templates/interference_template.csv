@@ -1,0 +1,10 @@
+interferent,interferent_conc,unit,as_true_ug_l,as_measured_ug_l,replicate,matrix,electrode_lot,date
+copper,0,ug/L,50,,1,DI water,,
+copper,50,ug/L,50,,1,DI water,,
+copper,200,ug/L,50,,1,DI water,,
+iron,0,mg/L,50,,1,DI water,,
+iron,5,mg/L,50,,1,DI water,,
+pH,6,pH,50,,1,DI water,,
+pH,8,pH,50,,1,DI water,,
+temperature,15,degC,50,,1,DI water,,
+temperature,35,degC,50,,1,DI water,,

@@ -778,11 +778,13 @@
 (function () {
   if (!window.I18N || !window.I18N.extend) return;
   window.I18N.extend('en', {
+    "qc.REF": "The cell did not settle at rest: check the reference electrode, the counter lead and the fill level.",
     "judge.toggle": "Judging mode: show only the science screens",
     "judge.on": "Judging mode on: market, sales and the assistant are hidden. Click again to show everything.",
     "judge.badge": "Judging mode"
   });
   window.I18N.extend('hi', {
+    "qc.REF": "सेल स्थिर नहीं हुआ: रेफरेंस इलेक्ट्रोड, काउंटर तार और भराव स्तर जाँचें।",
     "judge.toggle": "जजिंग मोड: केवल विज्ञान की स्क्रीनें दिखाएँ",
     "judge.on": "जजिंग मोड चालू: बाज़ार, बिक्री और सहायक छिपे हैं। सब दिखाने के लिए फिर क्लिक करें।",
     "judge.badge": "जजिंग मोड"

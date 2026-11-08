@@ -178,6 +178,8 @@ At boot the node runs a **self-test** and prints it on the serial monitor:
 [SELFTEST] Scan evidence upload: on
 ```
 
+Firmware 5.10.0 adds a **reference-electrode / cell settle test** before every cycle (ISEF item 174): the cell is held at −300 mV for 1.5 s and the rest current and its drift are measured; a large or drifting current sets the `REF_UNSTABLE` fault (dry or cracked Ag/AgCl reference, broken counter lead, low fill) and the test fails instead of producing a number. `QC_REF_MAX_ABS_UA` / `QC_REF_MAX_DRIFT_UA` are first values to tune from the dummy-cell characterisation (item 166); the last rest current and drift are in `/status.json` under `ref_check`.
+
 Firmware 5.9.0 also prints `[TIMING] First result N ms after power-on` and reports `first_result_ms` in `/status.json` (ISEF item 186). Pins and parts are in one table in [`PINOUT.md`](PINOUT.md).
 
 The same facts are in `/status.json` under `self_test` (`adc_ads1115`, `dac_mcp4725`, `storage`, `inference_us`,

@@ -1,0 +1,6 @@
+mode,current_ma,seconds_per_cycle,voltage_v,note
+deep_sleep,,3240,3.7,measure with the pump driver and sensors fitted
+wake_wifi,,25,3.7,
+scan,,300,3.7,
+pump,,20,3.7,
+upload,,15,3.7,

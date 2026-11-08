@@ -350,10 +350,39 @@ now applies: the software changes only to fix defects or to process real data.
 
 ---
 
+## 4h. v5.10: every roadmap item addressed
+
+**Why:** after v5.9, 184 items were not "done": most were the team's, the laboratory's or the field's, but a plan
+that stops at "not software" leaves the student without the instrument for the item. v5.10 gives each one its
+instrument: a script that turns the measurement into the figure a judge expects, a template that captures the data
+in the shape the script reads, or a worksheet with the steps and where to record the result.
+
+| Items | What v5.10 does | Verified by |
+| --- | --- | --- |
+| 157 | `TraceCNN` on raw voltammograms in the research pipeline; `GET /api/scans/export` | `test_pipeline_includes_trace_cnn_on_demo`, `test_scan_export_carries_points_and_reading_ids` |
+| 174 | firmware settle test, `REF_UNSTABLE`, `/status.json ref_check` | firmware host build; `test_firmware_scan_qc_catches_a_dead_electrode` harness |
+| 64–65, 73, 87 | `linearity.py` | `test_linearity_reports_lod_and_lack_of_fit` |
+| 86 | `doe_factorial.py` | `test_doe_plan_and_effects` |
+| 70–72, 80 | `electrode_study.py` | `test_electrode_study` |
+| 165, 171, 190 | `power_budget.py` | `test_power_budget_numbers` |
+| 114–115, 182–183 | `deployment_report.py`; export columns | `test_deployment_report_detects_gaps_and_late_deliveries`, `test_raw_export_has_deployment_columns` |
+| 48–49, 55, 57 | `decision_matrix.py` | `test_decision_matrix_and_sensitivity` |
+| 126, 177, 211, 214 | `scale_estimate.py` | `test_scale_estimate_names_missing_assumptions` |
+| all 181 non-Done items | `Docs/TEAM_WORKBOOK.md` + 29 templates | `test_every_non_done_item_has_a_workbook_entry` |
+
+**What the scripts refuse to do:** invent a price (the cost model lists parts without a price), guess an
+assumption (the scale estimate names the missing rows), or claim a model wins (the pipeline keeps the calibration line
+unless a learned model beats it on an unseen site). The honest demo result of the CNN - no better than the line on
+synthetic data - is printed as such.
+
+---
+
 ## 5. API reference: everything added or changed
 
 | Method | Path | Since | Notes |
 | --- | --- | --- | --- |
+| GET | `/api/scans/export` | v5.10 | Every stored real scan with its points and reading ids (for the trace CNN) |
+| GET | `/api/data/export` | v5.10 | Schema 1.4.0: device code, battery, QC, outcome, uncertainty, time source, firmware |
 | POST | `/api/qc/runs` | v5.9 | New `run_type` values `field_blank`, `spike_recovery` (+ `baseline_ug_l`), `ph_buffer`, `conductivity_standard`, `turbidity_standard`, `temperature_reference` |
 | GET | `/api/qc/status` | v5.9 | `sensor_checks` per auxiliary sensor |
 | POST | `/api/readings`, `/api/scans` | v5.9 | `sample` object (`SampleMeta`) stored and returned |

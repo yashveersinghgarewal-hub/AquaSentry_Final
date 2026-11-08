@@ -42,6 +42,7 @@ def qc_required() -> bool:
 # Plain-language names for the QC codes (dashboard, PDF, alerts)
 QC_TEXT = {
     "FLAT_SIGNAL": "flat signal: electrode disconnected, dry or worn out",
+    "REF_UNSTABLE": "cell did not settle at rest: check the reference electrode, counter lead and fill level",
     "BASELINE_UNSTABLE": "background too unstable",
     "NOISE_ABOVE_LOD": "too noisy to detect arsenic at the detection limit",
     "PEAK_AT_WINDOW_EDGE": "arsenic peak outside the search window",

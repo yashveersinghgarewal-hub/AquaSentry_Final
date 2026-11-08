@@ -1,0 +1,20 @@
+name,value,unit,source
+habitations_affected,,count,JJM / IMIS dashboard arsenic-affected habitations (state and date)
+sources_per_habitation,,count,district survey or assumption stated on the poster
+tests_per_source_per_year,,count,screening cadence you propose
+sources_per_device,,count,how many sources one node screens per year
+tests_per_device_per_year,,count,sources_per_device x tests_per_source_per_year
+device_cost_inr,,INR,Analysis/project_figures.py cost (receipts)
+consumables_per_test_inr,,INR,same
+electrode_price_inr,,INR,receipt
+tests_per_electrode,,count,Analysis/electrode_study.py (item 70)
+lab_confirmation_share,,fraction,share of screen positives and retests sent to ICP-MS
+lab_cost_per_sample_inr,,INR,laboratory quote
+device_lifetime_years,,years,assumption; state it
+devices_per_technician,,count,assumption
+technician_cost_per_year_inr,,INR,assumption / PHED pay scale
+check_standard_interval_days,7,days,platform QC rule
+calibration_interval_days,90,days,platform QC rule
+electrode_life_tests,,count,Analysis/electrode_study.py
+field_samples_collected,,count,logbook
+field_total_spend_inr,,INR,receipts (travel + lab + consumables)

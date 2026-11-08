@@ -45,7 +45,7 @@
 #include "aquasentry_types.h" /* structs live in a header: the Arduino IDE writes function prototypes
                                 above the first function, so types defined later in the sketch break them */
 
-#define FIRMWARE_VERSION     "5.9.0"
+#define FIRMWARE_VERSION     "5.10.0"
 
 /* =====================================================================
  * Pin Assignments (per chip). Change them here if your wiring differs.
@@ -159,12 +159,25 @@ char DEVICE_API_KEY[73]      = "";
 #define QC_SCANS_DISAGREE    0x0040
 #define QC_ADC_SATURATION    0x0080
 #define QC_LOW_SNR           0x0100     // warning only
-#define QC_FAULT_MASK        (QC_FLAT_SIGNAL | QC_NOISE_ABOVE_LOD | QC_BASELINE_UNSTABLE | QC_PEAK_AT_EDGE | QC_TOO_FEW_SCANS | QC_SCANS_DISAGREE | QC_ADC_SATURATION)
+#define QC_REF_UNSTABLE      0x0200     // v5.10 (ISEF 174): reference / cell did not settle at the rest potential
+#define QC_FAULT_MASK        (QC_FLAT_SIGNAL | QC_NOISE_ABOVE_LOD | QC_BASELINE_UNSTABLE | QC_PEAK_AT_EDGE | QC_TOO_FEW_SCANS | QC_SCANS_DISAGREE | QC_ADC_SATURATION | QC_REF_UNSTABLE)
+/* Reference-electrode / cell settle test (v5.10). Before cleaning, the cell is held at the rest potential and the
+ * current is sampled for QC_REF_CHECK_MS. A healthy cell settles to a small, steady current; a dry, cracked or
+ * depleted Ag/AgCl reference (or a broken counter lead) shows a large or drifting current. Thresholds are
+ * conservative first values to be tuned on the bench (item 166); the raw figures are printed for the logbook. */
+#define QC_REF_CHECK_MV         -300.0f
+#define QC_REF_CHECK_MS         1500
+#define QC_REF_CHECK_STEP_MS    50
+#define QC_REF_MAX_ABS_UA       2.0f       // |mean current| at rest above this: cell not at equilibrium / wrong reference
+#define QC_REF_MAX_DRIFT_UA     0.20f      // |first-half mean - second-half mean| above this: still drifting
 static const struct { uint16_t bit; const char* name; } QC_NAMES[] = {
     {QC_FLAT_SIGNAL, "FLAT_SIGNAL"}, {QC_NOISE_ABOVE_LOD, "NOISE_ABOVE_LOD"}, {QC_BASELINE_UNSTABLE, "BASELINE_UNSTABLE"},
     {QC_PEAK_AT_EDGE, "PEAK_AT_WINDOW_EDGE"}, {QC_PEAK_SHIFTED, "PEAK_SHIFTED"}, {QC_TOO_FEW_SCANS, "TOO_FEW_GOOD_SCANS"},
     {QC_SCANS_DISAGREE, "SCANS_DISAGREE"}, {QC_ADC_SATURATION, "ADC_SATURATION_HIGH"}, {QC_LOW_SNR, "LOW_SNR"},
+    {QC_REF_UNSTABLE, "REF_UNSTABLE"},
 };
+static float asv_ref_mean_ua = NAN;   // from the last settle test, for /status.json
+static float asv_ref_drift_ua = NAN;
 
 /* ---------------------------------------------------------------------
  * OPTIONAL FEATURES (all off by default). Change them here, or set them as build flags
@@ -524,6 +537,26 @@ static void savgol5(const float* y, float* s, int n) {
 asv_result_t execute_asv_cycle() {
     asv_result_t res = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN, 0};
     Serial.println(F("[ASV] --- Starting ASV Anodic Stripping Cycle ---"));
+
+    // Step 0 (v5.10): reference / cell settle test at the rest potential
+    {
+        dac_set_potential(QC_REF_CHECK_MV);
+        const int n_ref = QC_REF_CHECK_MS / QC_REF_CHECK_STEP_MS;
+        float sum1 = 0, sum2 = 0;
+        for (int i = 0; i < n_ref; i++) {
+            delay(QC_REF_CHECK_STEP_MS);
+            float ua = (ads1115_read_differential() * 0.0000625f / 100000.0f) * 1e6f;
+            if (i < n_ref / 2) sum1 += ua; else sum2 += ua;
+        }
+        float m1 = sum1 / (n_ref / 2), m2 = sum2 / (n_ref - n_ref / 2);
+        asv_ref_mean_ua = (m1 + m2) / 2.0f;
+        asv_ref_drift_ua = fabsf(m2 - m1);
+        Serial.printf("[ASV] Step 0: rest current %.3f uA, drift %.3f uA over %d ms\n", asv_ref_mean_ua, asv_ref_drift_ua, QC_REF_CHECK_MS);
+        if (fabsf(asv_ref_mean_ua) > QC_REF_MAX_ABS_UA || asv_ref_drift_ua > QC_REF_MAX_DRIFT_UA) {
+            res.qc |= QC_REF_UNSTABLE;
+            Serial.println(F("[ASV] Reference/cell unstable: check the Ag/AgCl reference, the counter lead and the fill level."));
+        }
+    }
 
     // Step 1: Electrochemical pre-cleaning pulse
     Serial.println(F("[ASV] Step 1: Applying +1.200V cleaning pulse (2.0s)..."));
@@ -1147,7 +1180,7 @@ static bool setup_allowed() {
 }
 
 void handle_status_json() {
-    char buf[1200];
+    char buf[1300];
     float as = last_arsenic_ug;
     int cls = last_class;
     snprintf(buf, sizeof(buf),
@@ -1160,7 +1193,7 @@ void handle_status_json() {
         "\"arsenic_species\":\"%s\",\"calibration\":\"%s\",\"copper_check\":%s,\"pull_updates\":%s,"
         "\"trace_upload\":%s,\"trace_pending\":%s,"
         "\"self_test\":{\"adc_ads1115\":%s,\"dac_mcp4725\":%s,\"storage\":%s,\"inference_us\":%lu,\"calibration_age_days\":%ld},"
-        "\"first_result_ms\":%lu}",
+        "\"first_result_ms\":%lu,\"ref_check\":{\"rest_ua\":%.3f,\"drift_ua\":%.3f}}",
         DEVICE_CODE, FIRMWARE_VERSION, BOARD_NAME, (unsigned long)(millis() / 1000),
         is_wifi_connected ? "true" : "false", WiFi.localIP().toString().c_str(),
         is_wifi_connected ? (int)WiFi.RSSI() : 0, setup_ap_active ? "true" : "false",
@@ -1173,7 +1206,8 @@ void handle_status_json() {
         PIN_REAGENT_PUMP >= 0 ? "total" : "as3_only", cal_id, COPPER_CHECK ? "true" : "false", PULL_OTA ? "true" : "false",
         TRACE_UPLOAD ? "true" : "false", trace_pending ? "true" : "false",
         selftest_adc_ok ? "true" : "false", selftest_dac_ok ? "true" : "false", selftest_fs_ok ? "true" : "false",
-        (unsigned long)selftest_infer_us, (long)selftest_cal_age_days, (unsigned long)first_result_ms);
+        (unsigned long)selftest_infer_us, (long)selftest_cal_age_days, (unsigned long)first_result_ms,
+        isnan(asv_ref_mean_ua) ? 0.0f : asv_ref_mean_ua, isnan(asv_ref_drift_ua) ? 0.0f : asv_ref_drift_ua);
     server.sendHeader("Access-Control-Allow-Origin", "*");   // read-only, no secrets in it
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", buf);

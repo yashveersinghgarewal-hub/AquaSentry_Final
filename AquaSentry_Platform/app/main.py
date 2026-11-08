@@ -1193,12 +1193,22 @@ def export_data(
             "latitude": lat,
             "longitude": lon,
             "coordinates_redacted": redact_coordinates,
+            # v5.10 (ISEF 114-115, 182-183): what a deployment report needs
+            "device_code": r.device.device_code if r.device else None,
+            "battery_pct": r.battery_pct,
+            "qc_status": r.qc_status,
+            "qc_flags": r.qc_flags,
+            "screening_outcome": r.screening_outcome,
+            "uncertainty_ug_l": r.uncertainty_ppb,
+            "time_source": r.time_source,
+            "firmware_version": r.device.firmware_version if r.device else None,
         })
 
     if format == "csv":
         cols = ["sample_id", "recorded_at", "device_code", "arsenic_ppb", "arsenic_mg_l", "classification",
                 "regulatory_tier", "is_safe_to_drink", "ph", "conductivity_us_cm", "turbidity_ntu", "temperature_c",
-                "latitude", "longitude", "source_type", "is_simulated", "model_version", "method_version"]
+                "latitude", "longitude", "source_type", "is_simulated", "model_version", "method_version",
+                "battery_pct", "qc_status", "qc_flags", "screening_outcome", "uncertainty_ug_l", "time_source", "firmware_version"]
         codes = {d.id: d.device_code for d in db.query(models.Device).all()}
 
         def cell(v):
@@ -1223,7 +1233,7 @@ def export_data(
 
     return {
         "export_metadata": {
-            "schema_version": "1.3.0",
+            "schema_version": "1.4.0",
             "exported_at": now_utc().isoformat(),
             "records_count": len(records),
             "source_type_filter": source_type,

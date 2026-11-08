@@ -282,7 +282,7 @@ def test_firmware_scan_qc_catches_a_dead_electrode():
     defines = "\n".join(l for l in src.splitlines()
                         if re.match(r"#define (VOLT_|PEAK_|BASELINE_EXCLUDE|ASV_MAX_POINTS|COPPER_OFFSET|COPPER_HALF|QC_)", l))
     qc_names = re.search(r"static const struct \{ uint16_t bit; const char\* name; \} QC_NAMES\[\] = \{.*?\n\};\n", src, re.S).group(0)
-    arrays = "\n".join(re.findall(r"^static float asv_\w+\[ASV_MAX_POINTS\];$", src, re.M))
+    arrays = "\n".join(re.findall(r"^static float asv_\w+(?:\[ASV_MAX_POINTS\]| = NAN);.*$", src, re.M))
     savgol = re.search(r"static void savgol5\(.*?\n\}\n", src, re.S).group(0)
     cycle = re.search(r"asv_result_t execute_asv_cycle\(\) \{.*?\n\}\n", src, re.S).group(0)
     harness = r'''

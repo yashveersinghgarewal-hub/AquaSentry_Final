@@ -45,7 +45,14 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import svg_plots as sp  # noqa: E402
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "AquaSentry_Platform"))
+from app.signal_processing import generate_synthetic_asv_trace  # noqa: E402
+
 FEATURES = ["peak_height_ua", "peak_potential_mv", "snr", "ph", "conductivity_us_cm", "turbidity_ntu", "temperature_c"]
+N_FEAT = len(FEATURES)
+# v5.10 (ISEF item 157): raw voltammograms, resampled to the standard sweep grid, travel in X[:, N_FEAT:] when available
+TRACE_GRID = np.arange(-1100.0, -499.9, 5.0)          # 121 points, the node's own grid
+N_TRACE = len(TRACE_GRID)
 CUTOFFS = (10.0, 20.0)
 MIN_SITES, MIN_PAIRS = 4, 40
 CONF_LEVEL = 0.90
@@ -60,8 +67,29 @@ def _f(v) -> float:
         return float("nan")
 
 
-def load(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[str]]:
-    X, y, cens, sites = [], [], [], []
+def resample_trace(P, C) -> np.ndarray:
+    """A stored scan on the node's 121-point grid (linear interpolation; NaN outside the scan's own range)."""
+    P, C = np.asarray(P, float), np.asarray(C, float)
+    order = np.argsort(P)
+    P, C = P[order], C[order]
+    out = np.interp(TRACE_GRID, P, C, left=np.nan, right=np.nan)
+    return out
+
+
+def load_scans(path: str) -> Dict[int, np.ndarray]:
+    """GET /api/scans/export saved as JSON -> {reading_id: resampled trace}."""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    out = {}
+    for sc in data.get("scans", data if isinstance(data, list) else []):
+        tr = resample_trace(sc["potentials_mv"], sc["currents_ua"])
+        for rid in sc.get("reading_ids") or []:
+            out[int(rid)] = tr
+    return out
+
+
+def load(path: str, scans_path: Optional[str] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[str]]:
+    X, y, cens, sites, rids = [], [], [], [], []
     with open(path, "r", encoding="utf-8-sig", newline="") as f:
         for r in csv.DictReader(f):
             if (r.get("qc_status") or "").lower() == "fail":
@@ -73,14 +101,23 @@ def load(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Lis
             y.append(lab)
             cens.append((r.get("lab_qualifier") or "").strip() == "<")
             sites.append(r.get("site_name") or r.get("village") or r.get("device_code") or "unknown")
-    return np.array(X, float), np.array(y, float), np.array(cens, bool), np.array(sites), FEATURES
+            try:
+                rids.append(int(r.get("reading_id") or -1))
+            except ValueError:
+                rids.append(-1)
+    X = np.array(X, float)
+    if scans_path:
+        traces = load_scans(scans_path)
+        T = np.array([traces.get(rid, np.full(N_TRACE, np.nan)) for rid in rids]) if len(rids) else np.zeros((0, N_TRACE))
+        X = np.hstack([X, T]) if len(X) else X
+    return X, np.array(y, float), np.array(cens, bool), np.array(sites), FEATURES
 
 
 def demo(n_sites: int = 8, per_site: int = 30, seed: int = 11):
     """SYNTHETIC: each site has its own matrix (slope factor 0.75-1.1, offset), copper that shifts the peak, pH
     and conductivity that correlate with the matrix, and 8 % proportional + 0.004 µA floor noise on the peak."""
     rng = np.random.default_rng(seed)
-    X, y, cens, sites = [], [], [], []
+    X, y, cens, sites, traces = [], [], [], [], []
     for s in range(n_sites):
         slope_f = rng.uniform(0.75, 1.1)
         offset = rng.uniform(-0.004, 0.006)
@@ -99,12 +136,18 @@ def demo(n_sites: int = 8, per_site: int = 30, seed: int = 11):
             y.append(2.0 if c else lab)
             cens.append(c)
             sites.append(f"Site-{s + 1}")
-    return np.array(X), np.array(y), np.array(cens, bool), np.array(sites), FEATURES
+            # the raw voltammogram the same site matrix would give (for the trace CNN, item 157)
+            eff_ppb = max(0.0, (ip - 0.0096) / 0.8563 * 1000.0)
+            P, C = generate_synthetic_asv_trace(eff_ppb, seed=int(rng.integers(0, 10 ** 6)))
+            traces.append(resample_trace(P, C))
+    X = np.hstack([np.array(X), np.array(traces)])
+    return X, np.array(y), np.array(cens, bool), np.array(sites), FEATURES
 
 
 # ---------------------------------------------------------------- models (numpy only)
 class Standardiser:
     def fit(self, X):
+        X = X[:, :N_FEAT]
         self.med = np.nanmedian(X, axis=0)
         self.med = np.where(np.isfinite(self.med), self.med, 0.0)
         Xi = self._impute(X)
@@ -115,6 +158,7 @@ class Standardiser:
         return np.where(np.isfinite(X), X, self.med)
 
     def transform(self, X):
+        X = X[:, :N_FEAT]
         Xi = self._impute(X)
         miss = (~np.isfinite(X)).astype(float)
         return np.hstack([(Xi - self.mu) / self.sd, miss])
@@ -262,6 +306,114 @@ class ResidualMLP:
         return np.clip(base + corr, 0, None)
 
 
+class TraceCNN:
+    """A tiny 1-D convolutional network on the raw voltammogram (ISEF item 157), numpy only.
+
+    conv(kernel 9, F filters) -> ReLU -> global average + max pool -> linear -> log1p(As). Each trace is centred and
+    scaled by the training set's spread; the network has F*(9+1) + 2F + 1 parameters (F = 8: 97). Early stopping on an
+    inner site split; falls back to the calibration line for rows without a stored trace, and is kept only when it
+    beats the line on the inner split - the same rule as the residual MLP."""
+    name = "trace CNN"
+
+    def __init__(self, filters=8, kernel=9, lr=0.01, epochs=400, l2=1e-4, seed=0):
+        self.F, self.K, self.lr, self.epochs, self.l2, self.seed = filters, kernel, lr, epochs, l2, seed
+
+    @staticmethod
+    def _windows(T, K):
+        n, L = T.shape
+        idx = np.arange(K)[None, :] + np.arange(L - K + 1)[:, None]          # (L-K+1, K)
+        return T[:, idx]                                                      # (n, L-K+1, K)
+
+    def _prep(self, X):
+        T = X[:, N_FEAT:N_FEAT + N_TRACE]
+        has = np.isfinite(T).all(1)
+        T = np.where(np.isfinite(T), T, 0.0)
+        T = T - T.mean(1, keepdims=True)
+        return T / self.scale, has
+
+    def fit(self, X, y, sites=None):
+        self.base = CalLine().fit(X, y)
+        T = X[:, N_FEAT:N_FEAT + N_TRACE] if X.shape[1] >= N_FEAT + N_TRACE else np.full((len(y), N_TRACE), np.nan)
+        has = np.isfinite(T).all(1)
+        self.use = False
+        if has.sum() < 20:
+            return self
+        Tc = T[has] - T[has].mean(1, keepdims=True)
+        self.scale = Tc.std() + 1e-9
+        T = Tc / self.scale
+        yl = np.log1p(np.clip(y[has], 0, None))
+        self.ym, self.ys = yl.mean(), yl.std() + 1e-9
+        yn = (yl - self.ym) / self.ys
+        rng = np.random.default_rng(self.seed)
+        s_has = sites[has] if sites is not None else None
+        if s_has is not None and len(np.unique(s_has)) >= 3:
+            hold = np.unique(s_has)[rng.integers(0, len(np.unique(s_has)))]
+            tr, va = s_has != hold, s_has == hold
+        else:
+            idx = rng.permutation(len(yn)); cut = int(0.8 * len(yn))
+            tr = np.zeros(len(yn), bool); tr[idx[:cut]] = True; va = ~tr
+        W = rng.normal(0, 1 / math.sqrt(self.K), (self.K, self.F)); b = np.zeros(self.F)
+        V = rng.normal(0, 1 / math.sqrt(2 * self.F), 2 * self.F); c = np.zeros(1)
+        params = [W, b, V, c]
+        m = [np.zeros_like(p) for p in params]; v = [np.zeros_like(p) for p in params]
+        Wn = self._windows(T, self.K)                                  # (n, P, K)
+
+        def forward(Wn_b, P):
+            W, b, V, c = P
+            Z = Wn_b @ W + b                                           # (n, P, F)
+            H = np.maximum(Z, 0)
+            feat = np.concatenate([H.mean(1), H.max(1)], axis=1)       # (n, 2F)
+            return Z, H, feat, feat @ V + c[0]
+
+        best, best_params, bad = float("inf"), [p.copy() for p in params], 0
+        for ep in range(1, self.epochs + 1):
+            Z, H, feat, out = forward(Wn[tr], params)
+            err = (out - yn[tr]) / tr.sum()                            # dL/dout for mean squared error (x 1/2)
+            gV = feat.T @ err + self.l2 * params[2]
+            gc = np.array([err.sum()])
+            dfeat = np.outer(err, params[2])                           # (n, 2F)
+            n_, Pn, F = H.shape
+            dH = np.repeat(dfeat[:, None, :F], Pn, axis=1) / Pn
+            amax = H.argmax(1)                                         # (n, F)
+            dmax = np.zeros_like(H)
+            np.put_along_axis(dmax, amax[:, None, :], dfeat[:, None, F:], axis=1)
+            dZ = (dH + dmax) * (Z > 0)
+            gW = np.einsum("npk,npf->kf", Wn[tr], dZ) + self.l2 * params[0]
+            gb = dZ.sum((0, 1))
+            grads = [gW, gb, gV, gc]
+            for i in range(4):
+                m[i] = 0.9 * m[i] + 0.1 * grads[i]
+                v[i] = 0.999 * v[i] + 0.001 * np.square(grads[i])
+                params[i] = params[i] - self.lr * (m[i] / (1 - 0.9 ** ep)) / (np.sqrt(v[i] / (1 - 0.999 ** ep)) + 1e-8)
+            if ep % 10 == 0:
+                _, _, _, ov = forward(Wn[va], params)
+                loss = float(np.mean((ov - yn[va]) ** 2))
+                if loss < best - 1e-6:
+                    best, best_params, bad = loss, [p.copy() for p in params], 0
+                else:
+                    bad += 1
+                    if bad >= 12:
+                        break
+        self.params = best_params
+        _, _, _, ov = forward(Wn[va], self.params)
+        pred_va = np.expm1(ov * self.ys + self.ym)
+        base_va = self.base.predict(X[has][va])
+        self.use = np.abs(pred_va - y[has][va]).mean() < np.abs(base_va - y[has][va]).mean() * 0.98
+        self._forward = forward
+        return self
+
+    def predict(self, X):
+        base = self.base.predict(X)
+        if not self.use or X.shape[1] < N_FEAT + N_TRACE:
+            return base
+        T, has = self._prep(X)
+        out = base.copy()
+        if has.any():
+            _, _, _, o = self._forward(self._windows(T[has], self.K), self.params)
+            out[has] = np.clip(np.expm1(o * self.ys + self.ym), 0, None)
+        return out
+
+
 def choose(model_cls, grid: List, X, y, sites) -> object:
     """Inner leave-one-site-out to pick a hyper-parameter; falls back to the first value with < 3 sites."""
     us = np.unique(sites)
@@ -309,6 +461,11 @@ def run(X, y, cens, sites, out_dir: str, label: str) -> Dict:
              ("ridge", lambda Xt, yt, st: choose(Ridge, [0.1, 1.0, 10.0, 100.0], Xt, yt, st).fit(Xt, yt, st)),
              ("PLS", lambda Xt, yt, st: choose(PLS, [1, 2, 3], Xt, yt, st).fit(Xt, yt, st)),
              ("residual MLP", lambda Xt, yt, st: ResidualMLP().fit(Xt, yt, st))]
+    has_traces = X.shape[1] >= N_FEAT + N_TRACE and np.isfinite(X[:, N_FEAT:N_FEAT + N_TRACE]).all(1).sum() >= 20
+    if has_traces:
+        specs.append(("trace CNN", lambda Xt, yt, st: TraceCNN().fit(Xt, yt, st)))
+    res["trace_cnn"] = ("included (raw voltammograms available for %d rows)" % int(np.isfinite(X[:, N_FEAT:N_FEAT + N_TRACE]).all(1).sum())
+                        if has_traces else "skipped: fewer than 20 rows with a stored scan (pass --scans scans.json from GET /api/scans/export)")
     preds = {name: np.full(len(y), np.nan) for name, _ in specs}
     lo = {name: np.full(len(y), np.nan) for name, _ in specs}
     hi = {name: np.full(len(y), np.nan) for name, _ in specs}
@@ -338,7 +495,7 @@ def run(X, y, cens, sites, out_dir: str, label: str) -> Dict:
     rel_ax = sp.Axes((0, 1), (0, 1), "Reliability: predicted vs observed ≥ 10 µg/L" + (" (SYNTHETIC)" if "SYNTHETIC" in label else ""),
                      "Predicted probability of lab ≥ 10 µg/L (bin centre)", "Observed fraction with lab ≥ 10 µg/L")
     rel_ax.line([0, 1], [0, 1], sp.MUTED, 1.0, "5 4", "perfect")
-    colors = [sp.MUTED, sp.BLUE, sp.GREEN, sp.RED]
+    colors = [sp.MUTED, sp.BLUE, sp.GREEN, sp.RED, sp.VIOLET]
     unsafe = (y >= 10) & quant
     for (name, _), col in zip(specs, colors):
         p = preds[name]
@@ -410,7 +567,8 @@ def _write(out_dir: str, res: Dict, preds: Dict) -> None:
             a, b, c = d["at_10"], d["at_20"], d["conformal"]
             L += [f"| {name} | {d['mae_ug_l']:.1f} | {d['rmse_ug_l']:.1f} | {100 * a['sensitivity']:.0f} % | {100 * a['specificity']:.0f} % | "
                   f"{100 * b['sensitivity']:.0f} % | {100 * b['specificity']:.0f} % | {100 * c['empirical_coverage']:.0f} % | {c['median_width_ug_l']:.0f} |"]
-        L += ["", f"**{res['verdict']}**", "", "![referral](referral_curve.svg)", "", "![reliability](reliability.svg)", "",
+        L += ["", f"**{res['verdict']}**", "", f"Trace CNN (item 157): {res.get('trace_cnn', 'n/a')}.", "",
+              "![referral](referral_curve.svg)", "", "![reliability](reliability.svg)", "",
               "## Reading the results", "",
               "- Every model is fitted without the site it is scored on. Random row splits would leak the site's matrix into training and flatter every model.",
               "- The 90 % interval is split-conformal: the |residual| quantile on a training site the model did not fit. Coverage far below 90 % on new sites means the interval is too narrow there.",
@@ -426,12 +584,13 @@ def main(argv=None) -> int:
     ap.add_argument("--demo", action="store_true", help="run on a SYNTHETIC multi-site dataset")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", "aquanet_pipeline"))
     ap.add_argument("--label", default=None)
+    ap.add_argument("--scans", default=None, help="JSON from GET /api/scans/export: enables the trace CNN (item 157)")
     a = ap.parse_args(argv)
     if a.demo:
         X, y, cens, sites, _ = demo()
         label = a.label or "SYNTHETIC multi-site demo"
     elif a.csv:
-        X, y, cens, sites, _ = load(a.csv)
+        X, y, cens, sites, _ = load(a.csv, a.scans)
         label = a.label or os.path.basename(a.csv)
     else:
         ap.error("give a paired CSV or --demo")

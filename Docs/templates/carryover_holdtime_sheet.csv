@@ -1,0 +1,8 @@
+study,date,sequence_no,sample_or_standard,expected_ug_l,measured_ug_l,minutes_since_collection,rinse_volume_ml,rinse_count,electrode_id,note
+carryover,,1,high standard 500,500,,,,,,
+carryover,,2,blank after high,0,,,,,,
+carryover,,3,blank after high (2nd rinse),0,,,,,,
+hold_time,,1,field sample A at t=0,,,0,,,,
+hold_time,,2,field sample A at t=30 min,,,30,,,,
+hold_time,,3,field sample A at t=2 h,,,120,,,,
+hold_time,,4,field sample A at t=24 h,,,1440,,,,

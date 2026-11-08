@@ -126,3 +126,24 @@ def test_certificate_names_every_version(client):
     pdf = client.get(f"/api/reports/certificate/pdf?reading_id={rid}")
     text = " ".join("".join(p.extract_text() for p in pypdf.PdfReader(io.BytesIO(pdf.content)).pages).split())
     assert "firmware 5.9.0" in text and "model AquaNet" in text and "electrode lot LOT-A" in text and "sample W18-02" in text
+
+
+def test_scan_export_carries_points_and_reading_ids(client):
+    from app.signal_processing import generate_synthetic_asv_trace as g
+    P, C = g(70, seed=4)
+    r = client.post("/api/scans", json={"device_code": "EXP-510", "potentials_mv": P, "currents_ua": C, "source_type": "recorded_replay"})
+    assert r.status_code == 200
+    e = client.get("/api/scans/export?device_code=EXP-510").json()
+    assert e["count"] == 1 and len(e["scans"][0]["potentials_mv"]) == 121 and e["scans"][0]["reading_ids"] == [r.json()["reading_id"]]
+    assert client.get("/api/scans/export?device_code=NOPE").status_code == 404
+    sim = client.post("/api/scans", json={"device_code": "EXP-510", "potentials_mv": P, "currents_ua": C, "source_type": "simulated"})
+    assert sim.status_code == 200
+    assert client.get("/api/scans/export?device_code=EXP-510").json()["count"] == 1          # simulated left out
+    assert client.get("/api/scans/export?device_code=EXP-510&include_demo=true").json()["count"] == 2
+
+
+def test_raw_export_has_deployment_columns(client):
+    client.post("/api/readings", json={"device_code": "RAW-510", "arsenic_ppb": 30, "source_type": "hardware", "qc_status": "pass", "battery_pct": 77})
+    rows = client.get("/api/data/export?device_code=RAW-510&format=json").json()["records"]
+    row = next(r for r in rows if r.get("device_code") == "RAW-510")
+    assert row["battery_pct"] == 77 and row["qc_status"] == "pass" and row["screening_outcome"] == "screen_positive"

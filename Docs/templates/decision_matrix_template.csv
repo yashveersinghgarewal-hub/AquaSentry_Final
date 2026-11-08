@@ -1,0 +1,8 @@
+# criterion,weight,option1,option2,option3   (scores 1-5; write the reason for each score in Docs/DECISION_LOG.md)
+criterion,weight,gold screen-printed strip,gold disc electrode,bismuth film
+detection limit,5,,,
+cost per test,4,,,
+field robustness,4,,,
+reagents needed,3,,,
+speed,2,,,
+repeatability,3,,,

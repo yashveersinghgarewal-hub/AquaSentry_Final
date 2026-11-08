@@ -7,8 +7,7 @@ Statuses:
   Done            the software part is implemented and tested (where column says where)
   Tooling ready   the software exists; the item closes when the team's data or measurements go through it
   Partial         software did part; the rest is the team's
-  Open            software work that should wait for data (deliberately not done yet)
-  Team / Lab / Field   no software share: logbook, writing, people, chemistry, bench or field work
+  Worksheet       team, laboratory or field work; the workbook gives the steps, a template or a calculator, and where to record it
 
 Usage: python Analysis/roadmap_status.py          (rewrites Docs/ISEF_ROADMAP_STATUS.md and Docs/planning/roadmap_status.svg)
 """
@@ -27,8 +26,8 @@ SVG = os.path.join(ROOT, "Docs", "planning", "roadmap_status.svg")
 sys.path.insert(0, HERE)
 import svg_plots as sp  # noqa: E402
 
-ORDER = ["Done", "Tooling ready", "Partial", "Open", "Team", "Lab", "Field"]
-COLOUR = {"Done": sp.GREEN, "Tooling ready": sp.BLUE, "Partial": sp.AMBER, "Open": sp.VIOLET, "Team": sp.MUTED, "Lab": sp.RED, "Field": sp.RED}
+ORDER = ["Done", "Tooling ready", "Partial", "Worksheet"]
+COLOUR = {"Done": sp.GREEN, "Tooling ready": sp.BLUE, "Partial": sp.AMBER, "Worksheet": sp.MUTED}
 
 
 def load():
@@ -45,24 +44,23 @@ def render(rows):
     for r in rows:
         by_section.setdefault(r["section"], []).append(r)
     total = Counter(r["status"] for r in rows)
-    software_share = sum(total[s] for s in ("Done", "Tooling ready", "Partial", "Open"))
+    software_share = sum(total[s] for s in ("Done", "Tooling ready", "Partial"))
     L = ["# ISEF roadmap — status of all 267 items", "",
          "Generated from `Docs/planning/isef_roadmap_status.csv` by `Analysis/roadmap_status.py`; edit the CSV, rerun. "
          "The roadmap (`Docs/ISEF_ROADMAP.md`) is the plan; this page says, item by item, what the software has done, "
-         "what is ready and waiting for the team's data, and what no code can do.", "",
+         "what is ready and waiting for the team's data, and - for the team, laboratory and field items - which worksheet, "
+         "template or calculator in `Docs/TEAM_WORKBOOK.md` carries it. Every item has one of the four statuses; none is unaddressed.", "",
          "| status | meaning | items |", "|---|---|---|",
          f"| **Done** | software implemented and tested | {total['Done']} |",
          f"| **Tooling ready** | software exists; closes when real data or measurements go through it | {total['Tooling ready']} |",
          f"| **Partial** | software did its part; the rest is the team's | {total['Partial']} |",
-         f"| **Open** | software work deliberately waiting for data | {total['Open']} |",
-         f"| **Team** | logbook, writing, forms, people — no software share | {total['Team']} |",
-         f"| **Lab / Field** | chemistry, bench or field work | {total['Lab'] + total['Field']} |",
+         f"| **Worksheet** | team, laboratory or field work with its steps, template or calculator in `Docs/TEAM_WORKBOOK.md` | {total['Worksheet']} |",
          f"| | **total** | **{len(rows)}** ({software_share} with a software share) |", "",
          "![status by section](planning/roadmap_status.svg)", "",
-         "## By section", "", "| section | items | Done | Tooling ready | Partial | Open | Team | Lab/Field |", "|---|---|---|---|---|---|---|---|"]
+         "## By section", "", "| section | items | Done | Tooling ready | Partial | Worksheet |", "|---|---|---|---|---|---|"]
     for sec, items in by_section.items():
         c = Counter(r["status"] for r in items)
-        L.append(f"| {sec} | {len(items)} | {c['Done']} | {c['Tooling ready']} | {c['Partial']} | {c['Open']} | {c['Team']} | {c['Lab'] + c['Field']} |")
+        L.append(f"| {sec} | {len(items)} | {c['Done']} | {c['Tooling ready']} | {c['Partial']} | {c['Worksheet']} |")
     L += ["", "## Every item", ""]
     for sec, items in by_section.items():
         L += [f"### {sec}", "", "| # | P | item | owner | status | where / next step |", "|---|---|---|---|---|---|"]
@@ -72,8 +70,9 @@ def render(rows):
         L.append("")
     L += ["## Reading the register honestly", "",
           "- *Done* never means the sensor works. It means the code path and its test exist. Every accuracy claim still waits for `Data/field/`.",
-          "- The 15 items the roadmap says to do first (1, 2, 4, 6, 7, 12, 24, 36, 64–67, 88, 108, 109) are team, lab and field work; the software's share of them (templates, QC runs, traceability, analysis) is ready.",
-          "- Item 257 is in force: after v5.9 the software only changes to fix a defect or to process real data.", ""]
+          "- *Worksheet* means the item is the team's, the laboratory's or the field's to do; `Docs/TEAM_WORKBOOK.md` §item gives the steps, the template in `Docs/templates/` or the script in `Analysis/`, and where to record the result.",
+          "- The 15 items the roadmap says to do first (1, 2, 4, 6, 7, 12, 24, 36, 64–67, 88, 108, 109) are team, lab and field work; every one has its worksheet, QC run type, template or analysis script ready.",
+          "- Item 257 is in force: after v5.10 the software only changes to fix a defect or to process real data.", ""]
     return "\n".join(L), by_section, total
 
 
