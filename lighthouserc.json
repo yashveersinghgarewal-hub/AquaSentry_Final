@@ -3,18 +3,51 @@
     "collect": {
       "startServerCommand": "cp AquaSentry_Platform/aquasentry.db /tmp/lhci.db && cd AquaSentry_Platform && DATABASE_URL=sqlite:////tmp/lhci.db python -m uvicorn app.main:app --port 8077",
       "startServerReadyPattern": "Application startup complete",
-      "url": ["http://127.0.0.1:8077/index.html", "http://127.0.0.1:8077/device.html?code=DEMO-BOT-01"],
+      "url": [
+        "http://127.0.0.1:8077/index.html",
+        "http://127.0.0.1:8077/device.html?code=DEMO-BOT-01"
+      ],
       "numberOfRuns": 1,
-      "settings": { "preset": "desktop", "chromeFlags": "--no-sandbox" }
+      "settings": {
+        "preset": "desktop",
+        "chromeFlags": "--no-sandbox",
+        "maxWaitForLoad": 30000,
+        "maxWaitForFcp": 20000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000
+      }
     },
     "assert": {
       "assertions": {
-        "categories:accessibility": ["error", { "minScore": 0.95 }],
-        "categories:best-practices": ["warn", { "minScore": 0.9 }],
-        "categories:performance": ["warn", { "minScore": 0.8 }],
-        "categories:seo": ["warn", { "minScore": 0.9 }]
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 0.95
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "categories:performance": [
+          "warn",
+          {
+            "minScore": 0.8
+          }
+        ],
+        "categories:seo": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ]
       }
     },
-    "upload": { "target": "temporary-public-storage" }
+    "upload": {
+      "target": "temporary-public-storage"
+    }
   }
 }
