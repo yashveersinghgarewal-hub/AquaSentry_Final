@@ -1,4 +1,4 @@
-# AquaSentry improvement log (v5.1 → v5.4)
+# AquaSentry improvement log (v5.1 → v5.5)
 
 Every change made to this repository since the v5.1 baseline (commit `667a469`, "black & blue UI with a motion layer"), with the reason for it, where it lives, and how it is tested. Newest release last, so it reads as a story; `CHANGELOG.md` has the short version.
 
@@ -7,9 +7,10 @@ Every change made to this repository since the v5.1 baseline (commit `667a469`, 
 | v5.1 | `667a469` | Baseline as received |
 | v5.2 | `1ec3697` | Correct arsenic limit, honest verdicts, bug fixes, write protection, retrained AquaNet-V3 |
 | v5.3 | `8fba1a6` | ESP32 hardening, device fleet API, "field kit" dashboard |
-| v5.4 | this release | Backend hardening (keys, rate limits, CSP, backups), live updates, trend early warning, UI accessibility and offline mode |
+| v5.4 | `52eae72` | Backend hardening (keys, rate limits, CSP, backups), live updates, trend early warning, UI accessibility and offline mode |
+| v5.5 | this release | Signed + retried alerts, Prometheus metrics, faster and more honest trends, offline chat, optional HTTPS / battery / deep sleep on the ESP32, Docker and GitHub readiness, lint and accessibility audit |
 
-Tests: **110 → 139 → 167 → 185** (22 neural toolkit + 163 platform). Run them with `python main.py --test`.
+Tests: **110 → 139 → 167 → 185 → 204** (22 neural toolkit + 182 platform). Run them with `python main.py --test`.
 
 ---
 
@@ -18,6 +19,7 @@ Tests: **110 → 139 → 167 → 185** (22 neural toolkit + 163 platform). Run t
 2. [v5.2: correct limits, honest verdicts, fixes](#2-v52-correct-limits-honest-verdicts-fixes)
 3. [v5.3: ESP32 hardening, fleet API, field-kit UI](#3-v53-esp32-hardening-fleet-api-field-kit-ui)
 4. [v5.4: backend hardening, live data, trends, UX](#4-v54-backend-hardening-live-data-trends-ux)
+4b. [v5.5: alerts, metrics, low-power ESP32, Docker, GitHub](#4b-v55-alerts-metrics-low-power-esp32-docker-github)
 5. [API reference: everything added or changed](#5-api-reference-everything-added-or-changed)
 6. [Settings added](#6-settings-added)
 7. [Upgrade notes (behaviour that changed)](#7-upgrade-notes-behaviour-that-changed)
@@ -146,6 +148,45 @@ The 21st.dev component service and the UI UX Pro Max skill were not installed in
 
 ---
 
+## 4b. v5.5: alerts, metrics, low-power ESP32, Docker, GitHub
+
+### Code quality and accessibility audit
+- **ruff** with bug-finding rules only (`ruff.toml`: syntax errors, undefined names, redefinitions, unused variables, mutable defaults, `raise ... from`): every finding fixed (`raise HTTPException(...) from e` in the import endpoints, a local name that shadowed a function, unused imports). CI now runs `ruff check .`.
+- **axe-core WCAG 2.2 AA** run in headless Chrome on the dashboard, device simulator, market research and sales pages, light and dark: it found skipped heading levels (`h4` straight after `h2`, 15 on the dashboard) and low-contrast text on the verdict badge and in dark mode. Fixed with real heading levels styled as before and adjusted colour tokens (dark `--safe #6FC896`, `--caution #EDB858`, `--unsafe #FF8E80`, `--haz #F59AA7`). Result: **0 violations** on all eight page/theme combinations.
+
+### Alerts (server)
+- **Why:** the alert webhook was an unsigned POST tried once. A receiver (SMS gateway, Slack relay, the panchayat's own server) could not tell a real Unsafe alert from a forged one, and a single network blip lost the alert.
+- **What:** `app/webhooks.py` follows the Standard Webhooks spec used by Svix and others: `webhook-id` (the alert id, reused on retries so receivers de-duplicate), `webhook-timestamp`, and `webhook-signature: v1,<base64 HMAC-SHA256 of "id.timestamp.body">`. Secrets in the `whsec_<base64>` format work with the standard libraries; a plain string also works. Network errors, 408, 425, 429 and 5xx are retried after 1 s, 4 s and 16 s; other 4xx are not (they will not get better). Only `http(s)` URLs are accepted, because `urllib` would otherwise open `file://` targets. Delivery stays on a background thread so the ESP32's upload never waits.
+- **Low battery:** a node whose latest reading reports `battery_pct` at or below `LOW_BATTERY_PCT` (15) gets a notice in `/api/alerts/recent`; device cards show the battery level (English and Hindi), and the warnings list ranks it after unsafe readings.
+
+### Monitoring
+- `GET /api/metrics` in the Prometheus text format, so Prometheus, Grafana Agent or Netdata can scrape it: readings by verdict and source, devices by status, alerts raised, webhook outcomes, trend-cache hits and misses, live connections, uptime, build info, and per-route request counts and latency histograms. Routes are recorded by **template** (`/api/devices/{device_code}`), never the raw path, so a scanner hitting random URLs cannot create unbounded series. `METRICS_PUBLIC=0` limits it to this computer and API-key holders.
+
+### Trends: faster and more honest
+- **Why:** a node that reports hourly sends 2,160 readings in 90 days. Mann-Kendall assumes independent values, but hourly readings of the same well are strongly correlated, which makes the test report significant trends that are not there (Hirsch & Slack 1984, USGS). The pair loops are also O(n²): 2.3 million pairs, about 570 ms per device on every `/api/devices` call.
+- **What:** when a node reports more than once a day, the series is reduced to **daily medians** (weekly beyond 400 days), after non-detects are censored to the detection limit so sub-LOD noise cannot move a median. The response says how (`aggregation`, `readings`, and "daily medians of N readings" in the evidence line). 90 days of hourly data now takes about 3 ms. Results are also cached per device, keyed by reading count, newest reading id and the date, so a new or deleted reading always invalidates the entry.
+
+### Chat that works without the internet
+- **Why:** on a field laptop with no internet or no Gemini key, the assistant only said it was offline, and a Gemini error (quota, retired model, no network) gave an apology.
+- **What:** `offline_answer()` answers the common questions from the database with fixed wording: the latest reading and its device, which nodes show a rising or falling trend, which nodes are offline, and the limits (10 µg/L legal, 20 µg/L sensor detection limit, lab test needed below it). It is used when no key is configured and as the fallback when Gemini fails. When Gemini is available, its prompt now also gets one status and trend line per node.
+
+### Smaller server changes
+- `X-Total-Count` header on `GET /api/readings` (exposed through CORS) so clients can page.
+- `X-Request-ID` from clients is reduced to `[A-Za-z0-9._:-]`, 64 characters; otherwise a fresh id is generated.
+- **SQLite WAL-reset bug guard.** The bug (SQLite 3.7.0 to 3.51.2, fixed in 3.51.3 and the 3.50.7 / 3.44.6 backports) can corrupt a WAL database when two connections write or checkpoint at the same instant. Debian and Ubuntu Python images ship SQLite 3.46, so on an unpatched build the server now keeps **one** database connection (`SQLITE_SINGLE_CONNECTION=auto`), which makes the race impossible. The load of a sensor network is tiny, and 40 parallel uploads to the container all succeeded with `PRAGMA integrity_check` = ok. `/api/health` reports `single_connection_mode`.
+
+### ESP32 firmware 5.5.0 (all new features off by default)
+- **HTTPS.** With an `https://` server address the node uses `WiFiClientSecure` and checks the certificate chain and host name against `ROOT_CA_PEM`. With no certificate it does not send at all (readings wait in the offline buffer) unless `ALLOW_INSECURE_TLS 1`, because an unchecked TLS connection cannot tell the real server from an impostor. The telemetry task stack went from 12 to 16 KB for the handshake.
+- **Battery monitor.** A two-resistor divider on an ADC1 pin (`PIN_BATTERY_ADC`), read with the factory-calibrated `analogReadMilliVolts`, converted with a resting Li-ion curve, and measured before the pump loads the cell. Sent as `battery_pct` with each reading and shown on `/status.json`. The new record field fits in what was padding, so readings already in the LittleFS buffer stay readable (a host test checks the size), and records are now zeroed before they are written to flash.
+- **Low-power mode** (`LOW_POWER_MODE 1`): after a test the node stays awake up to 90 s to upload it and any backlog, then deep-sleeps for the rest of the hour. It never sleeps while the setup hotspot is open. Before sleeping it parks the electrode at 0 mV, switches the A4988 off and holds its EN pin high through sleep (`gpio_hold_en`, plus `gpio_deep_sleep_hold_en` on C3 and S3); Pololu-style boards pull EN low, so a floating pin would power the motor all hour. The README asks for a 10 kΩ pull-up as well. The last result and a wake counter live in RTC memory.
+- The options can be set as build flags (`#ifndef` guards); `platformio.ini` has an `esp32dev-lowpower` environment, the host check compiles the sketch with all options on for the three chips, and CI builds them with Espressif's core for ESP32 and ESP32-C3.
+
+### Docker and GitHub
+- **Dockerfile:** no compilers or curl (smaller, fewer CVEs), non-root user (uid 10001), works on a read-only root filesystem, database and backups in the `/data` volume, the demo database copied in on first start by `docker-entrypoint.sh`, and a Python health check. The old compose file stored the database inside the container (lost on rebuild) and mounted the repo's `Data` folder over the image's; it now uses a named volume, `no-new-privileges` and settings from `.env`. `.dockerignore` keeps `.git`, `.venv`, `Docs` and secrets out of the image. Built and run here: non-root, healthy, readings stored, integrity check ok.
+- **GitHub:** CI badge; ruff step; `workflow_dispatch`; read-only token permissions; concurrency cancel; Dependabot for pip, GitHub Actions and Docker; `SECURITY.md` with a deployment checklist; pull-request and bug-report templates.
+
+---
+
 ## 5. API reference: everything added or changed
 
 | Method | Path | Since | Notes |
@@ -163,9 +204,12 @@ The 21st.dev component service and the UI UX Pro Max skill were not installed in
 | DELETE | `/api/admin/devices/{code}/key` | v5.4 | Admin only |
 | POST | `/api/admin/backup` | v5.4 | Admin only |
 | POST | `/api/admin/db/compact` | changed v5.2 | Admin only |
-| GET | `/api/health` | changed v5.2, v5.4 | Model, standards, write auth, SQLite, uptime |
+| GET | `/api/health` | changed v5.2, v5.4, v5.5 | Model, standards, write auth, SQLite, single-connection mode, uptime, webhook status |
+| GET | `/api/metrics` | v5.5 | Prometheus text format |
+| GET | `/api/readings` | changed v5.5 | `X-Total-Count` header |
+| POST | `/api/chat` | changed v5.5 | Grounded offline answers when Gemini is missing or fails |
 
-ESP32 node pages (v5.3): `/`, `/status.json`, `/setup`, `/update`.
+ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, `battery_mv`, `low_power_mode`, `wake_count`), `/setup`, `/update`.
 
 ## 6. Settings added
 
@@ -179,6 +223,14 @@ ESP32 node pages (v5.3): `/`, `/status.json`, `/setup`, `/update`.
 | `AS_EDGES` | training env | `10,20,150` | Arsenic class edges for retraining |
 | `DEVICE_API_KEY` | firmware / setup page | empty | Global or per-device key |
 | `OTA_PASS` | firmware | `change-me` (OTA off) | OTA and LAN setup login, 8+ characters |
+| `ALERT_WEBHOOK_SECRET` | `.env` | empty | Sign alert webhooks (v5.5) |
+| `ALERT_WEBHOOK_ATTEMPTS` | `.env` | 3 | Delivery attempts per alert |
+| `METRICS_PUBLIC` | `.env` | 1 | 0 = metrics for this computer / key holders only |
+| `LOW_BATTERY_PCT` | `.env` | 15 | Low-battery notice threshold |
+| `SQLITE_SINGLE_CONNECTION` | `.env` | auto | One DB connection on SQLite without the WAL-reset fix |
+| `ROOT_CA_PEM`, `ALLOW_INSECURE_TLS` | firmware | empty, 0 | HTTPS uploads |
+| `PIN_BATTERY_ADC`, `BATTERY_DIVIDER` | firmware | -1, 2.0 | Battery monitor |
+| `LOW_POWER_MODE`, `LOW_POWER_AWAKE_MS` | firmware | 0, 90000 | Deep sleep between tests |
 
 ## 7. Upgrade notes (behaviour that changed)
 
@@ -187,6 +239,8 @@ ESP32 node pages (v5.3): `/`, `/status.json`, `/setup`, `/update`.
 - `source_type` values outside `simulated, hardware, manual_import, synthetic_fixture, synthetic_demo` and device codes with spaces or symbols are rejected with 422.
 - The dashboard opens in the light theme; the moon button still switches, and the choice is remembered.
 - Old firmware's NVS buffer is not migrated to LittleFS; upload pending readings before flashing 5.3.0.
+- v5.5: trends for nodes that report more than once a day are computed on daily medians, so `n` in the trend output counts days; `readings` has the raw count.
+- v5.5: with an `https://` server address and no `ROOT_CA_PEM`, firmware 5.5.0 keeps readings in its buffer instead of sending them unchecked.
 
 ## 8. How each change is verified
 
@@ -197,8 +251,11 @@ ESP32 node pages (v5.3): `/`, `/status.json`, `/setup`, `/update`.
 | `tests/test_v53_fleet.py` | Devices status, firmware version, history |
 | `tests/test_v53_ui.py` | Every dashboard string in English and Hindi, chart geometry, scripts parse, field layer on all pages, service worker never caches the API |
 | `tests/test_v54_backend.py` | Headers + CSP hash, request IDs, rate limit 429, device keys, Mann-Kendall maths, trend endpoint + alert, CSV export + injection guard, SSE delivery, backups, validation, health |
+| `tests/test_v55_backend.py` | Webhook signature round trip, tampering, replay window, key rotation; retries only on transient errors; signed end-to-end delivery to a local receiver; metrics format and route templates; restricted metrics; `X-Total-Count`; request-ID sanitising; daily-median aggregation; trend cache hit and invalidation; offline and fallback chat; low-battery notice; single-connection guard |
+| `tests/test_firmware_host_build.py` (v5.5 additions) | Sketch with HTTPS, battery and deep sleep switched on for 3 chips; offline record size unchanged; battery curve monotonic; TLS never unchecked by default; deep sleep keeps the stepper off |
 | `Neural_Network/v3_training/results/c_vs_python_parity_100k.txt` | C engine vs Python, 100,000 inputs |
-| GitHub Actions `firmware` job | Real ESP32 compile for esp32, esp32s3, esp32c3 |
+| GitHub Actions `firmware` job | Real ESP32 compile for esp32, esp32s3, esp32c3, plus the optional features on esp32 and esp32c3 |
+| GitHub Actions `ruff` step, local axe-core run | Lint clean; 0 WCAG 2.2 AA violations |
 
 Manual checks done for each release: server started, every page loaded in headless Chrome at 1440 px and 390 px, light and dark, English and Hindi, with no console errors or CSP violations; a live reading posted while the page was open produced the toast and refreshed the device list; the service worker took control of the page.
 
@@ -209,6 +266,8 @@ Manual checks done for each release: server started, every page loaded in headle
 - Rate limits and live-event subscribers are per server process (fine for one laptop or Pi; use a shared store if you run several workers).
 - Trend projections are straight-line estimates; aquifers can change faster around monsoon recharge.
 - 21st.dev components could be used if the dashboard moves to React, or if you connect the 21st MCP with your key.
+- Deep sleep, battery and HTTPS are compiled and type-checked but not yet bench-tested on a board; measure the real sleep current (development boards with USB chips and LEDs draw milliamps, not microamps).
+- The Docker image uses Debian's SQLite 3.46 with the single-connection guard; a base image with SQLite 3.51.3+ would allow a normal connection pool.
 
 ## 10. Sources
 
@@ -219,4 +278,11 @@ Manual checks done for each release: server started, every page loaded in headle
 - Mann-Kendall and Sen's slope for groundwater quality trends, including non-detect handling and α = 0.1 (PMC7096367).
 - SQLite concurrency: busy_timeout, WAL and the WAL-reset fix (oneuptime.com, 2026).
 - HTTP security headers reference: CSP, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, X-XSS-Protection deprecation (hidekazu-konishi.com).
+- Standard Webhooks specification and Svix "Webhook security 101" (signature format, timestamps, retries).
+- Hirsch & Slack (1984), *A nonparametric trend test for seasonal data with serial dependence*, USGS: serial correlation and Mann-Kendall.
+- Prometheus exposition format 0.0.4 and label-cardinality guidance.
+- SQLite WAL-reset bug: conditions and fixed versions (mjtsai.com, Aug 2026; sqlite.org release notes for 3.51.3).
+- ESP-IDF GPIO hold in deep sleep (`gpio_hold_en`, `gpio_deep_sleep_hold_en`); Arduino-ESP32 `WiFiClientSecure` and `analogReadMilliVolts`.
+- Arduino forum: A4988 carrier boards pull ENABLE low (driver on by default).
+- axe-core rules for heading order and colour contrast (Deque).
 - UI UX Pro Max guideline database (github.com/nextlevelbuilder/ui-ux-pro-max-skill) and the 21st MCP README (github.com/21st-dev/magic-mcp).

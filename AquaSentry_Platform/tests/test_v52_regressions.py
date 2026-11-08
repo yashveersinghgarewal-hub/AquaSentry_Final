@@ -20,6 +20,7 @@ import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 from starlette.requests import Request
 
 from app import main as app_main
@@ -147,7 +148,7 @@ class TestWriteProtection:
         with pytest.raises(Exception) as e:
             require_writer(_request("192.168.1.50"))
         assert getattr(e.value, "status_code", None) == 401
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException):
             require_writer(_request("192.168.1.50", {"X-API-Key": "wrong"}))
         require_writer(_request("192.168.1.50", {"X-API-Key": "s3cret-key"}))
         require_writer(_request("127.0.0.1"))     # the dashboard on this computer still works

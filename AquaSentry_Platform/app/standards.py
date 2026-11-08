@@ -18,7 +18,7 @@ before making regulatory declarations of drinking water potability.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Optional
 
 
 # ==============================================================================

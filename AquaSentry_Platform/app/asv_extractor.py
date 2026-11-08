@@ -14,7 +14,6 @@ from __future__ import annotations
 import csv
 import json
 import os
-import sys
 import argparse
 from typing import Dict, List, Tuple, Any, Optional
 
@@ -24,7 +23,7 @@ except ImportError:
     try:
         from app.neural_classifier import forward_pass, AquaNetV1, POTABILITY_LIMITS
     except ImportError:
-        from neural_classifier import forward_pass, AquaNetV1, POTABILITY_LIMITS
+        from neural_classifier import forward_pass
 
 
 def savitzky_golay_5pt(y: List[float]) -> List[float]:

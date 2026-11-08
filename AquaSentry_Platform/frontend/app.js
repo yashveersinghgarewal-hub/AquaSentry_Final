@@ -572,20 +572,21 @@
     trend: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
     offline: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/></svg>',
     reading: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19Z"/><path d="M12 10v4M12 17v.5"/></svg>',
+    battery: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3M6 10.5v3"/></svg>',
   };
   function renderWarnings(list) {
     const ul = $('warnList');
     if (!ul) return;
     if (list === null) { ul.innerHTML = `<li class="empty">${esc(t('fleet.empty'))}</li>`; return; }
     // field data first: hide demo/simulated alerts whenever a real node has something to say
-    const real = list.filter((a) => a.type === 'trend' || a.type === 'offline' || a.source_type === 'hardware');
+    const real = list.filter((a) => a.type === 'trend' || a.type === 'offline' || a.type === 'battery' || a.source_type === 'hardware');
     // one line per device and kind (newest wins); trends and silent devices before single readings
     const seen = new Set(), pick = [];
     (real.length ? real : list).slice().sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).forEach((a) => {
       const k = (a.type || 'reading') + '|' + (a.device_code || a.id);
       if (!seen.has(k)) { seen.add(k); pick.push(a); }
     });
-    const rank = { trend: 0, offline: 1 };
+    const rank = { trend: 0, offline: 1, battery: 3 };   // single unsafe readings rank 2
     const items = pick.sort((a, b) => (rank[a.type] ?? 2) - (rank[b.type] ?? 2)).slice(0, 6);
     if (!items.length) { ul.innerHTML = `<li class="empty">${esc(t('warn.none'))}</li>`; return; }
     ul.innerHTML = items.map((a) => {
@@ -618,7 +619,8 @@
   function deviceRow(d) {
     const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${fmtUgNum(d.latest.arsenic_ppb)} µg/L</span>` : '<span></span>';
     const count = d.reading_count === 1 ? t('fleet.count.one', { u: d.unsafe_count }) : t('fleet.count', { n: d.reading_count, u: d.unsafe_count });
-    const meta = [t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
+    const batt = d.latest && d.latest.battery_pct != null ? t('fleet.batt', { n: Math.round(d.latest.battery_pct) }) : '';
+    const meta = [t('fleet.st.' + d.status), seenText(d.minutes_since_seen), count, batt, d.firmware_version ? t('fleet.fw', { v: d.firmware_version }) : '']
       .filter(Boolean).join(', ');
     const sel = state.histDevice === d.device_code;
     const tr = d.trend && d.trend.direction === 'rising' ? `<span class="dv-trend up">${ICON_UP}${esc(t('trend.rising'))}</span>`

@@ -1,0 +1,7 @@
+# Lint rules that catch real bugs (undefined names, shadowing, unused variables, mutable defaults,
+# blind exception tests). Style is not enforced. FastAPI's Depends()/Query() defaults are allowed.
+target-version = "py310"
+extend-exclude = [".venv", "AquaSentry_Platform/frontend", "Neural_Network/v2_training", "AquaSentry_Platform/scripts"]
+
+[lint]
+select = ["E9", "F63", "F7", "F82", "F811", "F841", "B006", "B017", "B904"]

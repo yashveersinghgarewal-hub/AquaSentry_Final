@@ -15,7 +15,7 @@ Implements server-side policy enforcement:
 
 import re
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 
 class ChatIntent(str, Enum):
@@ -134,3 +134,61 @@ def format_grounded_context(latest_reading: Optional[Dict]) -> str:
         f"- Safe to Drink: {latest_reading.get('is_safe_to_drink', 'Unverified')}\n"
         f"- Precedence Notice: Method LOD is 20 µg/L. If concentration < 20 µg/L, it CANNOT be confirmed potable without lab testing.\n"
     )
+
+
+def format_fleet_context(devices) -> str:
+    """Per-device status and arsenic trend lines for the system prompt (hardware nodes first, max 10)."""
+    if not devices:
+        return ""
+    lines = ["\nFLEET CONTEXT (one line per sensor node):"]
+    for d in devices[:10]:
+        latest = d.get("latest") or {}
+        t = d.get("trend") or {}
+        bits = [f"- {d['device_code']}: {d.get('status', 'unknown')}"]
+        if latest:
+            bits.append(f"latest {latest.get('arsenic_ppb')} µg/L ({latest.get('classification')})")
+        if t.get("direction") in ("rising", "falling"):
+            bits.append(f"trend {t['direction']} ({t.get('message', '')})")
+        lines.append(", ".join(bits))
+    return "\n".join(lines) + "\n"
+
+
+_ASK_LIMIT = re.compile(r"\b(limit|limits|standard|standards|guideline|permissible|bis|is 10500|lod|detection)\b", re.I)
+_ASK_TREND = re.compile(r"\b(trend|rising|increas\w*|worse|getting|over time|falling|decreas\w*)\b", re.I)
+_ASK_FLEET = re.compile(r"\b(device|devices|node|nodes|offline|online|fleet|sensor|sensors)\b", re.I)
+_ASK_LATEST = re.compile(r"\b(latest|last|current|now|today|reading|result|safe|drink|my water)\b", re.I)
+
+
+def offline_answer(message: str, latest: Optional[Dict], devices) -> str:
+    """Grounded answers without an LLM, for a field laptop with no internet or no GEMINI_API_KEY.
+    Every number comes from the database or the standards module; nothing is generated."""
+    parts = []
+    if _ASK_LIMIT.search(message):
+        parts.append("**Limits:** arsenic must stay below **10 µg/L** in drinking water (India IS 10500:2012 "
+                     "Amendment 1, no relaxation; WHO guideline). This sensor detects arsenic from **20 µg/L**, so "
+                     "a result below that is *not detected*, not *proven safe*: only a laboratory test (ICP-MS or "
+                     "HG-AAS) can confirm water is under 10 µg/L.")
+    if _ASK_TREND.search(message):
+        moving = [d for d in (devices or []) if (d.get("trend") or {}).get("direction") in ("rising", "falling")]
+        if moving:
+            parts.append("**Trends:**\n" + "\n".join(f"- {d['device_code']}: {d['trend']['message']}" for d in moving))
+        else:
+            parts.append("**Trends:** no node shows a statistically clear rising or falling arsenic trend "
+                         "(Mann-Kendall test, p < 0.10, needs at least 6 readings).")
+    if _ASK_FLEET.search(message) and devices:
+        counts = {}
+        for d in devices:
+            counts[d.get("status", "unknown")] = counts.get(d.get("status", "unknown"), 0) + 1
+        summary = ", ".join(f"{n} {s}" for s, n in sorted(counts.items()))
+        quiet = [d["device_code"] for d in devices if d.get("status") == "offline"]
+        parts.append(f"**Nodes:** {len(devices)} ({summary})." + (f" Not reporting: {', '.join(quiet)}." if quiet else ""))
+    if _ASK_LATEST.search(message) or not parts:
+        if latest:
+            where = f" at **{latest.get('device_code')}**" if latest.get("device_code") else ""
+            demo = " This is demo / simulated data." if latest.get("source_type") != "hardware" else ""
+            parts.append(f"**Latest reading{where}:** {latest.get('arsenic_ppb')} µg/L, "
+                         f"{latest.get('analytical_status')} ({latest.get('regulatory_tier')}).{demo}")
+        else:
+            parts.append("**No readings yet.** Connect a node, load the demo data or import a CSV file.")
+    parts.append("_Offline answer from your own data. Add GEMINI_API_KEY in .env for free-form questions._")
+    return "\n\n".join(parts)

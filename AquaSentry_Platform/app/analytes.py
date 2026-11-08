@@ -12,7 +12,7 @@ cataloged as 'Planned', 'Experimental', or 'Requires Laboratory Confirmation' so
 and API never falsely claim that a single sensor detects every chemical species.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
 

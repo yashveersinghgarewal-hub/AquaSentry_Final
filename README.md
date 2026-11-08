@@ -1,5 +1,7 @@
 # AquaSentry — low-cost arsenic and water-safety monitor
 
+[![CI](https://github.com/yashveersinghgarewal-hub/AquaSentry_Final/actions/workflows/ci.yml/badge.svg)](https://github.com/yashveersinghgarewal-hub/AquaSentry_Final/actions/workflows/ci.yml)
+
 AquaSentry measures arsenic in drinking water with **anodic stripping voltammetry** on an **ESP32**, checks pH, conductivity, turbidity and temperature, and decides whether the water is **Safe, Caution, Unsafe or Hazardous** (WHO and Indian IS 10500 limits: arsenic 10 µg/L, no relaxation since the 2015 amendment). A small neural network, **AquaNet-V3**, runs both on the ESP32 and on the server; fixed safety rules run after it and can only make a verdict stricter.
 
 | Part | Folder | What it does |
@@ -9,6 +11,16 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 | Neural network | `Neural_Network/` | AquaNet-V1 (original), V2 and V3 (current) + training code in `v3_training/` |
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
+
+## What changed in v5.5
+
+- **Alerts you can trust:** webhooks are signed (Standard Webhooks HMAC-SHA256) and retried on failure; low-battery notices for battery-powered nodes.
+- **Monitoring:** `/api/metrics` in Prometheus format (readings, devices by status, alerts, webhook deliveries, request latency per route).
+- **Faster, more honest trends:** hourly readings are reduced to daily medians before the Mann-Kendall test (hourly values are correlated and overstate trends); 90 days of hourly data takes 3 ms instead of 570 ms, and results are cached.
+- **Chat works offline:** with no Gemini key or no internet, the assistant answers from your own readings, devices and trends.
+- **ESP32 (firmware 5.5.0), all optional:** HTTPS with certificate checking, a battery monitor, and a low-power mode that deep-sleeps between tests.
+- **Docker:** non-root, read-only container, database in a volume, health check; automatic protection against the SQLite WAL-reset bug on older SQLite builds.
+- **GitHub:** lint in CI, ESP32 builds with the optional features on, Dependabot, security policy, PR and issue templates.
 
 ## What changed in v5.4
 
@@ -46,7 +58,9 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 The first run creates a `.venv` folder and installs packages (needs internet). Full steps: **`WHATS_NEW_AND_HOW_TO_RUN.md`**.
 
-Run all tests: `python main.py --test` (185 tests: 22 neural toolkit + 163 platform).
+**Docker:** `docker compose up -d`, then open http://localhost:8000. Data is kept in the `aquasentry-data` volume; put `AQUASENTRY_API_KEY` and other settings in a `.env` file next to `docker-compose.yml`.
+
+Run all tests: `python main.py --test` (204 tests: 22 neural toolkit + 182 platform). Lint: `ruff check .`
 
 **With an ESP32:** start the server with **`Start AquaSentry for ESP32.bat`** (or `python main.py --serve --host 0.0.0.0 --port 8000`), then open `Firmware/esp32_firmware/esp32_firmware.ino` in the Arduino IDE, fill in Wi-Fi and server address, and upload. See `Firmware/README.md`.
 
@@ -66,7 +80,7 @@ When unzipped on any computer, this package contains everything organized into c
 AquaSentry_Universal/
 ├── setup_and_run.sh            # 1-Click launcher for macOS & Linux (auto venv + pip + server)
 ├── setup_and_run.bat           # 1-Click launcher for Windows (auto venv + pip + server)
-├── run_all_tests.sh            # 1-Click test runner for macOS & Linux (139 tests)
+├── run_all_tests.sh            # 1-Click test runner for macOS & Linux (204 tests)
 ├── run_all_tests.bat           # 1-Click test runner for Windows
 ├── main.py                     # Root universal command-line interface
 ├── requirements.txt            # Unified project dependencies
@@ -79,7 +93,7 @@ AquaSentry_Universal/
 │   ├── app/                    # FastAPI backend (WebSocket, PDF certs, alerts, WAL DB)
 │   ├── frontend/               # Interactive PWA dashboard with real-time UI & manifest
 │   ├── bridge/                 # ADS1115 / ESP32 serial bridge and microcontroller bindings
-│   ├── tests/                  # 117 automated API, safety, parity and scientific tests
+│   ├── tests/                  # 182 automated API, safety, parity, firmware and scientific tests
 │   ├── aquasentry.db           # Pre-configured SQLite database (WAL mode enabled)
 │   ├── main.py                 # Platform-specific runner
 │   └── run_tests.py            # Platform test runner with auto-venv detection
@@ -172,7 +186,7 @@ The root `main.py` provides immediate access to all subsystems:
 # 1. Start the interactive web dashboard and REST API
 python3 main.py --serve --port 8000
 
-# 2. Run the complete automated test suite (all 139 tests)
+# 2. Run the complete automated test suite (all 204 tests)
 python3 main.py --test
 
 # 3. Analyze raw ASV voltammetric scan CSV and classify water safety
@@ -192,7 +206,7 @@ python3 main.py --version
 
 ## 4. Running the Complete Test Suite
 
-You can run all 139 tests across the entire platform in a single command:
+You can run all 204 tests across the entire platform in a single command:
 ```bash
 ./run_all_tests.sh
 ```
@@ -203,7 +217,7 @@ You can run all 139 tests across the entire platform in a single command:
   * Multi-parameter WHO/BIS 10500 potability downgrades (pH, Turbidity, Conductivity).
   * Conservative precedence overrides for arsenic limits.
   * Numerical stability (softmax sum = 1.0, float64 scaling).
-* **117 Platform Integration Tests** ([`AquaSentry_Platform/run_tests.py`](AquaSentry_Platform/run_tests.py)):
+* **182 Platform Tests** ([`AquaSentry_Platform/run_tests.py`](AquaSentry_Platform/run_tests.py)):
   * REST API endpoints, health checks, reading ingestion, deduplication.
   * Signal processing (Savitzky-Golay filters, baseline tilt subtraction).
   * Chat policy prompt-injection filters & emergency toxicology gates.

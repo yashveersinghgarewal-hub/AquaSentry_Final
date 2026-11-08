@@ -23,7 +23,7 @@ How the weights were made (read this before quoting accuracy):
 from __future__ import annotations
 import math
 import time
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Tuple, Any
 
 
 # Standardization moments (empirical geochemical feature distribution)

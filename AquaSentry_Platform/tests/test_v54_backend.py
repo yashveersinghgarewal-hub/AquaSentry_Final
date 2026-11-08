@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 from starlette.requests import Request
 
 from app import main as app_main
@@ -93,7 +94,7 @@ def test_device_key_locks_the_device(client, monkeypatch):
     # the key also opens the door for a LAN device when a global key is configured
     monkeypatch.setenv("AQUASENTRY_API_KEY", "global-secret")
     app_main.require_writer(_req("192.168.1.9", {"X-API-Key": key}))
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException):
         app_main.require_writer(_req("192.168.1.9", {"X-API-Key": "aqs_not_a_key"}))
     monkeypatch.delenv("AQUASENTRY_API_KEY")
     assert client.delete("/api/admin/devices/KEYED-01/key").json()["status"] == "revoked"

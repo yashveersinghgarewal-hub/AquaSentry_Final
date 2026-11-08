@@ -2,6 +2,28 @@
 
 Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
 
+## v5.5 — signed alerts, metrics, low-power ESP32, Docker and GitHub readiness
+**Server (API 1.6.0)**
+- **Signed, retried alert webhooks** (`app/webhooks.py`): Standard Webhooks headers (`webhook-id`, `webhook-timestamp`, `webhook-signature: v1,<HMAC-SHA256>`) with `ALERT_WEBHOOK_SECRET` (`whsec_` base64 or plain text); network errors, 408/425/429 and 5xx retried after 1 s, 4 s, 16 s with the same id; other 4xx not retried; only http(s) URLs accepted (urllib would open `file://`). A `verify()` helper for receivers.
+- **`GET /api/metrics`** (Prometheus text format 0.0.4): readings by verdict and source, devices by status, alerts raised, webhook outcomes, trend-cache hits, live connections, uptime, build info, and HTTP request counts and latency histograms per **route template** (never raw paths). `METRICS_PUBLIC=0` restricts it.
+- **Trend analysis on daily medians** when a node reports more than once a day: serially correlated hourly values make Mann-Kendall see trends that are not there (Hirsch & Slack 1984, USGS); weekly medians beyond 400 days. 90 days of hourly readings: 570 ms → 3 ms. Results cached per device (key: reading count, newest id, day), so `/api/devices` no longer recomputes every trend.
+- **Grounded offline chat:** without `GEMINI_API_KEY`, or when Gemini fails (no internet, quota, retired model), the assistant answers from the database: latest reading with device, per-node trends, node status, limits. The LLM prompt also gets one status/trend line per node.
+- **Low-battery notices** (`LOW_BATTERY_PCT`, default 15) in `/api/alerts/recent` and battery level on device cards (EN/HI).
+- `X-Total-Count` on `GET /api/readings` (exposed via CORS) for paging; `X-Request-ID` sanitised to `[A-Za-z0-9._:-]`.
+- **SQLite WAL-reset bug guard:** on SQLite builds without the fix (< 3.51.3 except the 3.50.7 / 3.44.6 backports; Debian's 3.46 in the Docker image) the server keeps a single database connection, so two connections can never write or checkpoint at the same instant. `SQLITE_SINGLE_CONNECTION=1/0` overrides; `/api/health` reports it.
+
+**ESP32 firmware (5.5.0)** — new features are off by default and can be set as build flags
+- **HTTPS** with `WiFiClientSecure`: certificate chain and host name checked against `ROOT_CA_PEM`; with no certificate the node keeps readings in the buffer instead of sending unchecked, unless `ALLOW_INSECURE_TLS 1`. Telemetry task stack 12 → 16 KB for the TLS handshake.
+- **Battery monitor** (`PIN_BATTERY_ADC`, `BATTERY_DIVIDER`): factory-calibrated `analogReadMilliVolts`, resting Li-ion curve, read before the pump loads the cell, sent as `battery_pct` and shown on `/status.json`. The new record field sits in old struct padding, so buffered readings survive the update.
+- **Low-power mode** (`LOW_POWER_MODE 1`): deep sleep between tests; stays awake up to 90 s to upload the test and the backlog; never sleeps with the setup hotspot open; holds the A4988 EN pin high through sleep (`gpio_hold_en`, `gpio_deep_sleep_hold_en` on C3/S3) and parks the electrode at 0 mV; last result and wake count kept in RTC memory.
+- `platformio.ini` env `esp32dev-lowpower`; host checks compile with the features on; CI builds them for ESP32 and ESP32-C3.
+
+**Docker and GitHub**
+- Dockerfile: no compilers or curl, non-root user (uid 10001), runs on a read-only root filesystem, database and backups in the `/data` volume (seeded from the demo database on first start), Python health check. Compose: named volume, `no-new-privileges`, settings from `.env`. `.dockerignore` keeps `.git`, `.venv`, `Docs` and secrets out of the image.
+- CI: ruff lint step, `workflow_dispatch`, read-only token permissions, concurrency cancel. Dependabot (pip, GitHub Actions, Docker), `SECURITY.md`, PR template, bug-report template, CI badge.
+- **Quality:** ruff with bug-finding rules (`ruff.toml`), all findings fixed; axe-core WCAG 2.2 AA audit of all four pages in light and dark mode: 0 violations (heading order, contrast).
+- Tests: 204 (22 toolkit + 182 platform).
+
 ## v5.4 — backend hardening, live data, arsenic trend warnings
 - **Security:** security headers on every response and a Content-Security-Policy that allows only the pages' own inline scripts by SHA-256 hash; per-IP rate limits (429 + Retry-After); **per-device API keys** (`POST/DELETE /api/admin/devices/{code}/key`, stored as hashes, a keyed device must use its key); stricter input validation; request IDs and Server-Timing.
 - **Database:** per-connection SQLite `busy_timeout`, `foreign_keys`, `synchronous=FULL`; composite `(device_id, recorded_at)` index; online backups (`POST /api/admin/backup`); SQLite version and WAL-fix status in `/api/health`.

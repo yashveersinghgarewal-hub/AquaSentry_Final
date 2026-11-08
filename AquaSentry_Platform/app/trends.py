@@ -12,16 +12,46 @@ Choices, following common groundwater practice:
 - a trend is reported at p < 0.10 with a non-zero Sen's slope and at least 6 readings
   (4 is the mathematical minimum for p < 0.10; 6 gives a usable test)
 - the projection to the next limit is a straight-line estimate, labelled as such
+- when a node reports several times a day, the series is reduced to daily medians first: hourly
+  readings are serially correlated, which makes Mann-Kendall report trends that are not there
+  (Hirsch & Slack 1984, USGS). It also keeps the O(n^2) pair loops small (90 days -> 90 points)
 """
 from __future__ import annotations
 
 import math
 from collections import Counter
 from datetime import datetime
+from statistics import median
 from typing import Dict, List, Optional, Sequence, Tuple
 
 ALPHA = 0.10
 MIN_POINTS = 6
+MAX_POINTS = 400        # beyond this even daily medians are thinned to weekly medians
+
+
+def _bucket_medians(pts: List[Tuple[datetime, float]], seconds: float) -> List[Tuple[datetime, float]]:
+    """Median value per time bucket, stamped at the bucket's median time. pts must be sorted."""
+    out, cur, key = [], [], None
+    for t, v in pts:
+        k = int(t.timestamp() // seconds)
+        if key is not None and k != key:
+            out.append(cur)
+            cur = []
+        cur.append((t, v))
+        key = k
+    if cur:
+        out.append(cur)
+    return [(b[len(b) // 2][0], median(v for _, v in b)) for b in out]
+
+
+def reduce_series(pts: List[Tuple[datetime, float]]) -> Tuple[List[Tuple[datetime, float]], str]:
+    """Daily (or weekly) medians when there is more than one reading per day; raw readings otherwise."""
+    daily = _bucket_medians(pts, 86400.0)
+    if len(daily) == len(pts) or len(daily) < MIN_POINTS:
+        return pts, "none"
+    if len(daily) > MAX_POINTS:
+        return _bucket_medians(pts, 7 * 86400.0), "weekly median"
+    return daily, "daily median"
 
 
 def _norm_sf(z: float) -> float:
@@ -74,9 +104,12 @@ def _p_text(p: float) -> str:
 
 def analyse(points: List[Tuple[datetime, float]], lod: float, limits: Sequence[float] = (20.0, 150.0)) -> Dict:
     """points: (time, arsenic µg/L), any order. Returns a JSON-ready summary."""
-    pts = sorted(points, key=lambda p: p[0])
+    raw = sorted(points, key=lambda p: p[0])
+    # censor non-detects first, so a day's median is never pulled around by sub-LOD noise
+    pts, aggregation = reduce_series([(t, max(v, lod)) for t, v in raw])
     n = len(pts)
-    out: Dict = {"n": n, "method": "Mann-Kendall (tie-corrected) + Sen's slope", "alpha": ALPHA,
+    out: Dict = {"n": n, "readings": len(raw), "aggregation": aggregation,
+                 "method": "Mann-Kendall (tie-corrected) + Sen's slope", "alpha": ALPHA,
                  "non_detects_as": f"{lod:g} µg/L (sensor detection limit)"}
     if n < MIN_POINTS:
         out.update(direction="insufficient_data", significant=False,
@@ -84,7 +117,7 @@ def analyse(points: List[Tuple[datetime, float]], lod: float, limits: Sequence[f
         return out
     t0 = pts[0][0]
     days = [(t - t0).total_seconds() / 86400.0 for t, _ in pts]
-    vals = [max(v, lod) for _, v in pts]          # censor non-detects to one value
+    vals = [v for _, v in pts]
     mk = mann_kendall(vals)
     slope = sens_slope(days, vals) or 0.0
     significant = mk["p_value"] < ALPHA and abs(slope) > 1e-9
@@ -106,5 +139,6 @@ def analyse(points: List[Tuple[datetime, float]], lod: float, limits: Sequence[f
         out["message"] = f"Arsenic is falling by about {abs(slope) * 7:.1f} µg/L per week."
     else:
         out["message"] = f"No clear trend over {days[-1]:.0f} days."
-    out["evidence"] = f"Mann-Kendall {_p_text(mk['p_value'])}, n = {n}, {days[-1]:.0f} days"
+    per = f" ({aggregation}s of {len(raw)} readings)" if aggregation != "none" else ""
+    out["evidence"] = f"Mann-Kendall {_p_text(mk['p_value'])}, n = {n}{per}, {days[-1]:.0f} days"
     return out

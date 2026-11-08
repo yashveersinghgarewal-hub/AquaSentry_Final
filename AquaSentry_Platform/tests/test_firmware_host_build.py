@@ -102,3 +102,41 @@ def test_pins_are_safe_on_each_chip():
         if name == "esp32":
             outs = [v for k, v in pins.items() if k != "PIN_BUBBLE_SENSE"]
             assert all(v < 34 for v in outs), "GPIO34-39 are input-only on the ESP32"
+
+
+@pytest.mark.skipif(GXX is None, reason="no C++ compiler")
+@pytest.mark.parametrize("target", sorted(TARGETS))
+def test_sketch_type_checks_with_optional_features_on(target):
+    """HTTPS-without-CA, battery monitor and low-power deep sleep, all switched on as build flags."""
+    flags = ["-DLOW_POWER_MODE=1", "-DPIN_BATTERY_ADC=35", "-DALLOW_INSECURE_TLS=1"]
+    cmd = [GXX, "-std=gnu++17", "-Wall", "-Wextra", "-Wformat=2", "-Werror", "-fsyntax-only", "-x", "c++",
+           *TARGETS[target], *flags, "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), SKETCH]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr[-3000:]
+
+
+@pytest.mark.skipif(GXX is None, reason="no C++ compiler")
+def test_offline_record_size_unchanged_by_battery_field():
+    """battery_pct sits in what used to be padding, so readings already buffered on LittleFS by
+    older firmware stay readable after an update (the buffer checks record_size)."""
+    body = re.search(r"typedef struct \{\n(\s+float arsenic_mg_l;[\s\S]*?)\} sensor_reading_t;", SRC).group(1)
+    old = "\n".join(l for l in body.splitlines() if "battery_pct" not in l)
+    src = ("#include <cstdint>\ntypedef struct {\n%s} new_t;\ntypedef struct {\n%s} old_t;\n"
+           "static_assert(sizeof(new_t) == sizeof(old_t), \"record size changed\");\nint main(){return 0;}\n") % (body, old)
+    work = tempfile.mkdtemp()
+    cpp = os.path.join(work, "size.cpp")
+    open(cpp, "w").write(src)
+    out = subprocess.run([GXX, "-std=c++17", "-fsyntax-only", cpp], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+
+
+def test_battery_curve_is_monotonic_and_https_is_checked():
+    mv = [int(x) for x in re.search(r"MV\[12\]\s*=\s*\{([^}]*)\}", SRC).group(1).split(",")]
+    pct = [int(x) for x in re.search(r"PCT\[12\]\s*=\s*\{([^}]*)\}", SRC).group(1).split(",")]
+    assert mv == sorted(mv) and pct == sorted(pct) and pct[0] == 0 and pct[-1] == 100 and mv[-1] == 4200
+    # https never silently skips certificate checks
+    assert "setCACert(ROOT_CA_PEM)" in SRC and re.search(r"else if \(ALLOW_INSECURE_TLS\)\s*\{\s*secure\.setInsecure\(\)", SRC)
+    assert re.search(r"#ifndef ALLOW_INSECURE_TLS\n#define ALLOW_INSECURE_TLS 0", SRC)
+    # deep sleep keeps the stepper driver off
+    sleep_fn = re.search(r"void enter_deep_sleep[\s\S]*?\n\}", SRC).group(0)
+    assert "digitalWrite(PIN_STEPPER_ENABLE, HIGH)" in sleep_fn and "gpio_hold_en" in sleep_fn

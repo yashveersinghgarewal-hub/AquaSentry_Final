@@ -21,7 +21,7 @@ import uuid
 import asyncio
 import ipaddress
 import threading
-import urllib.request
+from collections import OrderedDict
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 
@@ -30,7 +30,7 @@ load_dotenv()
 
 import csv
 import time as _time
-from fastapi import FastAPI, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, Response, Request
+from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
@@ -39,8 +39,8 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import (engine, get_db, Base, ensure_sqlite_columns, compact_database, ensure_indexes,
-                       sqlite_info, backup_database, DATABASE_URL)
-from . import security
+                       sqlite_info, backup_database)
+from . import security, webhooks, metrics
 from .events import HUB
 from .trends import analyse as analyse_trend
 from .classification import classify_arsenic_neural
@@ -53,24 +53,22 @@ from .standards import (
     METHOD_NAME,
     CALIBRATION_SLOPE,
     CALIBRATION_INTERCEPT,
-    mg_l_to_ug_l,
-    ug_l_to_mg_l,
 )
 from .neural_classifier import forward_pass, NODES_COUNT, SYNAPSES_COUNT
 from .analytes import (
     ANALYTE_REGISTRY,
     get_analyte_profile,
     list_supported_analytes,
-    evaluate_analyte_concentration,
 )
 from .signal_processing import (
     process_voltammetry_trace,
     generate_synthetic_asv_trace,
 )
 from .chat_policy import (
-    ChatIntent,
     classify_user_prompt,
     format_grounded_context,
+    format_fleet_context,
+    offline_answer,
 )
 
 # Create tables on startup and apply non-destructive column migrations
@@ -82,10 +80,10 @@ START_TIME = _time.time()
 app = FastAPI(
     title="AquaSentry Water Safety & Surveillance API",
     description="Scientific backend and edge neural classifier for autonomous water quality monitoring.",
-    version="1.5.0",
+    version="1.6.0",
 )
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
 
 
 def active_model_name() -> str:
@@ -189,6 +187,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
+    expose_headers=["X-Total-Count", "X-Request-ID"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(security.RateLimitMiddleware)
@@ -199,14 +198,24 @@ app.add_middleware(security.SecurityHeadersMiddleware,
                    csp=security.build_csp(security.inline_script_hashes(_FRONTEND_FOR_CSP, _PAGES)))
 
 
+_SAFE_RID = re.compile(r"[^A-Za-z0-9._:-]")
+
+
 @app.middleware("http")
 async def request_id_and_timing(request: Request, call_next):
-    """Every response carries X-Request-ID (echoed if the client sent one) and Server-Timing."""
-    rid = (request.headers.get("x-request-id") or uuid.uuid4().hex[:16])[:64]
+    """Every response carries X-Request-ID (echoed if the client sent a sane one) and Server-Timing,
+    and is counted in /api/metrics under its route template."""
+    rid = _SAFE_RID.sub("", request.headers.get("x-request-id") or "")[:64] or uuid.uuid4().hex[:16]
     t0 = _time.perf_counter()
     response = await call_next(request)
+    dur = _time.perf_counter() - t0
     response.headers["X-Request-ID"] = rid
-    response.headers["Server-Timing"] = f"app;dur={(_time.perf_counter() - t0) * 1000:.1f}"
+    response.headers["Server-Timing"] = f"app;dur={dur * 1000:.1f}"
+    route = request.scope.get("route")
+    path = getattr(route, "path", None)
+    if path is None:      # static files and 404s: one bucket, never the raw path (unbounded series)
+        path = "/api/(unmatched)" if request.url.path.startswith("/api/") else "(static)"
+    metrics.REQUESTS.observe(request.method, path, response.status_code, dur)
     return response
 
 
@@ -241,6 +250,8 @@ def health_check(db: Session = Depends(get_db)):
         "app_version": APP_VERSION,
         "uptime_s": round(_time.time() - START_TIME, 1),
         "live_subscribers": HUB.subscriber_count,
+        "alert_webhook": ("signed" if os.getenv("ALERT_WEBHOOK_SECRET") else "unsigned") if os.getenv("ALERT_WEBHOOK_URL") else "off",
+        "webhook_deliveries": dict(webhooks.STATS),
         **sqlite_info(),
         "ai_chatbot_configured": client is not None,
         "analytes_cataloged": len(ANALYTE_REGISTRY),
@@ -270,13 +281,7 @@ RECENT_EMERGENCY_ALERTS: List[Dict[str, Any]] = []
 _ALERT_LOCK = threading.Lock()
 
 
-def _post_webhook(url: str, alert: Dict[str, Any]):
-    try:
-        req = urllib.request.Request(url, data=json.dumps(alert).encode("utf-8"),
-                                     headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=5.0).close()
-    except Exception as e:
-        print(f"Warning: Webhook dispatch error: {e}")
+ALERTS_RAISED = {"WARNING": 0, "CRITICAL": 0}
 
 
 def build_alert(classification: str, as_ppb: float, **extra) -> Optional[Dict[str, Any]]:
@@ -315,10 +320,11 @@ def dispatch_emergency_alert(data: Dict[str, Any]):
     with _ALERT_LOCK:
         RECENT_EMERGENCY_ALERTS.append(alert)
         del RECENT_EMERGENCY_ALERTS[:-50]
+        ALERTS_RAISED[alert["level"]] = ALERTS_RAISED.get(alert["level"], 0) + 1
     webhook_url = os.getenv("ALERT_WEBHOOK_URL")
     if webhook_url:
-        # Never block the ESP32's upload on a slow webhook.
-        threading.Thread(target=_post_webhook, args=(webhook_url, alert), daemon=True).start()
+        # Signed (ALERT_WEBHOOK_SECRET), retried, and on a background thread: never blocks the ESP32's upload.
+        webhooks.deliver_in_background(webhook_url, alert)
     return alert
 
 
@@ -441,15 +447,15 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
     else:
         as_status = "Hazardous (above 150 µg/L)"
 
-    def status(val, ok):
+    def limit_status(val, ok):
         return "Not measured" if val is None else ("Within limit" if ok(val) else "Outside limit")
 
     chem_data = [
         ["Parameter", "Measured value", "Limit used", "Status"],
         ["Total arsenic (As)", f"{as_ug_l:.1f} µg/L ({as_mg_l:.4f} mg/L)", "WHO 10 µg/L; IS 10500 10 µg/L (no relaxation)", as_status],
-        ["pH", _fmt_or_missing(ph_val, ".2f"), "6.5 - 8.5 (BIS)", status(ph_val, lambda v: 6.5 <= v <= 8.5)],
-        ["Turbidity", _fmt_or_missing(turb_val, ".2f", "NTU"), "5 NTU (BIS permissible)", status(turb_val, lambda v: v <= 5.0)],
-        ["Conductivity", _fmt_or_missing(ec_val, ".0f", "µS/cm"), "1500 µS/cm (AquaSentry screening)", status(ec_val, lambda v: v <= 1500)],
+        ["pH", _fmt_or_missing(ph_val, ".2f"), "6.5 - 8.5 (BIS)", limit_status(ph_val, lambda v: 6.5 <= v <= 8.5)],
+        ["Turbidity", _fmt_or_missing(turb_val, ".2f", "NTU"), "5 NTU (BIS permissible)", limit_status(turb_val, lambda v: v <= 5.0)],
+        ["Conductivity", _fmt_or_missing(ec_val, ".0f", "µS/cm"), "1500 µS/cm (AquaSentry screening)", limit_status(ec_val, lambda v: v <= 1500)],
         ["Temperature", _fmt_or_missing(temp_val, ".1f", "°C"), "No health limit", "Recorded" if temp_val is not None else "Not measured"],
     ]
     chem_data = [[Paragraph(str(v), head_style if i == 0 else cell_style) for v in row] for i, row in enumerate(chem_data)]
@@ -579,7 +585,7 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
             source_type=payload.source_type or "simulated",
         )
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     device = _get_or_create_device(db, payload.device_code, payload.firmware_version)
     is_sim = payload.source_type != "hardware"
@@ -640,6 +646,7 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
 
 @app.get("/api/readings", response_model=List[schemas.ReadingOut], tags=["Readings"])
 def list_readings(
+    response: Response,
     device_code: Optional[str] = Query(None, description="Filter by device code"),
     classification: Optional[str] = Query(None, description="Filter by classification tier"),
     source_type: Optional[str] = Query(None, description="Filter by source_type (simulated | hardware | manual_import)"),
@@ -648,6 +655,7 @@ def list_readings(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
+    """Newest first. The total number of matching readings is in the X-Total-Count header, for paging."""
     q = db.query(models.Reading)
     if device_code:
         q = q.join(models.Device).filter(models.Device.device_code == device_code)
@@ -658,6 +666,7 @@ def list_readings(
     if is_simulated is not None:
         q = q.filter(models.Reading.is_simulated == is_simulated)
 
+    response.headers["X-Total-Count"] = str(q.order_by(None).count())
     q = q.order_by(models.Reading.recorded_at.desc()).offset(offset).limit(limit)
     return q.all()
 
@@ -690,6 +699,8 @@ def reading_history(
             for r, code in reversed(rows)]
 
 
+LOW_BATTERY_PCT = float(os.getenv("LOW_BATTERY_PCT", "15"))
+
 # Hardware nodes test once an hour (SAMPLE_INTERVAL_MS in the firmware); a full test with re-scans takes up to ~11 min.
 DEVICE_EXPECTED_INTERVAL_MIN = float(os.getenv("DEVICE_EXPECTED_INTERVAL_MIN", "60"))
 
@@ -717,13 +728,38 @@ def _device_status(d: "models.Device", latest) -> tuple:
     return st, mins, hardware, seen
 
 
+# Trend results keyed by everything that can change them: a new, edited or deleted reading changes the
+# count or the newest id, and the 90-day window moves on once a day. Small LRU, thread-safe.
+_TREND_CACHE: "OrderedDict[tuple, dict]" = OrderedDict()
+_TREND_LOCK = threading.Lock()
+TREND_STATS = {"hits": 0, "misses": 0}
+
+
+def device_trend_cached(db: Session, device_id: int, days: float = 90) -> dict:
+    n, max_id = (db.query(func.count(models.Reading.id), func.max(models.Reading.id))
+                 .filter(models.Reading.device_id == device_id).one())
+    key = (device_id, days, n, max_id, now_utc().date())
+    with _TREND_LOCK:
+        if key in _TREND_CACHE:
+            _TREND_CACHE.move_to_end(key)
+            TREND_STATS["hits"] += 1
+            return _TREND_CACHE[key]
+    t = analyse_trend(_device_points(db, device_id, days), lod=LOD_UG_L)
+    with _TREND_LOCK:
+        TREND_STATS["misses"] += 1
+        _TREND_CACHE[key] = t
+        while len(_TREND_CACHE) > 256:
+            _TREND_CACHE.popitem(last=False)
+    return t
+
+
 def _device_out(db: Session, d: "models.Device", counts: dict, unsafe: dict, with_trend: bool = True) -> schemas.DeviceStatusOut:
     latest = (db.query(models.Reading).filter(models.Reading.device_id == d.id)
               .order_by(models.Reading.recorded_at.desc()).first())
     st, mins, hardware, seen = _device_status(d, latest)
     trend = None
     if with_trend and hardware:
-        t = analyse_trend(_device_points(db, d.id, 90), lod=LOD_UG_L)
+        t = device_trend_cached(db, d.id, 90)
         trend = schemas.TrendSummary(direction=t["direction"], significant=t.get("significant", False),
                                      sen_slope_ug_per_week=t.get("sen_slope_ug_per_week"),
                                      p_value=(t.get("mann_kendall") or {}).get("p_value"),
@@ -736,7 +772,8 @@ def _device_out(db: Session, d: "models.Device", counts: dict, unsafe: dict, wit
         reading_count=int(counts.get(d.id, 0)), unsafe_count=int(unsafe.get(d.id, 0)), is_hardware=hardware,
         has_device_key=bool(d.api_key_hash), trend=trend,
         latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
-                                       recorded_at=_utc(latest.recorded_at)) if latest else None,
+                                       recorded_at=_utc(latest.recorded_at),
+                                       battery_pct=latest.battery_pct) if latest else None,
     )
 
 
@@ -788,7 +825,7 @@ def device_trend(device_code: str, days: float = Query(90, gt=1, le=3650), db: S
     """Is arsenic at this source rising? Mann-Kendall trend test (tie-corrected, non-detects set to the
     detection limit) with Sen's slope, plus a straight-line projection to the next limit."""
     d = _device_or_404(db, device_code)
-    return {"device_code": d.device_code, "days": days, **analyse_trend(_device_points(db, d.id, days), lod=LOD_UG_L)}
+    return {"device_code": d.device_code, "days": days, **device_trend_cached(db, d.id, days)}
 
 
 @app.post("/api/admin/devices/{device_code}/key", tags=["Admin"], dependencies=[Depends(require_admin)])
@@ -844,6 +881,43 @@ async def live_events(request: Request, max_events: int = Query(0, ge=0, le=1000
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@app.get("/api/metrics", tags=["Meta"], response_class=Response)
+def prometheus_metrics(request: Request, db: Session = Depends(get_db)):
+    """Prometheus text format: readings by verdict and source, devices by status, alerts, webhook
+    deliveries, live connections, trend-cache efficiency, and per-route request counts and latency.
+    Set METRICS_PUBLIC=0 to restrict it to this computer and holders of AQUASENTRY_API_KEY."""
+    if os.getenv("METRICS_PUBLIC", "1") == "0" and not (_is_loopback(request) or _key_ok(request)):
+        raise HTTPException(status_code=403, detail="Metrics are restricted (METRICS_PUBLIC=0).")
+    g = []
+    for cls, src, n in (db.query(models.Reading.classification, models.Reading.source_type, func.count(models.Reading.id))
+                        .group_by(models.Reading.classification, models.Reading.source_type).all()):
+        g.append(("aquasentry_readings", "gauge", "Stored readings by verdict and source.",
+                  {"classification": cls or "unknown", "source_type": src or "unknown"}, n))
+    if not g:
+        g.append(("aquasentry_readings", "gauge", "Stored readings by verdict and source.",
+                  {"classification": "none", "source_type": "none"}, 0))
+    by_status = {"online": 0, "late": 0, "offline": 0, "demo": 0}
+    for d in db.query(models.Device).all():
+        latest = (db.query(models.Reading.source_type).filter(models.Reading.device_id == d.id)
+                  .order_by(models.Reading.recorded_at.desc()).first())
+        st = _device_status(d, latest)[0]
+        by_status[st] = by_status.get(st, 0) + 1
+    for st, n in by_status.items():
+        g.append(("aquasentry_devices", "gauge", "Sensor nodes by reporting status.", {"status": st}, n))
+    with _ALERT_LOCK:
+        raised = dict(ALERTS_RAISED)
+    for level, n in raised.items():
+        g.append(("aquasentry_alerts_raised_total", "counter", "Unsafe / Hazardous alerts raised since start.", {"level": level}, n))
+    for outcome, n in webhooks.STATS.items():
+        g.append(("aquasentry_webhook_deliveries_total", "counter", "Alert webhook attempts by outcome.", {"outcome": outcome}, n))
+    for k, n in TREND_STATS.items():
+        g.append(("aquasentry_trend_cache_total", "counter", "Trend cache lookups.", {"result": k}, n))
+    g.append(("aquasentry_live_subscribers", "gauge", "Open Server-Sent Events connections.", {}, HUB.subscriber_count))
+    g.append(("aquasentry_uptime_seconds", "gauge", "Seconds since the server started.", {}, round(_time.time() - START_TIME, 1)))
+    g.append(("aquasentry_build_info", "gauge", "Version information.", {"version": APP_VERSION, "model": active_model_name()}, 1))
+    return Response(metrics.render(g), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -1067,7 +1141,7 @@ def process_voltammetry(payload: schemas.VoltammetryProcessRequest):
             filter_mode=payload.filter_mode or "savitzky_golay",
         )
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     peak_out = None
     if res.peak:
@@ -1623,21 +1697,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
     if preformatted:
         return schemas.ChatResponse(reply=preformatted, intent=intent.value, grounded=False)
 
-    if not client:
-        return schemas.ChatResponse(
-            reply=(
-                "⚠️ **AquaSentry AI Assistant (Offline Mode):**\n\n"
-                "The live Gemini AI model is currently not configured. To activate the AI Assistant, "
-                "please obtain a free API key from Google AI Studio and configure `GEMINI_API_KEY` "
-                "in your `.env` file.\n\n"
-                "*All dashboard sensors, the AquaNet-V1 neural network visualizer, and ASV simulations "
-                "continue to operate completely offline in your browser!*"
-            ),
-            intent="in_scope",
-            grounded=False,
-        )
-
-    # 2. Retrieve Latest Reading from Database for Grounding
+    # 2. Ground every answer in the database: the latest reading and each node's status and trend
     latest_rec = db.query(models.Reading).order_by(models.Reading.recorded_at.desc()).first()
     latest_dict = None
     if latest_rec:
@@ -1647,11 +1707,20 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
             "analytical_status": latest_rec.analytical_status,
             "regulatory_tier": latest_rec.regulatory_tier,
             "source_type": latest_rec.source_type,
-            "recorded_at": latest_rec.recorded_at.isoformat() if latest_rec.recorded_at else "Just now",
+            "recorded_at": _utc(latest_rec.recorded_at).isoformat() if latest_rec.recorded_at else "Just now",
             "is_safe_to_drink": latest_rec.is_safe_to_drink,
+            "device_code": latest_rec.device.device_code if latest_rec.device is not None else None,
         }
+    counts, unsafe = _counts(db)
+    fleet = [_device_out(db, d, counts, unsafe).model_dump(mode="json") for d in db.query(models.Device).all()]
+    fleet.sort(key=lambda d: (not d["is_hardware"], d["device_code"]))
 
-    grounded_context = format_grounded_context(latest_dict)
+    if not client:
+        # No LLM (no key, or a field laptop without internet): answer from the data with fixed wording.
+        return schemas.ChatResponse(reply=offline_answer(request.message, latest_dict, fleet),
+                                    intent="in_scope", grounded=True)
+
+    grounded_context = format_grounded_context(latest_dict) + format_fleet_context(fleet)
     dynamic_prompt = BASE_SYSTEM_PROMPT + "\n" + grounded_context
 
     try:
@@ -1665,20 +1734,17 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
         )
         return schemas.ChatResponse(reply=response.text or "(no answer returned)", intent="in_scope", grounded=True)
     except Exception as e:
+        # No internet, quota, or a retired model: still answer from the data instead of only apologising.
         error_str = str(e)
-        if "503" in error_str or "high demand" in error_str:
-            return schemas.ChatResponse(
-                reply="⚠️ *Notice:* Google AI servers are temporarily experiencing high global demand. Please try your question again in a minute.",
-                intent="in_scope",
-                grounded=False,
-            )
         print(f"[chat] Gemini error: {error_str}")
-        hint = " Check GEMINI_API_KEY and GEMINI_MODEL in .env." if any(k in error_str for k in ("401", "403", "404", "API key", "not found")) else ""
-        return schemas.ChatResponse(
-            reply=f"⚠️ *AI Notice:* The assistant could not answer right now.{hint}",
-            intent="in_scope",
-            grounded=False,
-        )
+        if "503" in error_str or "high demand" in error_str:
+            why = "Google's AI servers are busy right now, so this is the offline answer."
+        elif any(k in error_str for k in ("401", "403", "404", "API key", "not found")):
+            why = "The AI assistant could not answer (check GEMINI_API_KEY and GEMINI_MODEL in .env), so this is the offline answer."
+        else:
+            why = "The AI assistant could not be reached, so this is the offline answer."
+        return schemas.ChatResponse(reply=f"⚠️ *{why}*\n\n" + offline_answer(request.message, latest_dict, fleet),
+                                    intent="in_scope", grounded=True)
 
 
 # ===========================================================================
@@ -1825,6 +1891,11 @@ def get_recent_alerts(limit: int = Query(20, ge=1, le=100), db: Session = Depend
             alerts.append({"id": f"trend-{d.device_code}", "type": "trend", "level": "NOTICE", "device_code": d.device_code,
                            "timestamp": now_utc().isoformat(), "message": f"{d.device_code}: {info.trend.message}",
                            "action_required": "Test this source more often and arrange a laboratory test."})
+        batt = info.latest.battery_pct if info.latest else None
+        if batt is not None and batt <= LOW_BATTERY_PCT:
+            alerts.append({"id": f"battery-{d.device_code}", "type": "battery", "level": "NOTICE", "device_code": d.device_code,
+                           "timestamp": now_utc().isoformat(), "message": f"{d.device_code} battery is at {batt:.0f}%.",
+                           "action_required": "Charge or replace the battery before the node stops testing."})
         if info.status == "offline":
             hrs = (info.minutes_since_seen or 0) / 60
             alerts.append({"id": f"offline-{d.device_code}", "type": "offline", "level": "NOTICE", "device_code": d.device_code,

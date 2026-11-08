@@ -52,7 +52,7 @@ You do not have to edit the sketch for Wi-Fi at all. If no Wi-Fi is set, or the 
 On your own network the same page is available at `http://<device-ip>/setup`, but only after you change `OTA_PASS`, and it asks for that login.
 
 ## Status page
-`http://<device-ip>/` shows firmware, Wi-Fi signal, server address, readings waiting to upload and the last result. **`/status.json`** gives the same as JSON (device code, firmware version, board, uptime, RSSI, buffered and dropped readings, last arsenic value and verdict, free heap).
+`http://<device-ip>/` shows firmware, Wi-Fi signal, server address, readings waiting to upload and the last result. **`/status.json`** gives the same as JSON (device code, firmware version, board, uptime, RSSI, buffered and dropped readings, last arsenic value and verdict, free heap, whether the server address is https, battery percent and millivolts, low-power mode and the number of wake-ups).
 
 ## Offline buffer
 Readings that cannot be uploaded are kept in a fixed-size ring file on **LittleFS** (`/offline.bin`, 1,000 readings, about six weeks of hourly tests). The older firmware kept 500 in NVS, but NVS is meant for small settings, the default NVS partition is shared with Wi-Fi, and it filled up after roughly a hundred readings without any error. LittleFS uses the `spiffs` partition of the default partition scheme and is formatted automatically the first time. If it cannot be mounted the board falls back to a 24-reading RAM buffer and says so.
@@ -66,7 +66,7 @@ Allow Python through Windows Firewall on **Private** networks when asked. The ne
 
 ## What the firmware sends
 `POST /api/readings` with JSON in the format the server expects:
-`{"device_code":"TANK-001","arsenic_concentration_mg_l":0.0371,"source_type":"hardware","source_label":"ESP32 node","idempotency_key":"TANK-001-42","firmware_version":"5.3.0","recorded_at":"2026-11-08T04:00:12Z", ...}`.
+`{"device_code":"TANK-001","arsenic_concentration_mg_l":0.0371,"source_type":"hardware","source_label":"ESP32 node","idempotency_key":"TANK-001-42","firmware_version":"5.5.0","recorded_at":"2026-11-08T04:00:12Z", ...}`.
 pH, conductivity, turbidity and temperature are included **only** when you fit those sensors. Write the code in `read_ph()`, `read_conductivity()`, `read_turbidity()` and `read_temperature()`; until then they return NAN and are not sent. The idempotency key stops a reading that is re-sent from the offline buffer from being stored twice.
 
 Once Wi-Fi connects the board sets its clock by NTP, and each reading carries `"recorded_at"` (UTC), so readings buffered while offline keep the time they were taken. If the server sets `AQUASENTRY_API_KEY`, put the same value in `DEVICE_API_KEY`; the board sends it as the `X-API-Key` header. A reading the server rejects for good (any 4xx except 408/429, e.g. bad data or a wrong key) is logged and dropped instead of blocking the offline queue forever.
@@ -95,6 +95,17 @@ This regenerates `aquanet_v3.c/.h` here **and** updates the server and dashboard
 | `[HTTP] POST failed (422)` | Server rejected the data: the server and firmware versions don't match |
 | `[SAFETY] ABORTING ASV` | No water detected in the sample chamber |
 | `[ASV] Too few points recorded` | DAC/ADC wiring problem (check I2C on GPIO 21/22) |
+
+## Optional features (all off by default)
+Set them near the top of the sketch, or as build flags (PlatformIO: the `esp32dev-lowpower` environment, or `build_flags = -DLOW_POWER_MODE=1 -DPIN_BATTERY_ADC=35`).
+
+| Feature | Setting | What it does |
+| --- | --- | --- |
+| **HTTPS** | `https://...` server address + `ROOT_CA_PEM` | Uploads over TLS and checks the server certificate and host name. Without a certificate the node does **not** send (readings wait in the offline buffer) unless `ALLOW_INSECURE_TLS 1`, which encrypts but cannot tell the real server from an impostor. |
+| **Battery monitor** | `PIN_BATTERY_ADC`, `BATTERY_DIVIDER` | Reads the cell through a resistor divider (two equal resistors, `BATTERY_DIVIDER 2.0`) on an ADC1 pin: 35 on ESP32, 1 on S3, 0 on C3. Sends `battery_pct` with every reading (resting Li-ion curve, read before the pump starts) and shows it on `/status.json`. |
+| **Low-power mode** | `LOW_POWER_MODE 1` | Deep-sleeps between tests (chip about 10 µA). After a test it stays awake up to 90 s (`LOW_POWER_AWAKE_MS`) to upload it and the offline backlog, then sleeps for the rest of the hour. Pages and OTA work only while it is awake; it never sleeps while the setup hotspot is open. **Fit a 10 kΩ pull-up from the A4988 EN pin to 3.3 V**: Pololu-style boards pull EN low (motor ON) and the pin is otherwise floating during sleep. The firmware also holds EN high through sleep (`gpio_hold_en`, plus `gpio_deep_sleep_hold_en` on C3/S3). |
+
+For HTTPS the `ROOT_CA_PEM` is the certificate of the authority that signed the server's certificate (for Let's Encrypt, *ISRG Root X1*), pasted as a C string with `\n` line endings. The telemetry task has 16 KB of stack for the TLS handshake.
 
 ## Over-The-Air (OTA) Updates
 Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. OTA is **disabled while `OTA_PASS` is still `change-me`** (or shorter than 8 characters), so nobody can flash the board with the default login. Pick a long password, then re-flash over USB once.

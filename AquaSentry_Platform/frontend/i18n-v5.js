@@ -395,6 +395,7 @@
     'fleet.nohw': 'No ESP32 has sent a reading yet.',
     'fleet.demo': 'Demo and imported data ({n} sources)',
     'fleet.fw': 'firmware {v}',
+    'fleet.batt': 'battery {n}%',
     'hist.empty': 'No readings in this period yet.',
     'hist.desc': '{n} readings from {a} to {b}. Highest: {max} µg/L.',
     'hist.local': 'Readings taken in this browser. Start the server to see every device.',
@@ -407,6 +408,7 @@
     'warn.type.reading': 'Unsafe reading',
     'warn.type.trend': 'Rising arsenic',
     'warn.type.offline': 'Device silent',
+    'warn.type.battery': 'Low battery',
     'trend.rising': 'Rising',
     'trend.falling': 'Falling',
   });
@@ -443,6 +445,7 @@
     'fleet.nohw': 'अभी तक किसी ESP32 ने रीडिंग नहीं भेजी।',
     'fleet.demo': 'डेमो और आयात किया गया डेटा ({n} स्रोत)',
     'fleet.fw': 'फ़र्मवेयर {v}',
+    'fleet.batt': 'बैटरी {n}%',
     'hist.empty': 'इस अवधि में अभी कोई रीडिंग नहीं।',
     'hist.desc': '{a} से {b} तक {n} रीडिंग। सबसे ज़्यादा: {max} µg/L।',
     'hist.local': 'इस ब्राउज़र में ली गई रीडिंग। हर उपकरण देखने के लिए सर्वर चालू करें।',
@@ -455,6 +458,7 @@
     'warn.type.reading': 'असुरक्षित रीडिंग',
     'warn.type.trend': 'आर्सेनिक बढ़ रहा है',
     'warn.type.offline': 'उपकरण चुप है',
+    'warn.type.battery': 'बैटरी कम है',
     'trend.rising': 'बढ़ रहा',
     'trend.falling': 'घट रहा',
   });

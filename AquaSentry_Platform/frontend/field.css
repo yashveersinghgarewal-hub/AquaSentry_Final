@@ -21,7 +21,7 @@
   --line: #27424C; --line-strong: #3A5A65;
   --ink: #E4EDEE; --ink-2: #A9BDC1; --ink-3: #7F969C;
   --primary: #7CB8DE; --primary-2: #7CB8DE; --violet: #9DB7E8; --on-primary: #0E1C22;
-  --safe: #62BE8A; --caution: #E8AE45; --caution-fill: #E8AE45; --unsafe: #F07364; --haz: #E0697B;
+  --safe: #6FC896; --caution: #EDB858; --caution-fill: #E8AE45; --unsafe: #FF8E80; --haz: #F59AA7;
   --paint-safe: #2E7D50; --paint-caution: #8A5C0F; --paint-unsafe: #B23A2E; --paint-haz: #74182A; --paint-none: #1F3A45; --paint-clear: #2A5C74;
   --pos: #7CB8DE; --neg: #E0897B;
   --grad: var(--primary); --grad-soft: transparent; --glow: none; --shadow: none;
@@ -135,16 +135,16 @@ input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--primary)
 /* the painted verdict panel */
 .verdict { --paint: var(--paint-none); background: var(--paint); color: #F7FAF9; border: 0; border-radius: var(--radius-xl);
   box-shadow: none; min-height: 0; gap: 18px; padding: clamp(22px, 3vw, 32px);
-  --ink: #F7FAF9; --ink-2: rgba(247, 250, 249, .86); --ink-3: rgba(247, 250, 249, .9);
+  --ink: #F7FAF9; --ink-2: rgba(247, 250, 249, .96); --ink-3: rgba(247, 250, 249, .9);
   transition: background-color .5s ease; }
 .verdict[data-tone="Safe"] { --paint: var(--paint-safe); }
 .verdict[data-tone="Clear"] { --paint: var(--paint-clear); }
 .verdict[data-tone="Caution"] { --paint: var(--paint-caution); }
 .verdict[data-tone="Unsafe"] { --paint: var(--paint-unsafe); }
 .verdict[data-tone="Hazardous"] { --paint: var(--paint-haz); }
-[data-theme="light"] .verdict { background: var(--paint); color: #F7FAF9; --ink: #F7FAF9; --ink-2: rgba(247,250,249,.88); --ink-3: rgba(247,250,249,.9); }
+[data-theme="light"] .verdict { background: var(--paint); color: #F7FAF9; --ink: #F7FAF9; --ink-2: rgba(247,250,249,.96); --ink-3: rgba(247,250,249,.9); }
 .verdict::before { display: none; }
-.verdict-badge { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .38); border-radius: 4px;
+.verdict-badge { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .7); border-radius: 4px;
   text-transform: none; letter-spacing: 0; font-weight: 600; font-size: .95rem; padding: 4px 10px; }
 .verdict-badge::before { display: none; }
 .verdict-time { color: var(--ink-3); font-family: var(--font-display); font-variant-numeric: tabular-nums; }
@@ -254,6 +254,9 @@ input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--primary)
 .hist .h-swatch { stroke: rgba(19, 38, 46, .14); }
 
 /* ---------------- other sections, quieted ---------------- */
+.treat-card h3 { font-size: 1.05rem; }
+.dir-item h3, .spec h3, .disclosure h3 { font-family: var(--font); font-stretch: 100%; font-size: 1rem; font-weight: 700; margin-bottom: 2px; }
+.feature h2.h-step { font-size: 1.15rem; }
 .proto-n { background: none; -webkit-text-fill-color: currentColor; color: var(--ink-3); font-stretch: 75%; }
 .proto.danger .proto-n { color: var(--unsafe); background: none; }
 .proto-ico, .dir-ico, .feature-ico { border-radius: 6px; background: var(--surface-2); box-shadow: none; color: var(--ink-2); }

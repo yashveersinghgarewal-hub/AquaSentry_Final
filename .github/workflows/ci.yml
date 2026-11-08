@@ -5,6 +5,14 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-verify:
@@ -41,6 +49,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Lint (ruff, bug-finding rules in ruff.toml)
+        run: |
+          pip install ruff
+          ruff check .
+
       - name: Compile C99 Embedded Neural Engine
         run: |
           clang -std=c99 -Wall -Wextra -Werror -c Neural_Network/aquanet_v1.c -o /tmp/aquanet_v1.o
@@ -60,10 +73,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fqbn:
-          - esp32:esp32:esp32        # ESP32-WROOM-32 DevKit (default pins)
-          - esp32:esp32:esp32s3      # ESP32-S3
-          - esp32:esp32:esp32c3      # ESP32-C3 (single core)
+        include:
+          - fqbn: esp32:esp32:esp32        # ESP32-WROOM-32 DevKit (default pins)
+            flags: ""
+          - fqbn: esp32:esp32:esp32s3      # ESP32-S3
+            flags: ""
+          - fqbn: esp32:esp32:esp32c3      # ESP32-C3 (single core)
+            flags: ""
+          # the optional features (deep sleep, battery monitor, unchecked TLS path) on two chip families
+          - fqbn: esp32:esp32:esp32
+            flags: "-DLOW_POWER_MODE=1 -DPIN_BATTERY_ADC=35 -DALLOW_INSECURE_TLS=1"
+          - fqbn: esp32:esp32:esp32c3
+            flags: "-DLOW_POWER_MODE=1 -DPIN_BATTERY_ADC=0 -DALLOW_INSECURE_TLS=1"
     steps:
       - uses: actions/checkout@v4
 
@@ -85,3 +106,5 @@ jobs:
           cli-compile-flags: |
             - --warnings
             - default
+            - --build-property
+            - compiler.cpp.extra_flags=${{ matrix.flags }}

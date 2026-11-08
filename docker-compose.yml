@@ -1,15 +1,28 @@
-version: '3.8'
-
+# docker compose up -d   ->   http://localhost:8000
+# Put secrets in a .env file next to this one (see AquaSentry_Platform/.env.example).
 services:
   aquasentry:
     build: .
-    container_name: aquasentry_universal
+    image: aquasentry:latest
+    container_name: aquasentry
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./aquasentry.db
+      # Inside Docker the dashboard's requests come from the Docker network, not 127.0.0.1, so admin
+      # actions (backups, device keys) need X-API-Key: set AQUASENTRY_API_KEY to use them.
+      - AQUASENTRY_API_KEY=${AQUASENTRY_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - ALERT_WEBHOOK_SECRET=${ALERT_WEBHOOK_SECRET:-}
+      - METRICS_PUBLIC=${METRICS_PUBLIC:-1}
     volumes:
-      - ./data:/app/Data
+      - aquasentry-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
+
+volumes:
+  aquasentry-data:

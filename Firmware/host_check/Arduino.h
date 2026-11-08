@@ -40,11 +40,12 @@ class HardwareSerial : public Print {
 public:
   void begin(unsigned long) {}
   int printf(const char*, ...) __attribute__((format(printf, 2, 3)));
-  size_t println(const char*); size_t println();
+  size_t println(const char*); size_t println(); void flush();
 };
 extern HardwareSerial Serial;
 void pinMode(uint8_t, uint8_t); void digitalWrite(uint8_t, uint8_t); int digitalRead(uint8_t);
-uint16_t analogRead(uint8_t); void analogReadResolution(uint8_t);
+uint16_t analogRead(uint8_t); void analogReadResolution(uint8_t); uint32_t analogReadMilliVolts(uint8_t);
+#define RTC_DATA_ATTR
 void delay(uint32_t); void delayMicroseconds(uint32_t); unsigned long millis();
 void configTime(long gmtOffset_sec, int daylightOffset_sec, const char* s1, const char* s2 = nullptr, const char* s3 = nullptr);
 class EspClass { public: void restart(); uint32_t getFreeHeap(); };
@@ -59,6 +60,7 @@ typedef int BaseType_t; typedef unsigned int UBaseType_t; typedef uint32_t TickT
 QueueHandle_t xQueueCreate(UBaseType_t, UBaseType_t);
 BaseType_t xQueueReceive(QueueHandle_t, void*, TickType_t);
 BaseType_t xQueueSend(QueueHandle_t, const void*, TickType_t);
+UBaseType_t uxQueueMessagesWaiting(QueueHandle_t);
 SemaphoreHandle_t xSemaphoreCreateMutex();
 void vTaskDelay(TickType_t);
 BaseType_t xTaskCreatePinnedToCore(void (*)(void*), const char*, uint32_t, void*, UBaseType_t, TaskHandle_t*, BaseType_t);

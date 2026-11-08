@@ -171,6 +171,7 @@ class DeviceLatestOut(BaseModel):
     arsenic_ppb: float
     classification: str
     recorded_at: datetime
+    battery_pct: Optional[float] = None
 
 
 class TrendSummary(BaseModel):

@@ -29,7 +29,28 @@ if os.environ.get("VERCEL") or os.environ.get("VERCEL_URL"):
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+
+def _sqlite_has_wal_reset_fix() -> bool:
+    import sqlite3
+    v = sqlite3.sqlite_version_info
+    # 3.7.0-3.51.2 have a WAL-reset race fixed in 3.51.3 (backports 3.50.7, 3.44.6)
+    return v >= (3, 51, 3) or (3, 50, 7) <= v < (3, 51, 0) or (3, 44, 6) <= v < (3, 45, 0) or v < (3, 7, 0)
+
+
+def _single_connection() -> bool:
+    """The WAL-reset bug needs two connections writing or checkpointing at the same instant. On an
+    SQLite without the fix (Debian/Ubuntu images ship 3.46), the server keeps ONE connection, so that
+    can never happen. A sensor network's load is tiny, so serialising database access costs nothing
+    noticeable. SQLITE_SINGLE_CONNECTION=1 forces it, =0 turns it off."""
+    mode = os.getenv("SQLITE_SINGLE_CONNECTION", "auto").lower()
+    if not DATABASE_URL.startswith("sqlite") or ":memory:" in DATABASE_URL or mode in ("0", "false", "no"):
+        return False
+    return mode in ("1", "true", "yes") or not _sqlite_has_wal_reset_fix()
+
+
+SINGLE_CONNECTION = _single_connection()
+_pool_args = {"pool_size": 1, "max_overflow": 0, "pool_timeout": 30} if SINGLE_CONNECTION else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True, **_pool_args)
 
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
@@ -123,10 +144,8 @@ def ensure_indexes():
 
 def sqlite_info() -> Dict[str, Any]:
     import sqlite3
-    v = sqlite3.sqlite_version_info
-    # 3.7.0-3.51.2 have a WAL-reset race fixed in 3.51.3 (backports 3.50.7, 3.44.6)
-    fixed = v >= (3, 51, 3) or (3, 50, 7) <= v < (3, 51, 0) or (3, 44, 6) <= v < (3, 45, 0) or v < (3, 7, 0)
-    return {"sqlite_version": sqlite3.sqlite_version, "wal_reset_bug_fixed": fixed}
+    return {"sqlite_version": sqlite3.sqlite_version, "wal_reset_bug_fixed": _sqlite_has_wal_reset_fix(),
+            "single_connection_mode": SINGLE_CONNECTION}
 
 
 def backup_database(dest_dir: str) -> Dict[str, Any]:

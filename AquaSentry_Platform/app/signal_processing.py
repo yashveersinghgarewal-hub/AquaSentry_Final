@@ -13,18 +13,15 @@ Processes raw voltammograms acquired from the potentiostat (MAS-G1 strip / ADS11
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from .standards import (
     CALIBRATION_SLOPE,
     CALIBRATION_INTERCEPT,
-    LOD_UG_L,
-    LOQ_UG_L,
     CAL_MAX_UG_L,
     PEAK_POTENTIAL_MV,
     SWEEP_WINDOW_MV,
     mg_l_to_ug_l,
-    ug_l_to_mg_l,
 )
 
 
