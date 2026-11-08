@@ -17,12 +17,14 @@ Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_
 - **Battery monitor** (`PIN_BATTERY_ADC`, `BATTERY_DIVIDER`): factory-calibrated `analogReadMilliVolts`, resting Li-ion curve, read before the pump loads the cell, sent as `battery_pct` and shown on `/status.json`. The new record field sits in old struct padding, so buffered readings survive the update.
 - **Low-power mode** (`LOW_POWER_MODE 1`): deep sleep between tests; stays awake up to 90 s to upload the test and the backlog; never sleeps with the setup hotspot open; holds the A4988 EN pin high through sleep (`gpio_hold_en`, `gpio_deep_sleep_hold_en` on C3/S3) and parks the electrode at 0 mV; last result and wake count kept in RTC memory.
 - `platformio.ini` env `esp32dev-lowpower`; host checks compile with the features on; CI builds them for ESP32 and ESP32-C3.
+- **Fixed: the sketch did not build in the Arduino IDE / arduino-cli** (since v5.2). The IDE inserts function prototypes above the first function, which sat above the `sensor_reading_t` / `asv_result_t` structs, so every chip failed with "does not name a type". The structs now live in `aquasentry_types.h`. Found by the first real CI run; a new host test mimics the IDE's prototype insertion and reproduces the error on the old sketch. Also removed `++` on `volatile` counters (deprecated in C++20, which ESP32 core 3.x uses); host checks now compile as C++20 with `-Wvolatile`.
+- CI firmware job pinned to Ubuntu 24.04 (`arduino/compile-sketches` installs Python 3.12.4, which has no Ubuntu 26.04 build).
 
 **Docker and GitHub**
 - Dockerfile: no compilers or curl, non-root user (uid 10001), runs on a read-only root filesystem, database and backups in the `/data` volume (seeded from the demo database on first start), Python health check. Compose: named volume, `no-new-privileges`, settings from `.env`. `.dockerignore` keeps `.git`, `.venv`, `Docs` and secrets out of the image.
 - CI: ruff lint step, `workflow_dispatch`, read-only token permissions, concurrency cancel. Dependabot (pip, GitHub Actions, Docker), `SECURITY.md`, PR template, bug-report template, CI badge.
 - **Quality:** ruff with bug-finding rules (`ruff.toml`), all findings fixed; axe-core WCAG 2.2 AA audit of all four pages in light and dark mode: 0 violations (heading order, contrast).
-- Tests: 204 (22 toolkit + 182 platform).
+- Tests: 206 (22 toolkit + 184 platform).
 
 ## v5.4 — backend hardening, live data, arsenic trend warnings
 - **Security:** security headers on every response and a Content-Security-Policy that allows only the pages' own inline scripts by SHA-256 hash; per-IP rate limits (429 + Retry-After); **per-device API keys** (`POST/DELETE /api/admin/devices/{code}/key`, stored as hashes, a keyed device must use its key); stricter input validation; request IDs and Server-Timing.

@@ -22,6 +22,7 @@ ROOT = os.path.dirname(PLATFORM)
 FW_DIR = os.path.join(ROOT, "Firmware")
 SKETCH = os.path.join(FW_DIR, "esp32_firmware", "esp32_firmware.ino")
 SRC = open(SKETCH, encoding="utf-8").read()
+TYPES = open(os.path.join(FW_DIR, "esp32_firmware", "aquasentry_types.h"), encoding="utf-8").read()
 GXX = shutil.which("g++")
 GCC = shutil.which("gcc") or shutil.which("cc")
 
@@ -35,7 +36,7 @@ TARGETS = {
 @pytest.mark.skipif(GXX is None, reason="no C++ compiler")
 @pytest.mark.parametrize("target", sorted(TARGETS))
 def test_sketch_type_checks(target):
-    cmd = [GXX, "-std=gnu++17", "-Wall", "-Wextra", "-Wformat=2", "-Werror", "-fsyntax-only", "-x", "c++",
+    cmd = [GXX, "-std=gnu++20", "-Wall", "-Wextra", "-Wformat=2", "-Wvolatile", "-Werror", "-fsyntax-only", "-x", "c++",
            *TARGETS[target], "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), SKETCH]
     out = subprocess.run(cmd, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr[-3000:]
@@ -109,7 +110,7 @@ def test_pins_are_safe_on_each_chip():
 def test_sketch_type_checks_with_optional_features_on(target):
     """HTTPS-without-CA, battery monitor and low-power deep sleep, all switched on as build flags."""
     flags = ["-DLOW_POWER_MODE=1", "-DPIN_BATTERY_ADC=35", "-DALLOW_INSECURE_TLS=1"]
-    cmd = [GXX, "-std=gnu++17", "-Wall", "-Wextra", "-Wformat=2", "-Werror", "-fsyntax-only", "-x", "c++",
+    cmd = [GXX, "-std=gnu++20", "-Wall", "-Wextra", "-Wformat=2", "-Wvolatile", "-Werror", "-fsyntax-only", "-x", "c++",
            *TARGETS[target], *flags, "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), SKETCH]
     out = subprocess.run(cmd, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr[-3000:]
@@ -119,7 +120,7 @@ def test_sketch_type_checks_with_optional_features_on(target):
 def test_offline_record_size_unchanged_by_battery_field():
     """battery_pct sits in what used to be padding, so readings already buffered on LittleFS by
     older firmware stay readable after an update (the buffer checks record_size)."""
-    body = re.search(r"typedef struct \{\n(\s+float arsenic_mg_l;[\s\S]*?)\} sensor_reading_t;", SRC).group(1)
+    body = re.search(r"typedef struct \{\n(\s+float arsenic_mg_l;[\s\S]*?)\} sensor_reading_t;", TYPES).group(1)
     old = "\n".join(l for l in body.splitlines() if "battery_pct" not in l)
     src = ("#include <cstdint>\ntypedef struct {\n%s} new_t;\ntypedef struct {\n%s} old_t;\n"
            "static_assert(sizeof(new_t) == sizeof(old_t), \"record size changed\");\nint main(){return 0;}\n") % (body, old)
@@ -140,3 +141,36 @@ def test_battery_curve_is_monotonic_and_https_is_checked():
     # deep sleep keeps the stepper driver off
     sleep_fn = re.search(r"void enter_deep_sleep[\s\S]*?\n\}", SRC).group(0)
     assert "digitalWrite(PIN_STEPPER_ENABLE, HIGH)" in sleep_fn and "gpio_hold_en" in sleep_fn
+
+
+def test_structs_are_declared_before_arduino_prototypes():
+    """arduino-cli inserts function prototypes above the first function in the .ino, so every struct
+    used in a function signature must come from a header (CI caught this on the real ESP32 core)."""
+    assert not re.search(r"^typedef struct", SRC, re.M), "move structs to aquasentry_types.h"
+    assert SRC.index('#include "aquasentry_types.h"') < SRC.index("static float arsenic_ug_from_peak")
+
+
+_FUNC_DEF = re.compile(r"^((?:static\s+)?(?:unsigned\s+)?[A-Za-z_][\w:]*[\s\*&]+)([A-Za-z_]\w*)\s*\(([^;{}()]*)\)\s*\{", re.M)
+
+
+def _with_arduino_prototypes(src: str) -> str:
+    """Mimic arduino-cli's .ino preprocessing: a prototype for every top-level function, inserted just
+    above the first function definition (defaults dropped, as in a declaration that precedes them)."""
+    defs = [m for m in _FUNC_DEF.finditer(src) if m.group(2) not in ("if", "for", "while", "switch", "setup", "loop")]
+    protos = []
+    for m in defs:
+        args = re.sub(r"\s*=\s*[^,]+", "", m.group(3))
+        protos.append(f"{m.group(1).strip()} {m.group(2)}({args});")
+    first = defs[0].start()
+    return src[:first] + "\n".join(protos) + "\n#line %d\n" % (src[:first].count("\n") + 1) + src[first:]
+
+
+@pytest.mark.skipif(GXX is None, reason="no C++ compiler")
+def test_sketch_compiles_after_arduino_prototype_insertion():
+    work = tempfile.mkdtemp()
+    out_path = os.path.join(work, "esp32_firmware.cpp")
+    open(out_path, "w", encoding="utf-8").write(_with_arduino_prototypes(SRC))
+    cmd = [GXX, "-std=gnu++20", "-Wall", "-Wextra", "-Werror", "-Wno-unused-function", "-fsyntax-only", "-x", "c++",
+           *TARGETS["esp32"], "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), out_path]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr[-3000:]

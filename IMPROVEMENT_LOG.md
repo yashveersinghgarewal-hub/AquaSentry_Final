@@ -10,7 +10,7 @@ Every change made to this repository since the v5.1 baseline (commit `667a469`, 
 | v5.4 | `52eae72` | Backend hardening (keys, rate limits, CSP, backups), live updates, trend early warning, UI accessibility and offline mode |
 | v5.5 | this release | Signed + retried alerts, Prometheus metrics, faster and more honest trends, offline chat, optional HTTPS / battery / deep sleep on the ESP32, Docker and GitHub readiness, lint and accessibility audit |
 
-Tests: **110 → 139 → 167 → 185 → 204** (22 neural toolkit + 182 platform). Run them with `python main.py --test`.
+Tests: **110 → 139 → 167 → 185 → 206** (22 neural toolkit + 184 platform). Run them with `python main.py --test`.
 
 ---
 
@@ -181,6 +181,10 @@ The 21st.dev component service and the UI UX Pro Max skill were not installed in
 - **Low-power mode** (`LOW_POWER_MODE 1`): after a test the node stays awake up to 90 s to upload it and any backlog, then deep-sleeps for the rest of the hour. It never sleeps while the setup hotspot is open. Before sleeping it parks the electrode at 0 mV, switches the A4988 off and holds its EN pin high through sleep (`gpio_hold_en`, plus `gpio_deep_sleep_hold_en` on C3 and S3); Pololu-style boards pull EN low, so a floating pin would power the motor all hour. The README asks for a 10 kΩ pull-up as well. The last result and a wake counter live in RTC memory.
 - The options can be set as build flags (`#ifndef` guards); `platformio.ini` has an `esp32dev-lowpower` environment, the host check compiles the sketch with all options on for the three chips, and CI builds them with Espressif's core for ESP32 and ESP32-C3.
 
+### Firmware build fix found by the first real CI run
+- **Why:** the ESP32 compile job had never run on GitHub before this release. Its first run failed on every chip: `'asv_result_t' does not name a type`. When building a `.ino`, the Arduino IDE and arduino-cli write a prototype for every function just above the first function in the sketch (`arsenic_ug_from_peak`, line 180), which was above the structs. The local host check compiled the sketch as plain C++, so it never saw the inserted prototypes. This had been broken since v5.2, so anyone opening the sketch in the Arduino IDE would have hit it.
+- **What:** `sensor_reading_t`, `asv_result_t` and `offline_header_t` moved to `Firmware/esp32_firmware/aquasentry_types.h`. A new host test inserts prototypes the way arduino-cli does and compiles the result; run on the old sketch it reproduces the exact CI error. The real compiler also warned about `++` on `volatile` counters (deprecated in C++20, which ESP32 core 3.x uses), so those are now plain assignments and the host checks compile as C++20 with `-Wvolatile -Werror`. The CI firmware job is pinned to Ubuntu 24.04 because `arduino/compile-sketches` installs Python 3.12.4, which has no build for the Ubuntu 26.04 image that `ubuntu-latest` now uses.
+
 ### Docker and GitHub
 - **Dockerfile:** no compilers or curl (smaller, fewer CVEs), non-root user (uid 10001), works on a read-only root filesystem, database and backups in the `/data` volume, the demo database copied in on first start by `docker-entrypoint.sh`, and a Python health check. The old compose file stored the database inside the container (lost on rebuild) and mounted the repo's `Data` folder over the image's; it now uses a named volume, `no-new-privileges` and settings from `.env`. `.dockerignore` keeps `.git`, `.venv`, `Docs` and secrets out of the image. Built and run here: non-root, healthy, readings stored, integrity check ok.
 - **GitHub:** CI badge; ruff step; `workflow_dispatch`; read-only token permissions; concurrency cancel; Dependabot for pip, GitHub Actions and Docker; `SECURITY.md` with a deployment checklist; pull-request and bug-report templates.
@@ -252,7 +256,7 @@ ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, 
 | `tests/test_v53_ui.py` | Every dashboard string in English and Hindi, chart geometry, scripts parse, field layer on all pages, service worker never caches the API |
 | `tests/test_v54_backend.py` | Headers + CSP hash, request IDs, rate limit 429, device keys, Mann-Kendall maths, trend endpoint + alert, CSV export + injection guard, SSE delivery, backups, validation, health |
 | `tests/test_v55_backend.py` | Webhook signature round trip, tampering, replay window, key rotation; retries only on transient errors; signed end-to-end delivery to a local receiver; metrics format and route templates; restricted metrics; `X-Total-Count`; request-ID sanitising; daily-median aggregation; trend cache hit and invalidation; offline and fallback chat; low-battery notice; single-connection guard |
-| `tests/test_firmware_host_build.py` (v5.5 additions) | Sketch with HTTPS, battery and deep sleep switched on for 3 chips; offline record size unchanged; battery curve monotonic; TLS never unchecked by default; deep sleep keeps the stepper off |
+| `tests/test_firmware_host_build.py` (v5.5 additions) | Sketch compiled after Arduino-style prototype insertion, as C++20 with `-Wvolatile`; sketch with HTTPS, battery and deep sleep switched on for 3 chips; offline record size unchanged; battery curve monotonic; TLS never unchecked by default; deep sleep keeps the stepper off |
 | `Neural_Network/v3_training/results/c_vs_python_parity_100k.txt` | C engine vs Python, 100,000 inputs |
 | GitHub Actions `firmware` job | Real ESP32 compile for esp32, esp32s3, esp32c3, plus the optional features on esp32 and esp32c3 |
 | GitHub Actions `ruff` step, local axe-core run | Lint clean; 0 WCAG 2.2 AA violations |

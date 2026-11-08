@@ -267,7 +267,8 @@ def test_firmware_c_engine_matches_server():
 @pytest.mark.skipif(shutil.which("g++") is None, reason="no C++ compiler")
 def test_firmware_upload_json_is_valid():
     src = open(os.path.join(FW, "esp32_firmware.ino"), encoding="utf-8").read()
-    struct = re.search(r"typedef struct \{\n    float arsenic_mg_l;.*?\} sensor_reading_t;", src, re.S).group(0)
+    types = open(os.path.join(FW, "aquasentry_types.h"), encoding="utf-8").read()
+    struct = re.search(r"typedef struct \{\n    float arsenic_mg_l;.*?\} sensor_reading_t;", types, re.S).group(0)
     utc = re.search(r"uint32_t utc_now_or_zero\(\) \{.*?\n\}\n", src, re.S).group(0)
     build = re.search(r"int build_reading_json\(.*?\n\}\n", src, re.S).group(0)
     work = tempfile.mkdtemp()
