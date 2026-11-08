@@ -69,7 +69,7 @@ jobs:
 
   firmware:
     # Real compile of the ESP32 sketch with Espressif's Arduino core, for every supported chip.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # arduino/compile-sketches pins Python 3.12.4, which has no build for Ubuntu 26.04
     strategy:
       fail-fast: false
       matrix:
