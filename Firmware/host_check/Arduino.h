@@ -56,7 +56,7 @@ extern HardwareSerial Serial;
 void pinMode(uint8_t, uint8_t); void digitalWrite(uint8_t, uint8_t); int digitalRead(uint8_t);
 uint16_t analogRead(uint8_t); void analogReadResolution(uint8_t); uint32_t analogReadMilliVolts(uint8_t);
 #define RTC_DATA_ATTR
-void delay(uint32_t); void delayMicroseconds(uint32_t); unsigned long millis();
+void delay(uint32_t); void delayMicroseconds(uint32_t); unsigned long millis(); unsigned long micros();
 void configTime(long gmtOffset_sec, int daylightOffset_sec, const char* s1, const char* s2 = nullptr, const char* s3 = nullptr);
 class EspClass { public: void restart(); uint32_t getFreeHeap(); };
 extern EspClass ESP;

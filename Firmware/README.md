@@ -159,5 +159,29 @@ Without a passing check standard in the last 7 days (and a calibration made on t
 this node's LOW readings as **Test failed**; detected arsenic is still reported. A *Blank* (arsenic-free water)
 must read below 10 µg/L. The thresholds are starting values: tune them on scans from your own electrode.
 
+## Scan evidence and boot self-test (v5.8)
+
+Firmware 5.8.0 keeps the raw current-vs-potential points of the **last scan of every reading** and uploads them to
+`POST /api/scans` right after the reading is stored (or at the next 30-second sync once the offline buffer is empty).
+The server stores the trace with a SHA-256 checksum, its analysis version and the calibration in use, links it to the
+reading, and can reprocess it later with a better calibration without touching the original value. The reading is never
+delayed by the trace: it goes first, in the same JSON as before. `TRACE_UPLOAD 0` turns the upload off (metered links).
+
+At boot the node runs a **self-test** and prints it on the serial monitor:
+
+```
+[SELFTEST] ADS1115 ADC (0x48): found
+[SELFTEST] MCP4725 DAC (0x60): found
+[SELFTEST] Offline storage: LittleFS, 0 reading(s) waiting
+[SELFTEST] Calibration: factory (synthetic example - get this node calibrated)
+[SELFTEST] AquaNet-V3 inference: 412 us (probe verdict Caution)
+[SELFTEST] Scan evidence upload: on
+```
+
+The same facts are in `/status.json` under `self_test` (`adc_ads1115`, `dac_mcp4725`, `storage`, `inference_us`,
+`calibration_age_days`; −1 = unknown) together with `trace_upload` and `trace_pending`. A missing ADC or DAC does not
+stop the node (every scan is QC-checked anyway); it tells the installer at once what is wrong. Write the measured
+inference time from a real board into the logbook; no figure is claimed until then (`Docs/CLAIMS_REGISTER.md` N4).
+
 ## Over-The-Air (OTA) Updates
 Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. OTA is **disabled while `OTA_PASS` is still `change-me`** (or shorter than 8 characters), so nobody can flash the board with the default login. Pick a long password, then re-flash over USB once.

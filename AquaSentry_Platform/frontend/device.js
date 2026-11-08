@@ -34,14 +34,18 @@
       card.className = 'pub-card none';
       return;
     }
-    const v = VCLS[r.classification] || 'Caution';
+    let v = VCLS[r.classification] || 'Caution';
+    // v5.8: the screening outcome leads when the class only reflects arsenic (a borderline value is "Retest")
+    if (r.screening_outcome === 'invalid') v = 'Failed';
+    else if (r.screening_outcome === 'retest' && (v === 'Caution' || v === 'Clear' || v === 'Safe')) v = 'Retest';
+    else if (r.screening_outcome === 'not_detected' && (v === 'Caution' || v === 'Safe')) v = 'Clear';
     card.className = 'pub-card v-' + v;
     $('pubVerdict').textContent = t('verdict.' + v + '.title');
     // v5.7: below the 20 µg/L detection limit the number is noise, so it is not shown as "x µg/L (limit 10)";
     // a failed test has no valid number at all
     $('pubValue').textContent = v === 'Failed' ? t('pub.failed')
       : r.arsenic_ug_l < 20 ? t('pub.valueLow')
-        : t('pub.value', { v: Math.round(r.arsenic_ug_l) });
+        : t('pub.value', { v: Math.round(r.arsenic_ug_l) }) + (r.uncertainty_ug_l != null ? ' ' + t('ov.unc', { u: Math.round(r.uncertainty_ug_l) }) : '');
     const old = ageDays(r.recorded_at);
     $('pubWhen').textContent = t('pub.when', { d: when(r.recorded_at) }) + (old > 3 ? ' ' + t('pub.old', { n: Math.round(old) }) : '');
     $('pubWhen').classList.toggle('stale', old > 3);

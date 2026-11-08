@@ -41,7 +41,8 @@ class ReadingCreate(BaseModel):
     battery_pct: Optional[float] = Field(None, ge=0, le=100, description="Battery state of charge 0-100%")
     source_label: Optional[str] = Field(None, max_length=64, description="Sampling station or sector label")
 
-    source_type: Optional[Literal["simulated", "hardware", "manual_import", "synthetic_fixture", "synthetic_demo"]] = Field(
+    source_type: Optional[Literal["simulated", "hardware", "manual_import", "synthetic_fixture", "synthetic_demo",
+                                  "recorded_replay"]] = Field(
         "simulated", description="simulated | hardware | manual_import | synthetic_fixture | synthetic_demo")
     idempotency_key: Optional[str] = Field(None, max_length=64, description="Unique client transmission ID to prevent duplicates")
 
@@ -68,6 +69,9 @@ class ReadingCreate(BaseModel):
     scans_averaged: Optional[int] = Field(None, ge=0, le=100)
     age_seconds: Optional[float] = Field(None, ge=0, le=60 * 60 * 24 * 400,
                                          description="For a device without a set clock: how long ago the sample was taken")
+    # v5.8 traceability (review item 21): the parent sample the lab split came from, and the electrode batch
+    sample_code: Optional[str] = Field(None, max_length=64, pattern=r"^[A-Za-z0-9._/-]+$")
+    electrode_lot: Optional[str] = Field(None, max_length=64)
 
     @field_validator("recorded_at", mode="after")
     @classmethod
@@ -117,6 +121,11 @@ class ReadingOut(BaseModel):
     qc_status: Optional[str] = None
     time_source: Optional[str] = None
     device_code: Optional[str] = None
+    screening_outcome: Optional[str] = None
+    trace_id: Optional[int] = None
+    analysis_version: Optional[str] = None
+    sample_code: Optional[str] = None
+    electrode_lot: Optional[str] = None
     calibration_ref: Optional[str] = None
     recorded_at: datetime
     received_at: datetime
@@ -131,6 +140,9 @@ class ReadingOut(BaseModel):
 class ReadingResponse(BaseModel):
     reading: ReadingOut
     label: str
+    screening_outcome: Optional[str] = None     # v5.8: invalid | not_detected | retest | screen_positive
+    outcome_note: Optional[str] = None
+    uncertainty_source: Optional[str] = None    # measured_from_scan | method_typical
     severity: int
     message: str
     action: str
@@ -199,6 +211,9 @@ class DeviceLatestOut(BaseModel):
     classification: str
     recorded_at: datetime
     battery_pct: Optional[float] = None
+    screening_outcome: Optional[str] = None     # v5.8
+    uncertainty_ug_l: Optional[float] = None
+    qc_status: Optional[str] = None
 
 
 class TrendSummary(BaseModel):
@@ -318,6 +333,10 @@ class PeakCharacteristicsOut(BaseModel):
     baseline_residual_variance: float
     is_valid_peak: bool
     qc_flags: List[str]
+    baseline_slope_ua_per_mv: Optional[float] = None
+    noise_sigma_ua: Optional[float] = None
+    secondary_peaks: Optional[int] = None
+    uncertainty_ug_l: Optional[float] = None
 
 
 class VoltammetryProcessResponse(BaseModel):
@@ -332,6 +351,44 @@ class VoltammetryProcessResponse(BaseModel):
     smoothed_currents_ua: List[float]
     baseline_currents_ua: List[float]
     subtracted_currents_ua: List[float]
+    analysis_version: Optional[str] = None
+    sweep_reversed: Optional[bool] = None
+
+
+class ScanCreate(BaseModel):
+    """v5.8: a native voltammetry scan (potential / current arrays) from the device, a recorded instrument file
+    or the dashboard's replay. The server runs the one analysis pipeline, stores the trace with a checksum and
+    creates the reading from it."""
+    device_code: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")
+    potentials_mv: List[float] = Field(..., min_length=2, max_length=4000)
+    currents_ua: List[float] = Field(..., min_length=2, max_length=4000)
+    source_type: Literal["hardware", "recorded_replay", "simulated"] = "hardware"
+    recorded_at: Optional[datetime] = None
+    age_seconds: Optional[float] = Field(None, ge=0, le=60 * 60 * 24 * 400)
+    sample_code: Optional[str] = Field(None, max_length=64, pattern=r"^[A-Za-z0-9._/-]+$")
+    electrode_lot: Optional[str] = Field(None, max_length=64)
+    firmware_version: Optional[str] = Field(None, max_length=32)
+    raw_file_name: Optional[str] = Field(None, max_length=128)
+    idempotency_key: Optional[str] = Field(None, max_length=64)
+    arsenic_species: Optional[Literal["total", "as3_only", "unknown"]] = None
+    scan_settings: Optional[Dict[str, Any]] = Field(None, description="deposition_s, deposition_mv, step_mv, scans ...")
+    ph: Optional[float] = Field(None, ge=0, le=14)
+    temperature_c: Optional[float] = Field(None, ge=-10, le=60)
+    conductivity_us_cm: Optional[float] = Field(None, ge=0, le=50000)
+    turbidity_ntu: Optional[float] = Field(None, ge=0, le=1000)
+    battery_pct: Optional[float] = Field(None, ge=0, le=100)
+    source_label: Optional[str] = Field(None, max_length=64)
+    cu_peak_ua: Optional[float] = Field(None, ge=0, le=1000)
+    device_qc_flags: Optional[List[str]] = Field(None, max_length=20, description="QC codes from the device's other scans")
+    reading_idempotency_key: Optional[str] = Field(None, max_length=64,
+                                                   description="Link this trace to an already uploaded reading instead of creating one")
+
+    @field_validator("recorded_at", mode="after")
+    @classmethod
+    def _utc(cls, v):
+        if v is None:
+            return None
+        return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
 
 
 class SyntheticTraceResponse(BaseModel):

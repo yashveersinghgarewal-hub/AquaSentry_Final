@@ -47,6 +47,9 @@ QC_FAULT_FLAGS = {
     "ADC_SATURATION_HIGH", "ADC_SATURATION_LOW", "FLAT_SIGNAL", "BASELINE_UNSTABLE", "NOISE_ABOVE_LOD",
     "PEAK_AT_WINDOW_EDGE", "NO_POINTS_IN_WINDOW", "TOO_FEW_GOOD_SCANS", "SCANS_DISAGREE", "NO_LIQUID",
     "QC_NOT_REPORTED", "DEVICE_REPORTED_FAIL",
+    # v5.8 (review item 42): a trace that cannot be analysed is a failed test, never a concentration
+    "MALFORMED_TRACE", "TOO_FEW_POINTS", "NON_FINITE", "INVALID_CALIBRATION", "NONMONOTONIC_SWEEP",
+    "INSUFFICIENT_BASELINE", "PARTIAL_WINDOW",
 }
 
 # Detection and Quantification Limits (in micrograms per litre, µg/L = ppb)
@@ -59,6 +62,12 @@ CAL_MAX_UG_L = 500.0  # 0.500 mg/L - Upper boundary of validated linear range
 CALIBRATION_SLOPE = 0.8563
 CALIBRATION_INTERCEPT = 0.0096
 CALIBRATION_R2 = 0.9967
+# v5.8 (review item 06): where these numbers come from. The four "standards" in Data/calibration.json were produced
+# by the synthetic scan generator in Analysis/mas_g1_arsenic_analysis.py, not measured on an electrode. They let the
+# software run end to end; they are NOT evidence of accuracy. POST /api/admin/calibrations/external replaces them.
+CALIBRATION_SOURCE = "synthetic_example"
+CALIBRATION_PROVENANCE = ("Factory example calibration: 4 synthetic standards (30-500 µg/L) from the simulated scan "
+                          "generator, R² 0.9967 on those synthetic points. Not a laboratory calibration.")
 CALIBRATION_ID = "CAL-AS-2026-M1"
 
 

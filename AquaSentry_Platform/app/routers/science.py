@@ -131,6 +131,10 @@ def process_voltammetry(payload: schemas.VoltammetryProcessRequest):
             baseline_residual_variance=res.peak.baseline_residual_variance,
             is_valid_peak=res.peak.is_valid_peak,
             qc_flags=res.peak.qc_flags,
+            baseline_slope_ua_per_mv=res.peak.baseline_slope_ua_per_mv,
+            noise_sigma_ua=res.peak.noise_sigma_ua,
+            secondary_peaks=res.peak.secondary_peaks,
+            uncertainty_ug_l=res.peak.uncertainty_ug_l,
         )
 
     return schemas.VoltammetryProcessResponse(
@@ -145,6 +149,8 @@ def process_voltammetry(payload: schemas.VoltammetryProcessRequest):
         smoothed_currents_ua=res.smoothed_currents_ua,
         baseline_currents_ua=res.baseline_currents_ua,
         subtracted_currents_ua=res.subtracted_currents_ua,
+        analysis_version=res.analysis_version,
+        sweep_reversed=res.sweep_reversed,
     )
 
 
@@ -169,13 +175,14 @@ def get_sample_voltammetry_trace(
 # ---------------------------------------------------------------------------
 
 class NeuralInferencePayload(schemas.BaseModel):
-    arsenic_concentration_mg_l: Optional[float] = None
-    arsenic_mg_l: Optional[float] = None
-    arsenic_ppb: Optional[float] = None
-    ph: Optional[float] = 7.35
-    conductivity_us_cm: Optional[float] = 412.0
-    turbidity_ntu: Optional[float] = 2.1
-    temperature_c: Optional[float] = 24.2
+    """v5.8 (review item 43): bounded, finite inputs only; a negative or infinite concentration is rejected."""
+    arsenic_concentration_mg_l: Optional[float] = schemas.Field(None, ge=0, le=50, allow_inf_nan=False)
+    arsenic_mg_l: Optional[float] = schemas.Field(None, ge=0, le=50, allow_inf_nan=False)
+    arsenic_ppb: Optional[float] = schemas.Field(None, ge=0, le=50000, allow_inf_nan=False)
+    ph: Optional[float] = schemas.Field(7.35, ge=0, le=14, allow_inf_nan=False)
+    conductivity_us_cm: Optional[float] = schemas.Field(412.0, ge=0, le=50000, allow_inf_nan=False)
+    turbidity_ntu: Optional[float] = schemas.Field(2.1, ge=0, le=1000, allow_inf_nan=False)
+    temperature_c: Optional[float] = schemas.Field(24.2, ge=-10, le=60, allow_inf_nan=False)
 
 
 @router.post("/api/neural/inference", response_model=schemas.NeuralInferenceResponse, tags=["Neural Network"])

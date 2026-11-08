@@ -33,6 +33,34 @@ class ClassificationResult:
     is_safe_to_drink: Optional[bool] # None if unverified below LOD, False if >= WHO limit
     uncertainty_ppb: float   # Analytical measurement uncertainty (+/- ppb)
     disclaimer: str          # Regulatory screening disclaimer
+    screening_outcome: str = "not_determined"   # v5.8: invalid | not_detected | retest | screen_positive
+    outcome_note: str = ""
+
+
+# v5.8 (review item 04): one screening outcome per reading, decided only after the method, calibration and scan
+# checks have passed. The four class labels stay (the engines and their parity tests depend on them); the outcome
+# is what the dashboard, the public page and the PDF lead with.
+OUTCOME_INVALID = "invalid"                 # the test failed its checks: no value
+OUTCOME_NOT_DETECTED = "not_detected"       # below the detection limit by more than the uncertainty
+OUTCOME_RETEST = "retest"                   # within one expanded uncertainty of the detection limit: borderline
+OUTCOME_SCREEN_POSITIVE = "screen_positive" # at or above the detection limit (already above the 10 µg/L limit)
+
+
+def screening_outcome(arsenic_ppb: float, uncertainty_ppb: Optional[float], lod_ug_l: float = LOD_UG_L,
+                      failed: bool = False):
+    """Returns (outcome, note). The guard band is the expanded uncertainty of this reading (measured from the
+    scan when a trace was processed; otherwise the method's typical value)."""
+    if failed:
+        return OUTCOME_INVALID, "The test failed its quality checks; there is no valid arsenic value."
+    u = uncertainty_ppb if uncertainty_ppb is not None and uncertainty_ppb > 0 else 10.0
+    if arsenic_ppb >= lod_ug_l:
+        return OUTCOME_SCREEN_POSITIVE, (f"Arsenic detected (≥ {lod_ug_l:.0f} µg/L), which is above the 10 µg/L limit. "
+                                         "Confirm with an accredited laboratory; do not drink meanwhile.")
+    if arsenic_ppb >= lod_ug_l - u:
+        return OUTCOME_RETEST, (f"Borderline: {arsenic_ppb:.0f} ± {u:.0f} µg/L is within the uncertainty of the "
+                                f"{lod_ug_l:.0f} µg/L detection limit. Repeat the test and confirm in a laboratory.")
+    return OUTCOME_NOT_DETECTED, (f"Not detected: below the {lod_ug_l:.0f} µg/L detection limit. The sensor cannot "
+                                  "see the 10 µg/L limit, so this is not confirmation that the water is safe.")
 
 
 def classify_arsenic(
@@ -111,6 +139,7 @@ def classify_arsenic_neural(
     qc_failed: bool = False,
     qc_reasons: Optional[List[str]] = None,
     arsenic_species: Optional[str] = None,
+    uncertainty_ppb: Optional[float] = None,
 ) -> ClassificationResult:
     """
     Classify water safety with AquaNet-V3 (default; set AQUANET_MODEL=v1 for the original hand-built V1),
@@ -135,7 +164,11 @@ def classify_arsenic_neural(
     base_result = classify_arsenic(arsenic_ppb, source_type=source_type)
     arsenic_mg_l = arsenic_ppb / 1000.0
     if qc_failed:
-        return test_failed_result(qc_reasons, not_measured, base_result.uncertainty_ppb)
+        res = test_failed_result(qc_reasons, not_measured, base_result.uncertainty_ppb)
+        res.screening_outcome, res.outcome_note = screening_outcome(arsenic_ppb, None, failed=True)
+        return res
+    u = uncertainty_ppb if uncertainty_ppb is not None else base_result.uncertainty_ppb
+    outcome, note = screening_outcome(arsenic_ppb, u)
 
     if model_choice == "v1":
         from .neural_classifier import forward_pass
@@ -203,8 +236,10 @@ def classify_arsenic_neural(
         analytical_status=base_result.analytical_status,
         regulatory_tier=base_result.regulatory_tier,
         is_safe_to_drink=is_safe,
-        uncertainty_ppb=base_result.uncertainty_ppb,
+        uncertainty_ppb=u,
         disclaimer=base_result.disclaimer,
+        screening_outcome=outcome,
+        outcome_note=note,
     )
 
 

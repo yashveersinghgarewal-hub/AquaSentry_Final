@@ -62,8 +62,9 @@ Interactive documentation is at http://localhost:8000/docs when the server runs.
 | --- | --- |
 | Readings | `POST /api/readings` (from devices, idempotent), `GET /api/readings`, `/latest`, `/history`, `GET /api/dashboard/latest`, `GET /api/stats` |
 | Devices | `GET /api/devices`, `/api/devices/{code}`, `/api/devices/{code}/trend`, `/api/devices/{code}/calibration`, `PUT /api/admin/devices/{code}/site`, device keys under `/api/admin/devices/{code}/key` |
-| Lab and calibration | `POST/GET /api/lab-results`, `GET /api/validation`, `POST /api/admin/calibrations/external`, `/standard-addition`, `GET /api/calibrations` |
-| Field programme | `GET /api/public/devices/{code}` (QR page), `GET /api/data/export/jjm`, `GET /api/data/export`, import preview/commit |
+| Scans as evidence (v5.8) | `POST /api/scans` (native trace → stored with checksum, processed into a reading), `GET /api/scans`, `/api/scans/{id}`, `POST /api/scans/{id}/reprocess` |
+| Lab and calibration | `POST/GET /api/lab-results` (with `reporting_limit_ug_l`, `qualifier "<"`, `species`, `sample_code`), `GET /api/validation`, `POST /api/admin/calibrations/external`, `/standard-addition`, `GET /api/calibrations` |
+| Field programme | `GET /api/public/devices/{code}` (QR page), `GET /api/data/export/jjm`, `GET /api/data/export`, `GET /api/data/export/paired` (node-vs-lab table), import preview/commit |
 | Alerts | `GET /api/alerts/recent`, `/api/alerts/channels`, Web Push subscribe/unsubscribe, admin subscriptions and test |
 | Science tools | `POST /api/voltammetry/process`, `GET /api/voltammetry/sample-trace`, `/api/neural/inference`, `/api/neural/v3`, `/api/analytes` |
 | Reports | `GET /api/reports/certificate/pdf` (screening report, not a lab certificate) |

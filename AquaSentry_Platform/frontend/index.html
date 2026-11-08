@@ -95,6 +95,8 @@
           <article class="verdict" id="verdict" data-tone="none" aria-live="polite">
             <div class="verdict-top">
               <span class="verdict-badge" id="verdictBadge" data-i18n="verdict.badge.none">Waiting</span>
+              <span class="outcome-chip" id="outcomeChip" hidden></span>
+              <span class="mode-badge" id="modeBadge" data-mode="none" data-i18n="mode.none">No data</span>
               <span class="verdict-time" id="verdictTime"></span>
             </div>
             <div class="verdict-main">
@@ -114,6 +116,8 @@
             <div class="rc-label" id="readCardLabel" data-i18n="ov.arsenic">Arsenic</div>
             <div class="fig-value"><span id="asValue">–</span><span class="fig-unit" data-i18n="ov.unit">µg/L</span></div>
             <div class="fig-sub" id="asMgl"></div>
+            <p class="unc-line" id="uncLine" hidden></p>
+            <button class="btn btn-quiet btn-wide" type="button" id="viewScanBtn" hidden data-i18n="test.viewScan">View the recorded scan</button>
             <button class="btn btn-primary btn-wide" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
             <div class="quick">
               <span data-i18n="ov.quick">Try a sample:</span>
@@ -384,11 +388,17 @@
               <input type="range" id="testAs" min="0" max="300" step="1" value="35">
             </label>
             <button class="btn btn-primary btn-wide" type="button" id="runTestBtn" data-i18n="test.run">Run test</button>
+            <div class="replay-row">
+              <button class="btn btn-quiet btn-wide" type="button" id="replayBtn" data-i18n="test.replay">Replay a recorded scan file</button>
+              <input type="file" id="replayFile" accept=".csv,.tsv,.txt,.json" hidden>
+              <p class="hint" data-i18n="test.replayHint">A CSV or JSON file from the instrument with potential (mV) and current (µA) columns. It goes through the same pipeline as a live scan and is kept as evidence, labelled "replay".</p>
+            </div>
             <p class="status-msg" id="testMsg" role="status"></p>
           </div>
           <div class="test-output d-100" data-reveal>
             <div class="card chart-box">
               <svg id="vgChart" viewBox="0 0 640 340" role="img" aria-label="Voltammogram"></svg>
+              <p class="trace-caption" id="traceCaption"></p>
               <div class="legend">
                 <span class="lg lg-raw" data-i18n="test.chart.raw">Raw signal</span>
                 <span class="lg lg-smooth" data-i18n="test.chart.smooth">Smoothed</span>
@@ -402,6 +412,7 @@
               <div class="res-main"><dt data-i18n="test.result">Measured arsenic</dt><dd id="trAs">–</dd></div>
             </dl>
             <p class="formula" data-i18n="test.formula"></p>
+            <p class="cal-note" id="calNote" data-i18n="cal.synthNote">The factory calibration (slope 0.8563 µA per mg/L, R² 0.9967) was fitted to four SYNTHETIC standards from the simulated scan generator. It lets the software run; it is not evidence of accuracy. Enter a laboratory calibration (external standards or standard addition) before any field use.</p>
           </div>
         </div>
       </section>
@@ -588,7 +599,7 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5.4, AquaNet-V3</span>
+      <span>AquaSentry v5.8, AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>
@@ -616,6 +627,7 @@
   <script src="shell.js"></script>
   <script src="charts.js"></script>
   <script src="neural.js"></script>
+  <script src="asv.js"></script>
   <script src="app.js"></script>
   <script src="field-ui.js"></script>
   <dialog class="signin" id="signinDlg" aria-labelledby="signinTitle">

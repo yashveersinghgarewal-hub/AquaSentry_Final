@@ -40,3 +40,5 @@ body.pub { background: var(--bg); color: var(--ink); min-height: 100vh; margin: 
   body.sticker-mode { background: #fff; }
   .sticker { border: 1px solid #000; break-inside: avoid; }
 }
+
+.pub-card.v-Retest { border-left-color: var(--paint-caution); }   /* v5.8 */

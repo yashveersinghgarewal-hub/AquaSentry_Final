@@ -261,7 +261,7 @@ def main():
     
     # Train / Val Split (100,000 train, 20,000 val)
     X_train, Y_train, y_train_idx = X_norm[:100_000], Y_onehot[:100_000], y_indices[:100_000]
-    X_val, Y_val, y_val_idx = X_norm[100_000:], Y_onehot[100_000:], y_indices[100_000:]
+    X_val, _Y_val, y_val_idx = X_norm[100_000:], Y_onehot[100_000:], y_indices[100_000:]
     
     trainer = AquaNetTrainer()
     acc = trainer.train(X_train, Y_train, y_train_idx, X_val, y_val_idx, epochs=160, batch_size=256, lr_init=0.009)

@@ -2,6 +2,42 @@
 
 Full story of every change since v5.1, with reasons and sources: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
+## v5.8 — one outcome per test, scans kept as evidence, validation tooling
+
+Use: `AquaSentry_v5.8.zip` / branch `main`. Built from the Research and Engineering Review of 8 Nov 2026 (60 items) and the ISEF list; `Docs/ROADMAP_COVERAGE.md` maps every item to code, tests or "needs the lab". Nothing here claims the sensor works: it makes every result traceable and every claim checkable.
+
+**One screening outcome (review item 04)**
+- Every test now carries one of four outcomes beside the tier: **invalid** (failed QC), **not detected**, **retest** (borderline) or **screen positive**. The guard band around the 20 µg/L detection limit is the reading's own expanded uncertainty (k = 2), measured from the scan's shoulder noise plus a 5 % calibration term, or the method's typical ± 10 µg/L when no scan was stored. Dashboard chip and headline, public QR page, PDF ("ARSENIC DETECTED: CONFIRM IN A LABORATORY, DO NOT DRINK" / "BORDERLINE: RETEST …"), fleet list and API (`screening_outcome`, `outcome_note`, `uncertainty_source`).
+- Values are shown as **x ± U µg/L**; the PDF explains where U comes from.
+
+**Native scans as evidence (items 21, 31, 41–44)**
+- `POST /api/scans`: the raw potential/current points are stored with a SHA-256 checksum, point count, firmware, **analysis version `asv-1.2.0`**, calibration ID, QC status and flags, extracted features and scan settings, then processed by the one Python pipeline into a reading linked to the scan (`trace_id`). `GET /api/scans/{id}` returns the trace with smoothed / baseline / subtracted arrays and a checksum check; `POST /api/scans/{id}/reprocess?calibration_id=…&store=true` recomputes with another calibration as a **new** reading that points back to the first (the original is never changed; a tampered trace is refused with 409).
+- `frontend/asv.js`: the browser's offline maths is a line-by-line port of `app/signal_processing.py`; `tests/test_v58_pipeline.py` runs both on 17 traces (clean, copper bump, spike, reversed sweep, shifted peak, noisy, flat, jumbled, short) and fails if they drift by more than 0.05 µg/L. The dashboard uses the server's answer whenever it is reachable.
+- Robust baseline: MAD-clipped two-sided outlier rejection, so a copper-like bump at −550 mV no longer tilts the background line (45 → 30 µg/L before; 42 µg/L with a `BASELINE_OUTLIERS` warning now). Secondary peaks are counted and stored.
+- Malformed scans are **rejected with a reason and no value** (item 42): `MALFORMED_TRACE`, `TOO_FEW_POINTS`, `NON_FINITE`, `INVALID_CALIBRATION`, `NONMONOTONIC_SWEEP` (descending sweeps are reversed, jumbled ones refused), `INSUFFICIENT_BASELINE`, `PARTIAL_WINDOW`. A rejected scan is a failed test for **every** source type (a practice scan of a dead electrode used to be stored as 0 µg/L "not detected").
+- **Recorded replay** is a source type of its own: real instrument data played back is never stamped "simulated", never raises a live alert, and is shown with a "Recorded replay" badge. The dashboard's **Replay a recorded scan** button imports a CSV/TXT (mV or V, µA / A / nA detected), posts it to `/api/scans` and shows the stored trace; **View stored scan** fetches any reading's evidence with its checksum.
+- Calibration provenance: the factory line is labelled **"synthetic example (4 simulated standards), not a laboratory calibration"** on the dashboard, in the PDF and in `/api/scans` responses (item 06). A calibration fitted from standards can no longer claim an LOD below the validated method LOD (a perfect fit used to give 1e-14 µg/L and then fail every scan's noise check).
+
+**Corroboration, lab pairing, export (items 26, 29, 30, 46)**
+- "Confirmed by other nodes" now means other **QC-passed hardware** nodes within 2 km or in the same village in the last 24 h; unrelated devices and simulations never corroborate each other.
+- Lab results keep `reporting_limit_ug_l`, `qualifier` ("<") and `species`; a "<" result needs its reporting limit and cannot exceed it. `sample_code` on readings and lab results pairs the split sample exactly.
+- `GET /api/data/export/paired`: one row per real reading with its lab result, trace checksum, QC, calibration, firmware and the time gap; CSV (Excel-safe) or JSON. `Data/field/README.md` + `paired_template.csv` give the minimum record for the field programme.
+
+**Analysis tooling (items 11–15, 18, 24, 29, 54)** — numpy only, figures as SVG
+- `Analysis/paired_validation.py`: scatter with 1:1 and **Deming** regression (bootstrap CIs), **Bland–Altman**, confusion matrices at 10 and 20 µg/L with **Wilson** intervals, ROC/AUC, near-cutoff band, censored-result handling, rule-of-three note, uncertainty coverage. `--demo` runs on labelled synthetic pairs.
+- `Analysis/aquanet_v2_pipeline.py`: grouped **leave-one-site-out** evaluation of the calibration line vs ridge vs PLS vs a residual MLP, split-conformal 90 % intervals with coverage, reliability table and the **referral-vs-missed-unsafe** curve; refuses to run below 4 sites / 40 pairs.
+- `Docs/CLAIMS_REGISTER.md`: every limit / accuracy / cost / autonomy claim with its status (measured, software check, specification, target).
+
+**Firmware 5.8.0 and bridge (items 31, 40, 45)**
+- The ESP32 uploads the native trace of each reading's last scan to `/api/scans` after the reading is stored (`TRACE_UPLOAD`, kept until acknowledged, never delays the reading). Boot **self-test**: ADS1115 / MCP4725 presence, storage, buffered count, calibration age, measured AquaNet-V3 inference time; printed on serial and in `/status.json`.
+- `bridge/serial_bridge.py` rewritten: scalar lines as before plus `TRACE_BEGIN…TRACE_END` blocks and one-line `TRACE:`; `--file` uploads recorded CSVs as replays; `--watch` a logger folder; **durable outbox** (`bridge_outbox.jsonl`, acknowledged only on 2xx, flushed first on every start), stable content-hash scan IDs, `--api-key` / `AQUASENTRY_API_KEY`.
+
+**Hardening (items 43, 47)**
+- Neural inference inputs are bounded and finite; a NaN / Infinity body returns 422 (FastAPI's default handler used to crash with a 500). Request bodies above 2 MB (`MAX_BODY_BYTES`) are refused with 413.
+- Reprocess idempotency keys fit the 64-character column (was a 500 on `store=true`).
+
+**Tests**: 289 server tests (new `tests/test_v58_pipeline.py`, 33; `tests/test_v58_bridge.py`, 6), 9 browser/accessibility tests, firmware host build for ESP32 / S3 / C3, ruff clean. Migration `0004_v5_8_traces_outcome` adds the new columns in place; older databases upgrade on start.
+
 ## v5.7 (part 1, PR #3 by Nalin Aggarwal) — competition roadmap, tidy repository, demo data
 **Competition**
 - `Docs/ISEF_ROADMAP.md`: 267 prioritised changes for Regeneron ISEF / IRIS judging, grouped by the official engineering criteria, starting with the rules that can disqualify a project (no generative AI for the research plan, abstract, poster or citations; AI-use disclosure; the 12-month window from January 2026; Form 7 for continuations; SRC review and Form 3 for arsenic standards; human-participant approval for surveys; a booth that works without power or internet).

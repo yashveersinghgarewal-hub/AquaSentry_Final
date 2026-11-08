@@ -165,6 +165,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """v5.8 (review item 47): refuse request bodies above MAX_BODY_BYTES (default 2 MB; a 4 000-point scan is about
+    120 kB) before they are parsed. Clients that lie about Content-Length are stopped by the server's own read limit."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            limit = int(os.getenv("MAX_BODY_BYTES", str(2 * 1024 * 1024)))
+            length = request.headers.get("content-length")
+            if length and length.isdigit() and int(length) > limit:
+                return JSONResponse({"detail": f"Request body too large (limit {limit // 1024} kB)."}, status_code=413)
+        return await call_next(request)
+
+
 # ---------------------------------------------------------------------------- device keys
 KEY_PREFIX = "aqs_"
 

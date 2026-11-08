@@ -4,6 +4,8 @@
 | --- | --- |
 | [HOW_TO_RUN.md](HOW_TO_RUN.md) | Every way to run it: desktop app, browser, Docker, ESP32, demo data, tests, troubleshooting |
 | [ISEF_ROADMAP.md](ISEF_ROADMAP.md) | 267 prioritised changes for Regeneron ISEF / IRIS level judging, with the rules that can disqualify a project |
+| [ROADMAP_COVERAGE.md](ROADMAP_COVERAGE.md) | The 60-item Research and Engineering Review and the ISEF list mapped to code and tests, or to "needs the lab" |
+| [CLAIMS_REGISTER.md](CLAIMS_REGISTER.md) | Every claim about limits, accuracy, cost, autonomy or power with its evidence or marked as a target |
 | [CODE_GUIDE.md](CODE_GUIDE.md) | How the code fits together, and a neural-network primer using AquaNet |
 | [IMPROVEMENT_LOG.md](IMPROVEMENT_LOG.md) | Every change since v5.1 with the reason and the source (design history) |
 | [../CHANGELOG.md](../CHANGELOG.md) | Release notes, v2 → today |

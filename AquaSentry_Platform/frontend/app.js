@@ -11,12 +11,13 @@
   const UI = () => window.AquaUI;
   const DEVICE = 'AQUA-001';
   const SIM_DEVICE = 'SIM-DASHBOARD';   // v5.7: dashboard practice tests never share a code with a real device
+  const REPLAY_DEVICE = 'REPLAY-FILE';  // v5.8: recorded instrument files replayed through the server pipeline
   // windowMv: where the peak is expected; searchMv: how far it is searched (v5.7, same as app/standards.py)
-  const CAL = { slope: 0.8563, intercept: 0.0096, peakMv: -800, windowMv: 60, searchMv: 100, excludeMv: 105, lodUg: 20 };
-  // v5.7 scan checks, same numbers as app/standards.py: a dead / dry / noisy electrode reads LOW, so it must fail
-  const QC = { flatUa: 0.005, maxNoiseUa: 0.05, snr: 3 };
+  // v5.8: the trace maths lives in asv.js (a checked port of app/signal_processing.py); the server's answer wins online
+  const ASV = window.AquaASV;
+  const CAL = ASV.CAL;
   const STALE_MIN = 120;                // a node reports hourly; older than 2 h = possibly offline
-  const TONE_HEX = { none: '#3B82F6', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E', Clear: '#3B82F6', Failed: '#F43F5E' };
+  const TONE_HEX = { none: '#3B82F6', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E', Clear: '#3B82F6', Failed: '#F43F5E', Retest: '#F59E0B' };
   const CONTACT_KEY = 'aquasentry.contacts';
 
   const state = {
@@ -59,6 +60,7 @@
     Unsafe: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><circle cx="28" cy="28" r="24"/><path d="M19 19l18 18M37 19L19 37"/></svg>',
     Hazardous: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4h20l14 14v20L38 52H18L4 38V18Z"/><path d="M28 16v16M28 40v1"/></svg>',
     Failed: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="44" height="44" rx="6"/><path d="M19 19l18 18M37 19L19 37"/></svg>',
+    Retest: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M46 28a18 18 0 1 1-5.3-12.7"/><path d="M46 8v10H36"/></svg>',
   };
 
   // ---------------- readings ----------------
@@ -70,22 +72,41 @@
   // What the screen shows. A failed test is "Test failed" (never a clean result). Below the 20 µg/L LOD a "Safe"
   // vote is "Not detected: not confirmed safe", never "Safe to drink". A verdict stored by the server wins,
   // because it includes the scan QC, check-standard and calibration checks the browser cannot see.
+  // Is the verdict driven by something other than arsenic (pH, turbidity, conductivity, out-of-range input)?
+  const nonArsenicIssue = (res) => res.reasons.some((x) => /^(PH_|TURB_|EC_|OOB)/.test(x.code));
+  /** v5.8 (review item 04): the ONE screening outcome. From the server when it stored the reading (it includes
+   *  the scan QC, check-standard and calibration checks); otherwise from the local value and its uncertainty. */
+  function outcomeOf(r) {
+    if (!r) return null;
+    if (r.failed) return 'invalid';
+    if (r.outcome) return r.outcome;
+    const ug = ugl(r.asMgL), u = r.uncertaintyUg != null && r.uncertaintyUg > 0 ? r.uncertaintyUg : 10;
+    return ug >= CAL.lodUg ? 'screen_positive' : ug >= CAL.lodUg - u ? 'retest' : 'not_detected';
+  }
   function verdictKey(res, r) {
     r = r || state.reading;
     if (r && r.failed) return 'Failed';
+    const oc = outcomeOf(r);
     if (r && r.serverLabel && (SERVER_KEY[r.serverLabel] || res.final !== r.serverLabel)) {
       const k = SERVER_KEY[r.serverLabel] || r.serverLabel;
+      if (k === 'Failed') return k;
+      // the stored class says Caution / Below LOD for arsenic alone: show the outcome instead
+      if (!nonArsenicIssue(res) && (k === 'Clear' || k === 'Caution' || k === 'Safe')) return oc === 'retest' ? 'Retest' : oc === 'not_detected' ? 'Clear' : k;
       if (ICONS[k] || k === 'Clear') return k;
+    }
+    if (!nonArsenicIssue(res) && (res.final === 'Safe' || res.final === 'Caution')) {
+      if (oc === 'retest') return 'Retest';
+      if (oc === 'not_detected') return 'Clear';
     }
     return res.final === 'Safe' && res.belowLod ? 'Clear' : res.final;
   }
-  const paintKey = (vk) => (vk === 'Clear' || vk === 'Failed' ? vk : vk);
+  const paintKey = (vk) => vk;
   function belowLod(r) { return ugl(r.asMgL) < CAL.lodUg; }
   function setReading(r, opts) {
     state.reading = r;
     const res = evaluate(r);
     const vk = verdictKey(res, r);
-    r.verdict = vk === 'Failed' ? 'Test Failed' : vk === 'Clear' ? 'Below Sensor LOD' : res.final;
+    r.verdict = vk === 'Failed' ? 'Test Failed' : vk === 'Clear' ? 'Below Sensor LOD' : vk === 'Retest' ? 'Caution' : res.final;
     if (!opts || !opts.noHistory) {
       state.history.unshift({ time: r.time, asMgL: r.asMgL, verdict: r.verdict, source: r.source, ph: r.ph, ec: r.ec, turb: r.turb, temp: r.temp });
       state.history = state.history.slice(0, 50);
@@ -180,6 +201,7 @@
     v.dataset.tone = paintKey(vk);   // "not detected" gets its own paint, never the "safe" green; failed is red
     $('verdictIcon').innerHTML = vk === 'Clear' ? ICONS.none : (ICONS[vk] || ICONS[res.final]);
     $('verdictBadge').textContent = t('class.' + vk);
+    renderOutcome(r, vk);
     const vt = t('verdict.' + vk + '.title');
     if ($('verdictTitle').textContent !== vt) { if (window.AquaMotion) window.AquaMotion.decode($('verdictTitle'), vt, 650); else $('verdictTitle').textContent = vt; }
     $('verdictAction').textContent = t('verdict.' + vk + '.action');
@@ -190,7 +212,8 @@
     if (failed) { $('asValue').textContent = '–'; $('asValue')._v = 0; }
     else if (low) { $('asValue').textContent = '<' + CAL.lodUg; $('asValue')._v = 0; }
     else UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
-    $('asMgl').textContent = failed ? t('auth.f.notValid') : low ? t('auth.f.notDetected') : t('ov.mgl', { v: r.asMgL.toFixed(4) });
+    $('asMgl').textContent = failed ? t('auth.f.notValid') : low ? t('auth.f.notDetected')
+      : t('ov.mgl', { v: r.asMgL.toFixed(4) }) + (r.uncertaintyUg != null ? ' · ' + t('ov.unc', { u: r.uncertaintyUg < 10 ? r.uncertaintyUg.toFixed(1) : Math.round(r.uncertaintyUg) }) : '');
     const pin = $('stripPin');
     if (failed) pin.hidden = true;
     else {
@@ -234,6 +257,19 @@
   }
 
   const NM_LABEL = { ph: 'read.ph', ec: 'read.ec', turb: 'read.turb', temp: 'read.temp' };
+  const MODE_OF = { device: 'live', replay: 'replay', sim: 'sim', demo: 'demo', import: 'import' };
+  /** v5.8: the outcome chip, the ± uncertainty and the data mode (live / replay / simulation) beside the verdict. */
+  function renderOutcome(r, vk) {
+    const oc = outcomeOf(r), chip = $('outcomeChip'), mode = $('modeBadge'), unc = $('uncLine'), view = $('viewScanBtn');
+    if (chip) { chip.hidden = !oc; chip.dataset.outcome = oc || ''; chip.textContent = oc ? t('outcome.' + oc) : ''; }
+    if (mode) { const m = MODE_OF[r.source] || 'sim'; mode.dataset.mode = m; mode.textContent = t('mode.' + m); mode.title = t('mode.' + m + '.hint'); }
+    if (unc) {
+      const has = r.uncertaintyUg != null && !r.failed;
+      unc.hidden = !has;
+      if (has) unc.textContent = t(r.scanId || r.uncertaintySource === 'measured_from_scan' ? 'ov.uncMeasured' : 'ov.uncTypical', { u: r.uncertaintyUg < 10 ? r.uncertaintyUg.toFixed(1) : Math.round(r.uncertaintyUg) });
+    }
+    if (view) view.hidden = !(r.scanId && online());
+  }
   /** Device line under the verdict, with a warning when a real device's last reading is old (v5.7). */
   function ageText(min) {
     if (min < 120) return Math.round(min) + ' min';
@@ -286,7 +322,7 @@
   }
 
   // ---------------- server data ----------------
-  const SOURCE_KEY = { hardware: 'device', manual_import: 'import', simulated: 'sim', synthetic_demo: 'demo', synthetic_fixture: 'demo' };
+  const SOURCE_KEY = { hardware: 'device', manual_import: 'import', simulated: 'sim', synthetic_demo: 'demo', synthetic_fixture: 'demo', recorded_replay: 'replay' };
   /** A stored reading as the dashboard keeps it. Nothing is invented: missing values stay null. */
   function fromServer(d, code) {
     const qc = (d.qc_flags || '').split(',').filter(Boolean);
@@ -298,6 +334,8 @@
       source: SOURCE_KEY[d.source_type] || (d.is_simulated === false ? 'device' : 'demo'), savedOnServer: true,
       qc, species: d.arsenic_species || null, serverLabel: d.classification, failed: d.classification === 'Test Failed',
       timeUnknown: d.time_source === 'unknown',
+      outcome: d.screening_outcome || null, uncertaintyUg: d.uncertainty_ppb ?? null, scanId: d.trace_id || null,
+      uncertaintySource: d.trace_id ? 'measured_from_scan' : 'method_typical', calibrationId: d.calibration_ref || null,
     };
   }
   /** v5.7: with no device code, show the newest REAL device reading; fall back to the newest of any kind. */
@@ -320,107 +358,99 @@
     setReading({ asMgL: 0.045, ph: 7.35, ec: 412, turb: 2.1, temp: 24.2, battery: null, lat: null, lon: null, time: new Date(), source: 'demo' });
   }
 
-  // ---------------- voltammetry (same maths as app/signal_processing.py) ----------------
-  function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
-  function synthTrace(asMgL) {
-    const rand = rng(Math.round(asMgL * 1e5) + 17);
-    const P = [], C = [];
-    const peak = CAL.slope * asMgL + CAL.intercept;
-    for (let i = 0; i < 121; i++) {
-      const p = -1100 + i * 5;
-      const base = -0.15 + 0.00015 * (p + 1100);
-      const g = Math.exp(-0.5 * Math.pow((p - CAL.peakMv) / 35, 2));
-      C.push(base + peak * g + (rand() - 0.5) * 2 * 0.004);
-      P.push(p);
-    }
-    return { P, C };
+  // ---------------- voltammetry: asv.js (one pipeline; the server is authoritative when online) ----------------
+  const synthTrace = (asMgL) => ASV.synth(asMgL);
+  const faultTrace = () => ASV.fault();
+  const processTrace = (P, C) => ASV.process(P, C);
+  const FAULT_KEY = { FLAT_SIGNAL: 'qc.FLAT_SIGNAL', NOISE_ABOVE_LOD: 'qc.NOISE', BASELINE_UNSTABLE: 'qc.NOISE', PEAK_AT_WINDOW_EDGE: 'qc.PEAK_EDGE',
+    ADC_SATURATION_HIGH: 'qc.SATURATED', ADC_SATURATION_LOW: 'qc.SATURATED', NONMONOTONIC_SWEEP: 'qc.BADSWEEP', INSUFFICIENT_BASELINE: 'qc.BADSWEEP',
+    TOO_FEW_POINTS: 'qc.BADSWEEP', NON_FINITE: 'qc.BADSWEEP', MALFORMED_TRACE: 'qc.BADSWEEP', NO_POINTS_IN_WINDOW: 'qc.BADSWEEP', PARTIAL_WINDOW: 'qc.BADSWEEP', INVALID_CALIBRATION: 'qc.BADCAL' };
+  /** Send a trace through the server's pipeline (POST /api/scans). Returns null when offline or refused. */
+  async function postScan(P, C, extra) {
+    try {
+      return await api('/api/scans', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ potentials_mv: P, currents_ua: C }, extra)) }, 12000);
+    } catch (e) { return { error: e && e.message ? e.message : 'offline' }; }
   }
-  function savgol(y) {
-    const n = y.length; if (n < 5) return y.slice();
-    const s = new Array(n);
-    s[0] = (31 * y[0] + 9 * y[1] - 3 * y[2] - 5 * y[3] + 3 * y[4]) / 35;
-    s[1] = (9 * y[0] + 13 * y[1] + 12 * y[2] + 6 * y[3] - 5 * y[4]) / 35;
-    for (let i = 2; i < n - 2; i++) s[i] = (-3 * y[i - 2] + 12 * y[i - 1] + 17 * y[i] + 12 * y[i + 1] - 3 * y[i + 2]) / 35;
-    s[n - 2] = (-5 * y[n - 5] + 6 * y[n - 4] + 12 * y[n - 3] + 13 * y[n - 2] + 9 * y[n - 1]) / 35;
-    s[n - 1] = (3 * y[n - 5] - 5 * y[n - 4] - 3 * y[n - 3] + 9 * y[n - 2] + 31 * y[n - 1]) / 35;
-    return s;
+  function showTraceNumbers(out, caption) {
+    $('trPeak').textContent = out.net.toFixed(4) + ' µA';
+    $('trPos').textContent = Number.isFinite(out.peakMv) ? Math.round(out.peakMv) + ' mV' : '–';
+    $('trSnr').textContent = out.snr.toFixed(0);
+    $('trAs').textContent = out.failed ? t('class.Failed') : (out.asUgL < CAL.lodUg ? '< ' + CAL.lodUg : fmtUgNum(out.asUgL)) + ' µg/L'
+      + (out.uncertaintyUg != null && !out.failed && out.asUgL >= CAL.lodUg ? ' ± ' + (out.uncertaintyUg < 10 ? out.uncertaintyUg.toFixed(1) : Math.round(out.uncertaintyUg)) : '');
+    const cap = $('traceCaption'); if (cap) cap.textContent = caption || '';
   }
-  /** A dead / disconnected electrode: a flat line with only ADC noise on it (for the "Electrode fault" button). */
-  function faultTrace() {
-    const rand = rng(99), P = [], C = [];
-    for (let i = 0; i < 121; i++) { P.push(-1100 + i * 5); C.push(Math.round((rand() - 0.5) * 2) * 0.000625); }
-    return { P, C };
-  }
-  function processTrace(P, C) {
-    const S = savgol(C);
-    const flags = [];
-    if (Math.max.apply(null, C) - Math.min.apply(null, C) < QC.flatUa) flags.push('FLAT_SIGNAL');
-    const bx = [], by = [];
-    P.forEach((p, i) => { if (Math.abs(p - CAL.peakMv) > CAL.excludeMv) { bx.push(p); by.push(S[i]); } });
-    const mx = bx.reduce((a, b) => a + b, 0) / bx.length, my = by.reduce((a, b) => a + b, 0) / by.length;
-    let sxx = 0, sxy = 0; bx.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (by[i] - my); });
-    const m = sxx ? sxy / sxx : 0, c = my - m * mx;
-    const base = P.map((p) => m * p + c);
-    let vr = 0; bx.forEach((x, i) => { vr += (by[i] - (m * x + c)) ** 2; }); vr /= Math.max(1, bx.length - 2);
-    const noise = Math.sqrt(Math.max(1e-9, vr));
-    if (noise > QC.maxNoiseUa) flags.push('BASELINE_UNSTABLE');
-    else if (QC.snr * noise / CAL.slope * 1000 > CAL.lodUg) flags.push('NOISE_ABOVE_LOD');
-    let bi = -1, best = -Infinity;
-    const win = [];
-    P.forEach((p, i) => { if (Math.abs(p - CAL.peakMv) <= CAL.searchMv) { win.push(i); if (S[i] - base[i] > best) { best = S[i] - base[i]; bi = i; } } });
-    const net = Math.max(0, best);
-    const as = net <= CAL.intercept ? 0 : (net - CAL.intercept) / CAL.slope;
-    if (net > CAL.intercept && (bi === win[0] || bi === win[win.length - 1])) {
-      const nb = bi === win[0] ? bi - 1 : bi + 1;
-      if (nb >= 0 && nb < P.length && S[nb] - base[nb] >= best) flags.push('PEAK_AT_WINDOW_EDGE');
-    }
-    return { S, base, peakIdx: bi, peakMv: P[bi], net, snr: net / noise, asMgL: as, flags, failed: flags.length > 0 };
-  }
-
-  const FAULT_KEY = { FLAT_SIGNAL: 'qc.FLAT_SIGNAL', NOISE_ABOVE_LOD: 'qc.NOISE', BASELINE_UNSTABLE: 'qc.NOISE', PEAK_AT_WINDOW_EDGE: 'qc.PEAK_EDGE' };
+  /** A practice test (simulated trace), an electrode fault, or a recorded instrument file (replay). */
   async function runTest(asMgL, opts) {
-    const quiet = opts && opts.quiet;
+    opts = opts || {};
+    const quiet = opts.quiet;
     const btn = $('runTestBtn');
     btn.disabled = true; btn.textContent = t('test.running');
-    const { P, C } = opts && opts.fault ? faultTrace() : synthTrace(asMgL);
+    const replay = !!opts.trace;
+    const { P, C } = replay ? opts.trace : opts.fault ? faultTrace() : synthTrace(asMgL);
     let out = processTrace(P, C);
-    let saved = false;
+    let saved = false, refused = null, server = null;
     if (online()) {
-      try {
-        const d = await api('/api/voltammetry/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ potentials_mv: P, currents_ua: C, filter_mode: 'savitzky_golay' }) });
-        if (d && d.peak) {
-          const flags = (d.peak.qc_flags || []).filter((f) => FAULT_KEY[f] || /SATURATION|NO_POINTS/.test(f));
-          out = { S: d.smoothed_currents_ua, base: d.baseline_currents_ua, peakIdx: P.indexOf(d.peak.peak_potential_mv), peakMv: d.peak.peak_potential_mv, net: d.peak.net_peak_height_ua, snr: d.peak.snr, asMgL: d.estimated_arsenic_mg_l,
-            flags, failed: d.qc_status === 'REJECTED' };
-        }
-      } catch (e) { /* keep local result */ }
+      const d = await postScan(P, C, { device_code: replay ? (opts.device || REPLAY_DEVICE) : SIM_DEVICE,
+        source_type: replay ? 'recorded_replay' : 'simulated', raw_file_name: replay ? opts.fileName : undefined,
+        source_label: replay ? t('mode.replay') : 'Dashboard practice test', recorded_at: opts.recordedAt || undefined });
+      if (d && !d.error) {
+        server = d;
+        const pl = d.pipeline || {};
+        out = Object.assign({}, out, { asUgL: pl.estimated_ug_l == null ? 0 : pl.estimated_ug_l, asMgL: (pl.estimated_ug_l || 0) / 1000,
+          flags: pl.qc_flags || out.flags, failed: pl.qc_status === 'REJECTED', uncertaintyUg: pl.uncertainty_ug_l ?? out.uncertaintyUg, status: pl.qc_status || out.status });
+        saved = true;
+      } else if (d && d.error) refused = d.error;
     }
-    state.lastTrace = { P, C, out };
+    state.lastTrace = { P, C, out, caption: replay ? t('test.traceOf', { what: opts.fileName || t('mode.replay') }) : t(server ? 'test.pipelineServer' : 'test.pipelineLocal') };
     drawChart();
-    $('trPeak').textContent = out.net.toFixed(4) + ' µA';
-    $('trPos').textContent = Math.round(out.peakMv) + ' mV';
-    $('trSnr').textContent = out.snr.toFixed(0);
-    $('trAs').textContent = fmtUg(out.asMgL) + ' µg/L';
+    showTraceNumbers(out, state.lastTrace.caption);
 
-    // v5.7: a practice test only measures arsenic. pH / conductivity / turbidity / temperature are "not measured"
-    // (before, the previous reading's values or invented ones were copied in), and there is no battery or location.
-    const failNotes = (out.flags || []).map((f) => FAULT_KEY[f]).filter(Boolean);
+    // a practice test only measures arsenic: pH / conductivity / turbidity / temperature are "not measured"
+    const failNotes = Array.from(new Set((out.flags || []).map((f) => FAULT_KEY[f]).filter(Boolean)));
     const reading = { asMgL: out.asMgL, ph: null, ec: null, turb: null, temp: null, battery: null, lat: null, lon: null,
-      time: new Date(), source: 'sim', device: SIM_DEVICE, failed: !!out.failed, failNotes, qc: [] };
-    let refused = null;
-    if (online() && !out.failed) {   // a failed scan is not a result, so it is not stored as one
-      try {
-        const d = await api('/api/readings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-          device_code: SIM_DEVICE, arsenic_ppb: Math.round(ugl(out.asMgL) * 100) / 100, source_type: 'simulated', source_label: 'Dashboard practice test',
-        }) });
-        saved = true; reading.savedOnServer = true;
-        if (d && d.reading) { reading.id = d.reading.id; reading.serverLabel = d.label; reading.qc = (d.reading.qc_flags || '').split(',').filter(Boolean); }
-      } catch (e) { refused = e && e.message ? e.message : 'offline'; }
+      time: opts.recordedAt ? new Date(opts.recordedAt) : new Date(), source: replay ? 'replay' : 'sim',
+      device: replay ? (opts.device || REPLAY_DEVICE) : SIM_DEVICE, failed: !!out.failed, failNotes, qc: [],
+      uncertaintyUg: out.failed ? null : out.uncertaintyUg, uncertaintySource: 'measured_from_scan', fileName: opts.fileName || null };
+    if (server && server.result) {
+      const d = server.result;
+      reading.savedOnServer = true; reading.id = d.reading.id; reading.serverLabel = d.label;
+      reading.qc = (d.reading.qc_flags || '').split(',').filter(Boolean); reading.outcome = d.screening_outcome || null;
+      reading.scanId = server.scan && server.scan.id; reading.calibrationId = server.scan && server.scan.calibration_id;
     }
     setReading(reading);
     btn.disabled = false; btn.textContent = t('test.run');
     if (out.failed) $('testMsg').textContent = t('test.failed', { why: failNotes.map((k) => t(k)).join(' ') });
+    else if (replay) $('testMsg').textContent = t(saved ? 'test.replaySaved' : 'test.replayLocal', { n: P.length });
     else if (!quiet) $('testMsg').textContent = refused && online() ? t('test.refused', { why: refused }) : t(saved ? 'test.savedServer' : 'test.saved');
+  }
+  /** v5.8: show the stored native trace of the reading on screen (GET /api/scans/{id}), with the server's processing. */
+  async function viewScan(scanId) {
+    if (!scanId) return;
+    try {
+      const d = await api(`/api/scans/${scanId}`, null, 8000);
+      const pr = d.processed || {};
+      const out = { P: d.potentials_mv, C: d.currents_ua, S: pr.smoothed_currents_ua || d.currents_ua, base: pr.baseline_currents_ua || d.currents_ua.map(() => 0),
+        peakIdx: pr.peak && pr.peak.peak_potential_mv != null ? d.potentials_mv.indexOf(pr.peak.peak_potential_mv) : -1,
+        peakMv: pr.peak ? pr.peak.peak_potential_mv : NaN, net: pr.peak ? pr.peak.net_peak_height_ua || 0 : 0, snr: pr.peak ? pr.peak.snr || 0 : 0,
+        asUgL: pr.estimated_ug_l || 0, asMgL: (pr.estimated_ug_l || 0) / 1000, failed: pr.qc_status === 'REJECTED', flags: d.qc_flags || [],
+        uncertaintyUg: d.uncertainty_ug_l };
+      state.lastTrace = { P: out.P, C: out.C, out, caption: t('test.storedTrace', { id: scanId, sum: (d.checksum_sha256 || '').slice(0, 10), ok: pr.checksum_matches === false ? t('test.checksumBad') : t('test.checksumOk') }) };
+      drawChart();
+      showTraceNumbers(out, state.lastTrace.caption);
+      document.getElementById('test').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) { flash(t('test.traceMissing')); }
+  }
+  function onReplayFile(file) {
+    if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const parsed = ASV.parseTraceFile(rd.result, file.name);
+      if (parsed.error || !parsed.P || parsed.P.length < 2) { $('testMsg').textContent = t('test.replayBad'); return; }
+      runTest(0, { trace: { P: parsed.P, C: parsed.C }, fileName: file.name, recordedAt: parsed.meta && parsed.meta.recorded_at,
+        device: parsed.meta && parsed.meta.device_code });
+    };
+    rd.readAsText(file);
   }
 
   function drawChart() {
@@ -457,7 +487,7 @@
     add('path', { d: path(out.base), class: 'vg-base' });
     const sm = add('path', { d: path(out.S), class: 'vg-smooth' });
     try { sm.style.setProperty('--len', Math.ceil(sm.getTotalLength())); } catch (e) { /* ignore */ }
-    if (out.peakIdx >= 0) {
+    if (out.peakIdx >= 0 && Number.isFinite(out.peakMv)) {
       const px = X(out.peakMv);
       add('line', { x1: px, x2: px, y1: Y(out.base[out.peakIdx]), y2: Y(out.S[out.peakIdx]), class: 'vg-peak', 'stroke-dasharray': '2 3' });
       add('circle', { cx: px, cy: Y(out.S[out.peakIdx]), r: 6, class: 'vg-peak-dot' });
@@ -535,7 +565,7 @@
     if (!r) return null;
     const res = evaluate(r);
     const vk = verdictKey(res, r);
-    const srcKey = { device: 'auth.src.device', import: 'auth.src.import', sim: 'auth.src.sim', demo: 'auth.src.demo' }[r.source] || 'auth.src.demo';
+    const srcKey = { device: 'auth.src.device', import: 'auth.src.import', sim: 'auth.src.sim', demo: 'auth.src.demo', replay: 'auth.src.replay' }[r.source] || 'auth.src.demo';
     return [
       ['auth.f.source', t(srcKey)],
       ['auth.f.station', `${r.device || DEVICE} (${t('auth.f.stationType')})`],
@@ -544,6 +574,7 @@
       ['auth.f.reading', vk === 'Failed' ? t('auth.f.notValid') : belowLod(r) ? t('auth.f.notDetected') : `${r.asMgL.toFixed(4)} mg/L (${fmtUg(r.asMgL)} µg/L)`],
       ['auth.f.limits', 'WHO 10 µg/L · IS 10500: 10 µg/L (no relaxation since 2015)'],
       ['auth.f.tier', `${t('class.' + vk)} — ${t('verdict.' + vk + '.title')}`],
+      ['auth.f.outcome', `${t('outcome.' + (outcomeOf(r) || 'invalid'))}${r.uncertaintyUg != null && vk !== 'Failed' && !belowLod(r) ? ' · ± ' + (r.uncertaintyUg < 10 ? r.uncertaintyUg.toFixed(1) : Math.round(r.uncertaintyUg)) + ' µg/L' : ''}${r.calibrationId ? ' · ' + t('auth.f.cal', { id: r.calibrationId }) : ''}`],
       ['auth.f.other', [
         r.ph == null ? null : `pH ${r.ph.toFixed(2)}`, r.ec == null ? null : `${Math.round(r.ec)} µS/cm`,
         r.turb == null ? null : `${r.turb.toFixed(1)} NTU`, r.temp == null ? null : `${r.temp.toFixed(1)} °C`,
@@ -556,7 +587,7 @@
   /** v5.7: only real readings with a valid result can be sent to authorities (was: anything, incl. practice tests). */
   function reportBlocked(r) {
     if (!r) return null;
-    if (r.source !== 'device' && r.source !== 'import') return 'auth.blockedSim';
+    if (r.source !== 'device' && r.source !== 'import' && r.source !== 'replay') return 'auth.blockedSim';
     if (verdictKey(evaluate(r), r) === 'Failed') return 'auth.blockedFailed';
     return null;
   }
@@ -947,6 +978,9 @@
       b.dataset.quick === 'fault' ? runTest(0, { fault: true }) : runTest(parseFloat(b.dataset.quick), { quiet: true }))));
     $('testAs').addEventListener('input', () => { $('testAsOut').textContent = $('testAs').value + ' µg/L'; });
     $('runTestBtn').addEventListener('click', () => runTest(parseFloat($('testAs').value) / 1000));
+    if ($('replayBtn')) $('replayBtn').addEventListener('click', () => $('replayFile').click());
+    if ($('replayFile')) $('replayFile').addEventListener('change', (e) => { onReplayFile(e.target.files && e.target.files[0]); e.target.value = ''; });
+    if ($('viewScanBtn')) $('viewScanBtn').addEventListener('click', () => viewScan(state.reading && state.reading.scanId));
     NN_IDS.forEach(([id]) => $(id).addEventListener('input', updateNetwork));
     document.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
       b.dataset.preset.split(',').map(Number).forEach((v, i) => { $(NN_IDS[i][0]).value = v; UI().fillRange($(NN_IDS[i][0])); });

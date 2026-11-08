@@ -117,6 +117,15 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
             "Below Sensor LOD": ('#E8EEF8', '#1F4F8B')}.get(verdict, ('#F4F7F6', '#4B5D58'))
     verdict_text = {"Below Sensor LOD": "NOT DETECTED: NOT CONFIRMED SAFE",
                     "Test Failed": "TEST FAILED: RESULT NOT VALID"}.get(verdict, verdict.upper())
+    # v5.8: the screening outcome leads (one of four), the class follows
+    outcome = reading_dict.get("screening_outcome")
+    outcome_text = {"invalid": "TEST FAILED: NO VALID RESULT", "not_detected": "NOT DETECTED: NOT CONFIRMED SAFE",
+                    "retest": "BORDERLINE: RETEST AND CONFIRM IN A LABORATORY",
+                    "screen_positive": "ARSENIC DETECTED: CONFIRM IN A LABORATORY, DO NOT DRINK"}.get(outcome)
+    if outcome_text:
+        verdict_text = outcome_text
+        if outcome == "retest":
+            tone = ('#FBF3DC', '#8A6404')
     failed = verdict == "Test Failed"
     badge_bg, badge_color = colors.HexColor(tone[0]), colors.HexColor(tone[1])
     model_line = ""
@@ -165,7 +174,7 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
         ["Parameter", "Measured value", "Limit used", "Status"],
         ["Total arsenic (As)" if reading_dict.get("arsenic_species") == "total" else "Arsenic, As(III) only (As(V) not measured)",
          "Not valid" if failed else (f"< {LOD_UG_L:.0f} µg/L (not detected)" if as_ug_l < LOD_UG_L
-                                     else f"{as_ug_l:.1f} µg/L ({as_mg_l:.4f} mg/L)"),
+                                     else f"{as_ug_l:.1f} ± {float(reading_dict.get('uncertainty_ug_l') or 0):.1f} µg/L ({as_mg_l:.4f} mg/L)"),
          "WHO 10 µg/L; IS 10500 10 µg/L (no relaxation)", as_status],
         ["pH", _fmt_or_missing(ph_val, ".2f"), "6.5 - 8.5 (BIS)", limit_status(ph_val, lambda v: 6.5 <= v <= 8.5)],
         ["Turbidity", _fmt_or_missing(turb_val, ".2f", "NTU"), "5 NTU (BIS permissible)", limit_status(turb_val, lambda v: v <= 5.0)],
@@ -194,6 +203,13 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
         extra.append("QC codes: " + reading_dict["qc_flags"].replace(",", ", "))
     if reading_dict.get("time_source") in ("unknown", "server_receipt") and reading_dict.get("source_type") == "hardware":
         extra.append("Sample time not reported by the device; the time shown is when the server received it")
+    if reading_dict.get("uncertainty_ug_l") is not None and not failed:
+        extra.append(f"Uncertainty ± {float(reading_dict['uncertainty_ug_l']):.1f} µg/L (k = 2; "
+                     + ("measured from the scan's noise" if reading_dict.get("trace_id") else "method's typical value")
+                     + ", calibration term 5 % assumed)")
+    if reading_dict.get("trace_id"):
+        extra.append(f"Native scan #{reading_dict['trace_id']} stored (checksum {str(reading_dict.get('trace_checksum') or '')[:12]}…), "
+                     f"analysis {reading_dict.get('analysis_version') or '?'}")
     if extra:
         story.append(Spacer(1, 4))
         story.append(Paragraph(" | ".join(extra), body_style))
@@ -201,9 +217,13 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
 
     fingerprint = reading_fingerprint(reading_dict)
     sign_data = [[
-        Paragraph("<b>How this result was produced:</b><br/>Stripping-voltammetry peak converted with the stored calibration "
-                  f"(slope {CALIBRATION_SLOPE} µA per mg/L, intercept {CALIBRATION_INTERCEPT} µA), then classified by {reading_dict.get('model_version') or active_model_name()} "
-                  "with fixed WHO / IS 10500 safety rules applied after the model.", body_style),
+        Paragraph("<b>How this result was produced:</b><br/>Stripping-voltammetry peak converted with calibration "
+                  f"<b>{reading_dict.get('calibration_id') or 'factory'}</b>"
+                  + (" (factory example: 4 SYNTHETIC standards from the simulated scan generator, not a laboratory calibration)"
+                     if (reading_dict.get('calibration_id') or 'factory') == 'factory' else "")
+                  + f", then classified by {reading_dict.get('model_version') or active_model_name()} "
+                  "with fixed WHO / IS 10500 safety rules applied after the model. The model's vote share is not an "
+                  "accuracy figure.", body_style),
         Paragraph(f"<b>Data fingerprint (SHA-256):</b><br/><font size=6.5>{fingerprint[:32]}<br/>{fingerprint[32:]}</font><br/>"
                   "Recomputed from the values on this page; any change to them changes this code.", body_style),
     ]]
@@ -267,6 +287,12 @@ def download_potability_certificate(
         "qc_flags": rec.qc_flags,
         "qc_text": "; ".join(_qc_describe([f for f in (rec.qc_flags or "").split(",") if f])) or None,
         "time_source": rec.time_source,
+        "screening_outcome": rec.screening_outcome,
+        "uncertainty_ug_l": rec.uncertainty_ppb,
+        "trace_id": rec.trace_id,
+        "trace_checksum": rec.trace.checksum_sha256 if getattr(rec, "trace", None) is not None else None,
+        "analysis_version": rec.analysis_version,
+        "calibration_id": rec.calibration_ref,
     }
     # Model confidence is recomputed from the stored values with the model that classified the reading.
     try:

@@ -12,7 +12,7 @@ Processes raw voltammograms acquired from the potentiostat (MAS-G1 strip / ADS11
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 from .standards import (
@@ -31,6 +31,11 @@ from .standards import (
 )
 
 
+ANALYSIS_VERSION = "asv-1.2.0"   # v5.8: bump whenever the maths below changes (stored with every scan)
+MIN_POINTS = 10
+MIN_BASELINE_POINTS_PER_SIDE = 4  # background line needs real shoulders on both sides of the peak
+
+
 @dataclass
 class PeakCharacteristics:
     peak_potential_mv: float
@@ -43,6 +48,11 @@ class PeakCharacteristics:
     baseline_residual_variance: float
     is_valid_peak: bool
     qc_flags: List[str]
+    # v5.8 features (review item 12): kept with the raw trace so a later model can learn from them
+    baseline_slope_ua_per_mv: float = 0.0
+    noise_sigma_ua: float = 0.0
+    secondary_peaks: int = 0
+    uncertainty_ug_l: Optional[float] = None    # expanded (k=2) estimate, see estimate_uncertainty()
 
 
 @dataclass
@@ -58,6 +68,36 @@ class VoltammetryResult:
     smoothed_currents_ua: List[float]
     baseline_currents_ua: List[float]
     subtracted_currents_ua: List[float]
+    analysis_version: str = ANALYSIS_VERSION
+    sweep_reversed: bool = False       # the device swept from positive to negative; arrays were reordered
+    qc_flags: List[str] = field(default_factory=list)   # same as peak.qc_flags, also set when peak is None
+
+
+def estimate_uncertainty(conc_ug_l: float, noise_sigma_ua: float, slope: float,
+                         cal_rel_sd: float = 0.05, n_scans: int = 1) -> float:
+    """Expanded uncertainty (k = 2) of one arsenic value, in µg/L.
+
+    Measured part: the background noise of this scan divided by the calibration slope (how much the peak
+    height can wander), divided by sqrt(scans averaged). Calibration part: the relative standard deviation of
+    the calibration (5 % assumed until a laboratory calibration supplies its own residuals). Added in
+    quadrature and doubled. This replaces the model's "confidence", which never measured anything."""
+    if slope <= 0 or not math.isfinite(slope):
+        return float("nan")
+    u_noise = noise_sigma_ua / slope * 1000.0 / math.sqrt(max(1, n_scans))
+    u_cal = cal_rel_sd * max(0.0, conc_ug_l)
+    return round(2.0 * math.sqrt(u_noise * u_noise + u_cal * u_cal), 2)
+
+
+def _rejected(potentials, currents, flags, messages, filter_mode, smoothed=None, baseline=None, reversed_=False):
+    smoothed = smoothed if smoothed is not None else list(currents)
+    baseline = baseline if baseline is not None else [0.0] * len(currents)
+    return VoltammetryResult(
+        estimated_arsenic_ug_l=0.0, estimated_arsenic_mg_l=0.0, peak=None, filter_type=filter_mode,
+        qc_status="REJECTED", qc_messages=messages, raw_potentials_mv=list(potentials), raw_currents_ua=list(currents),
+        smoothed_currents_ua=smoothed, baseline_currents_ua=baseline,
+        subtracted_currents_ua=[a - b for a, b in zip(smoothed, baseline)], sweep_reversed=reversed_,
+        qc_flags=list(flags),
+    )
 
 
 def savitzky_golay_5pt(y: List[float]) -> List[float]:
@@ -126,21 +166,38 @@ def fit_linear_baseline(
         slope = (c_end - c_start) / (p_end - p_start) if p_end != p_start else 0.0
         intercept = c_start - slope * p_start
         baseline = [slope * p + intercept for p in potentials]
+        fit_linear_baseline.last_outliers = 0
         return baseline, 0.01
 
-    n_pts = len(base_x)
-    mean_x = sum(base_x) / n_pts
-    mean_y = sum(base_y) / n_pts
-    ss_xx = sum((x - mean_x) ** 2 for x in base_x)
-    ss_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(base_x, base_y))
+    def fit(xs, ys):
+        n_pts = len(xs)
+        mean_x = sum(xs) / n_pts
+        mean_y = sum(ys) / n_pts
+        ss_xx = sum((x - mean_x) ** 2 for x in xs)
+        ss_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+        sl = ss_xy / ss_xx if ss_xx != 0 else 0.0
+        ic = mean_y - sl * mean_x
+        res = [(y - (sl * x + ic)) for x, y in zip(xs, ys)]
+        return sl, ic, res, sum(r * r for r in res) / max(1, n_pts - 2)
 
-    slope = ss_xy / ss_xx if ss_xx != 0 else 0.0
-    intercept = mean_y - slope * mean_x
+    # v5.8: robust fit. A second stripping peak (copper, a shoulder, a spike) that sits in the background region
+    # would otherwise tilt the line and change the arsenic value; points far above the line are dropped and the
+    # line refitted (two passes), so such bumps stay in the subtracted trace where they can be seen and counted.
+    n_start = len(base_x)
+    slope, intercept, residuals, variance = fit(base_x, base_y)
+    for _ in range(3):
+        # robust scale (median absolute deviation): a wide bump must not inflate the yardstick it is judged by
+        med = sorted(residuals)[len(residuals) // 2]
+        mad = sorted(abs(r - med) for r in residuals)[len(residuals) // 2]
+        sd = max(1.4826 * mad, 1e-6)
+        keep = [(x, y) for x, y, r in zip(base_x, base_y, residuals) if abs(r - med) <= 3.0 * sd]
+        if len(keep) < 4 or len(keep) == len(base_x):
+            break
+        base_x, base_y = [k[0] for k in keep], [k[1] for k in keep]
+        slope, intercept, residuals, variance = fit(base_x, base_y)
 
     baseline = [slope * p + intercept for p in potentials]
-    residuals = [(y - (slope * x + intercept)) for x, y in zip(base_x, base_y)]
-    variance = sum(r * r for r in residuals) / max(1, n_pts - 2)
-
+    fit_linear_baseline.last_outliers = n_start - len(base_x)   # read by process_voltammetry_trace
     return baseline, variance
 
 
@@ -153,9 +210,16 @@ def process_voltammetry_trace(
     slope: float = CALIBRATION_SLOPE,
     intercept: float = CALIBRATION_INTERCEPT,
     lod_ug_l: float = LOD_UG_L,
+    strict: bool = True,
+    cal_rel_sd: float = 0.05,
 ) -> VoltammetryResult:
     """
     Process raw ASV voltammetric scan arrays and return rigorous peak and concentration metrics.
+
+    strict=True (the /api/voltammetry/process endpoint): a trace that cannot be analysed at all (too short,
+    non-finite numbers, lengths differ, invalid calibration) raises ValueError -> HTTP 422.
+    strict=False (stored device scans): the same cases come back as a REJECTED result with the reason, so the
+    failed run is kept as evidence (review item 40 / 42) and never turns into a concentration.
 
     Fail-safe QC: a scan that looks like a disconnected / dry electrode (FLAT_SIGNAL), is too noisy to see
     arsenic at the detection limit (NOISE_ABOVE_LOD, BASELINE_UNSTABLE), is clipped, or whose biggest
@@ -164,15 +228,32 @@ def process_voltammetry_trace(
     """
     qc_flags = []
     qc_messages = []
+    potentials_mv = [float(v) for v in potentials_mv]
+    currents_ua = [float(v) for v in currents_ua]
+
+    def fail(flag: str, msg: str):
+        if strict:
+            raise ValueError(msg)
+        return _rejected(potentials_mv, currents_ua, [flag], [msg], filter_mode)
 
     if len(potentials_mv) != len(currents_ua):
-        raise ValueError("Potentials and currents arrays must have identical length.")
-    if len(potentials_mv) < 10:
-        raise ValueError("Insufficient points for voltammetric trace analysis (minimum 10 required).")
+        return fail("MALFORMED_TRACE", "Potentials and currents arrays must have identical length.")
+    if len(potentials_mv) < MIN_POINTS:
+        return fail("TOO_FEW_POINTS", f"Insufficient points for voltammetric trace analysis (minimum {MIN_POINTS} required).")
+    if any(math.isnan(v) or math.isinf(v) for v in potentials_mv + currents_ua):
+        return fail("NON_FINITE", "Trace contains non-finite numbers (NaN or Infinity).")
+    if not (math.isfinite(slope) and slope > 0 and math.isfinite(intercept)):
+        return fail("INVALID_CALIBRATION", f"Calibration slope must be a positive number (got {slope}).")
 
-    for val in potentials_mv + currents_ua:
-        if math.isnan(val) or math.isinf(val):
-            raise ValueError("Trace contains non-finite numbers (NaN or Infinity).")
+    # Sweep order (review item 42): a stripping sweep runs from negative to positive. A reversed sweep is
+    # accepted and reordered; a jumbled or repeating potential axis is not a sweep and is rejected.
+    sweep_reversed = False
+    diffs = [b - a for a, b in zip(potentials_mv, potentials_mv[1:])]
+    if all(d < 0 for d in diffs):
+        potentials_mv, currents_ua, sweep_reversed = potentials_mv[::-1], currents_ua[::-1], True
+    elif not all(d > 0 for d in diffs):
+        return fail("NONMONOTONIC_SWEEP", "Potentials must increase (or decrease) steadily through the sweep; "
+                                           "this trace repeats or jumps back, so no peak can be located.")
 
     # Check for ADC saturation / clipping
     max_c = max(currents_ua)
@@ -195,13 +276,35 @@ def process_voltammetry_trace(
     else:
         smoothed_currents = list(currents_ua)
 
+    # The background line needs shoulders on both sides of the peak (review item 42: "missing shoulders").
+    left_sh = sum(1 for p in potentials_mv if p < target_peak_mv - 105.0)
+    right_sh = sum(1 for p in potentials_mv if p > target_peak_mv + 105.0)
+    if left_sh < MIN_BASELINE_POINTS_PER_SIDE or right_sh < MIN_BASELINE_POINTS_PER_SIDE:
+        msg = (f"The sweep has too few points outside the peak region ({left_sh} before, {right_sh} after; "
+               f"{MIN_BASELINE_POINTS_PER_SIDE} needed on each side) to fit a background line.")
+        if strict:
+            raise ValueError(msg)
+        return _rejected(potentials_mv, currents_ua, ["INSUFFICIENT_BASELINE"], [msg], filter_mode,
+                         smoothed_currents, None, sweep_reversed)
+    covers = potentials_mv[0] <= target_peak_mv - SWEEP_WINDOW_MV and potentials_mv[-1] >= target_peak_mv + SWEEP_WINDOW_MV
+    if not covers:
+        qc_flags.append("PARTIAL_WINDOW")
+        qc_messages.append(f"The sweep does not cover the whole arsenic window ({target_peak_mv:.0f} ± {SWEEP_WINDOW_MV:.0f} mV).")
+
     baseline_currents, baseline_variance = fit_linear_baseline(
         potentials_mv, smoothed_currents, target_peak_mv=target_peak_mv
     )
     subtracted_currents = [
         s - b for s, b in zip(smoothed_currents, baseline_currents)
     ]
+    b_slope = ((baseline_currents[-1] - baseline_currents[0]) / (potentials_mv[-1] - potentials_mv[0])
+               if potentials_mv[-1] != potentials_mv[0] else 0.0)
 
+    outliers = getattr(fit_linear_baseline, "last_outliers", 0)
+    if outliers > max(2, 0.05 * len(potentials_mv)):
+        qc_flags.append("BASELINE_OUTLIERS")
+        qc_messages.append(f"{outliers} points in the background region were spikes or bumps and were left out of "
+                           "the background fit (electrical noise or another stripping peak).")
     noise_sigma = math.sqrt(max(1e-9, baseline_variance))
     if noise_sigma > QC_MAX_NOISE_UA:
         qc_flags.append("BASELINE_UNSTABLE")
@@ -222,19 +325,8 @@ def process_voltammetry_trace(
     if not peak_indices:
         qc_flags.append("NO_POINTS_IN_WINDOW")
         qc_messages.append(f"No sweep data points within search window ({target_peak_mv} ± {search_window_mv} mV).")
-        return VoltammetryResult(
-            estimated_arsenic_ug_l=0.0,
-            estimated_arsenic_mg_l=0.0,
-            peak=None,
-            filter_type=filter_mode,
-            qc_status="REJECTED",
-            qc_messages=qc_messages,
-            raw_potentials_mv=potentials_mv,
-            raw_currents_ua=currents_ua,
-            smoothed_currents_ua=smoothed_currents,
-            baseline_currents_ua=baseline_currents,
-            subtracted_currents_ua=subtracted_currents,
-        )
+        return _rejected(potentials_mv, currents_ua, qc_flags, qc_messages, filter_mode,
+                         smoothed_currents, baseline_currents, sweep_reversed)
 
     best_idx = peak_indices[0]
     best_subtracted = subtracted_currents[best_idx]
@@ -300,6 +392,23 @@ def process_voltammetry_trace(
         qc_messages.append(f"Peak found at {peak_pot:.0f} mV, more than {SWEEP_WINDOW_MV:.0f} mV from the expected "
                            f"{target_peak_mv:.0f} mV. Check the reference electrode.")
 
+    # Secondary peaks (review item 12): other bumps above 3 sigma outside the main peak, e.g. copper or a
+    # second stripping process. Counted, not interpreted.
+    secondary = 0
+    thr = QC_DETECT_SNR * noise_sigma
+    # the main peak's own region: contiguous points around the maximum still above half the detection threshold
+    lo_i, hi_i = best_idx, best_idx
+    while lo_i > 0 and subtracted_currents[lo_i - 1] > thr / 2:
+        lo_i -= 1
+    while hi_i < len(subtracted_currents) - 1 and subtracted_currents[hi_i + 1] > thr / 2:
+        hi_i += 1
+    for i in range(1, len(subtracted_currents) - 1):
+        if lo_i - 1 <= i <= hi_i + 1:
+            continue
+        if subtracted_currents[i] > thr and subtracted_currents[i] >= subtracted_currents[i - 1] and subtracted_currents[i] > subtracted_currents[i + 1]:
+            secondary += 1
+    uncertainty = estimate_uncertainty(c_as_ug_l, noise_sigma, slope, cal_rel_sd)
+
     if c_as_ug_l > CAL_MAX_UG_L:
         qc_flags.append("ABOVE_CALIBRATION_RANGE")
         qc_messages.append(f"Calculated concentration ({c_as_ug_l:.1f} µg/L) exceeds validated range ({CAL_MAX_UG_L:.0f} µg/L); dilution advised.")
@@ -321,6 +430,10 @@ def process_voltammetry_trace(
         baseline_residual_variance=round(baseline_variance, 6),
         is_valid_peak=is_valid,
         qc_flags=qc_flags,
+        baseline_slope_ua_per_mv=round(b_slope, 7),
+        noise_sigma_ua=round(noise_sigma, 6),
+        secondary_peaks=secondary,
+        uncertainty_ug_l=uncertainty,
     )
 
     return VoltammetryResult(
@@ -335,6 +448,8 @@ def process_voltammetry_trace(
         smoothed_currents_ua=smoothed_currents,
         baseline_currents_ua=baseline_currents,
         subtracted_currents_ua=subtracted_currents,
+        sweep_reversed=sweep_reversed,
+        qc_flags=list(qc_flags),
     )
 
 

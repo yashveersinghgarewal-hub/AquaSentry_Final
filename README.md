@@ -10,13 +10,25 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 | ESP32 firmware | [`Firmware/`](Firmware/) | Runs the voltammetry scan (3 scans, up to 9 near a limit), pH / conductivity / turbidity / temperature, AquaNet-V3 on the chip, offline buffer, Wi-Fi upload, updates with rollback |
 | Neural network | [`Neural_Network/`](Neural_Network/) | AquaNet-V1 (original), V2 and V3 (in use), training code in `v3_training/` |
 | Hardware | [`models_3d/`](models_3d/), [`Docs/hardware/`](Docs/hardware/) | Printable enclosure, assembly manual, tank and catamaran versions |
-| Data and analysis | [`Data/`](Data/), [`Analysis/`](Analysis/) | Example scans and calibration, scan generator and analysis scripts |
+| Data and analysis | [`Data/`](Data/), [`Analysis/`](Analysis/) | Example scans and calibration, field-data template (`Data/field/`), scan generator, paired-validation and model-evaluation scripts |
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | [`Docs/`](Docs/) | **[Documentation index](Docs/README.md)**: run guide, ISEF roadmap, code guide, neural-network reports, video |
 
 ## For competitions (ISEF / IRIS)
 
 **[`Docs/ISEF_ROADMAP.md`](Docs/ISEF_ROADMAP.md)** lists 267 prioritised changes for Regeneron ISEF-level judging, grouped by the official criteria, starting with the rules that can disqualify a project (generative-AI use, the 12-month window, hazardous-chemical forms). The two biggest gaps it targets: the results so far come from **simulated data**, and the arsenic detection limit (**20 µg/L**) is above the **10 µg/L** legal limit.
+
+## What changed in v5.8
+
+Built from the 8 Nov 2026 **Research and Engineering Review** (60 items) and the ISEF list. [`Docs/ROADMAP_COVERAGE.md`](Docs/ROADMAP_COVERAGE.md) maps each item to code and tests, or says it needs the laboratory; [`Docs/CLAIMS_REGISTER.md`](Docs/CLAIMS_REGISTER.md) lists every claim with its evidence or marks it a target.
+
+- **One outcome per test.** Beside the tier, every result says **invalid**, **not detected**, **retest** or **screen positive**. The borderline band is the reading's own uncertainty (± U, k = 2, measured from the scan), so a 17 ± 6 µg/L reading is "retest and confirm in a lab", not "safe".
+- **Scans are evidence.** The raw current-vs-potential points of each test are stored with a SHA-256 checksum, analysis version, calibration ID and firmware; any reading's stored scan can be viewed, and reprocessed with a later calibration without touching the original value. Browser and server run the same checked pipeline.
+- **Bad scans fail visibly.** Jumbled, short, non-finite, saturated or shoulder-less traces are rejected with a reason and no number, whatever the source. The factory calibration is labelled what it is: a synthetic example.
+- **Real data has a mode.** Live / recorded replay / simulation / demo are separate; **Replay a recorded scan** imports an instrument file and the result is real data, never a live alert.
+- **Lab pairing and export.** Censored lab results ("< reporting limit") are kept as such; the paired node-vs-lab table exports in one call. `Analysis/paired_validation.py` (Deming, Bland–Altman, Wilson CIs, ROC, near-cutoff band) and `Analysis/aquanet_v2_pipeline.py` (site-grouped comparison of the calibration line against ridge / PLS / a residual MLP, conformal intervals, referral-vs-miss curve) turn that table into the judge figures. Both run today only on **labelled synthetic** demo data.
+- **ESP32 firmware 5.8.0** uploads the native trace of each reading and runs a boot self-test (ADC/DAC present, storage, calibration age, inference time). The **bridge** accepts trace blocks and recorded CSV files, with a durable outbox and stable scan IDs.
+- Hardening: finite, bounded inference inputs (422, not 500), 2 MB request cap, calibration LOD floored at the method LOD.
 
 ## What changed in v5.7
 

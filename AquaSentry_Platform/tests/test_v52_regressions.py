@@ -192,11 +192,19 @@ class TestTimestamps:
         assert not rd["recorded_at"].startswith("2099")
 
     def test_dashboard_unsafe_with_other_devices(self, client):
+        # v5.8 (review item 46): only real, QC-passed nodes at the SAME place corroborate; simulated readings from
+        # unrelated devices never do
         client.post("/api/readings", json={"device_code": "REG-D1", "arsenic_ppb": 90})
         client.post("/api/readings", json={"device_code": "REG-D2", "arsenic_ppb": 95})
         d = client.get("/api/dashboard/latest").json()
-        assert d["classification"] == "Unsafe" and d["confirmedByHomes"] >= 1
+        assert d["classification"] == "Unsafe" and d["confirmedByHomes"] == 0
         assert d["detectedAtIso"] and d["detectedAt"].endswith("UTC")
+        for code, lat in (("REG-H1", 25.6000), ("REG-H2", 25.6050), ("REG-FAR", 26.9000)):
+            client.post("/api/readings", json={"device_code": code, "arsenic_ppb": 90, "source_type": "hardware", "qc_status": "pass"})
+            r = client.put(f"/api/admin/devices/{code}/site", json={"latitude": lat, "longitude": 85.1, "village": "Simri"})
+            assert r.status_code == 200, r.text
+        d = client.get("/api/dashboard/latest?device_code=REG-H1").json()
+        assert d["confirmedByHomes"] == 1     # REG-H2 is 0.6 km away; REG-FAR is 140 km away
 
     def test_websocket_rejects_bad_input(self, client):
         with client.websocket_connect("/ws/voltammetry") as ws:

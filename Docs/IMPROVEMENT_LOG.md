@@ -291,10 +291,50 @@ the weekly check; bench-test firmware 5.7.0 on a board.
 
 ---
 
+## 4f. v5.8: the Research and Engineering Review (60 items) and the ISEF list
+
+**Why:** a review of 8 Nov 2026 found the project's numbers rested on simulated data, the browser and the server
+disagreed on the same trace (225.5 vs 213.4 µg/L), malformed scans were reported as 0 µg/L "Safe", four safety labels
+turned 10.1 µg/L into "Caution" and "Safe" at once, the calibration R² came from four synthetic standards, and nothing
+tied a result to the instrument file it came from. `Docs/ROADMAP_COVERAGE.md` maps each of the 60 items to what v5.8
+did; the short version:
+
+| Review item | What v5.8 does | Verified by |
+| --- | --- | --- |
+| 04 one outcome | `screening_outcome()` returns invalid / not_detected / retest / screen_positive with the guard band = the reading's expanded uncertainty (k = 2). Shown first everywhere; the tier is kept beside it. | `TestScreeningOutcome`, PDF text test |
+| 05 separate modes | `recorded_replay` source type; dashboard mode badge; replay never alerts and is not stamped simulated | `test_recorded_replay_is_not_a_simulation`, browser run |
+| 06 claims | `CALIBRATION_SOURCE = "synthetic_example"` and its provenance text on dashboard, PDF and `/api/scans`; `Docs/CLAIMS_REGISTER.md` | PDF text test |
+| 21, 31, 44 evidence | `RawVoltammetryTrace` gains checksum, versions, calibration, QC, features; `/api/scans` create / get / list / reprocess; firmware uploads traces; bridge imports files | `TestScanEvidence`, `test_v58_bridge.py`, firmware host build |
+| 26, 29, 30 | censored lab results, paired export, `paired_validation.py` with Wilson CIs and the rule of three | `TestLabPairing`, script `--demo` |
+| 41 one pipeline | `frontend/asv.js` port, parity test on 17 traces | `test_asv_js_matches_the_python_pipeline` |
+| 42 malformed scans | seven new fault codes; rejected scans carry no value and fail the test for every source type | `test_malformed_scans_are_rejected_with_a_fault`, `test_malformed_scan_becomes_an_invalid_reading` |
+| 43 units / bounds | bounded, finite inference inputs; a validation-error handler that renders NaN/Infinity (FastAPI's default raised a 500) | `test_neural_inference_rejects_nonsense` |
+| 46 corroboration | same place (2 km or village), QC-passed hardware only, 24 h | `test_only_nearby_real_nodes_corroborate` |
+| 47 protection | 2 MB body cap; existing write lock, keys, CORS, rate limits | `test_oversized_bodies_are_refused` |
+| 11–15, 18, 24 model study | `Analysis/aquanet_v2_pipeline.py`: grouped CV, baselines, residual MLP, conformal intervals, referral curve | `--demo` run; stops below 4 sites / 40 pairs |
+
+**Two defects found by the new tests and fixed on the way:** a perfect-looking external calibration produced an LOD of
+1e-14 µg/L (then every scan failed the noise-vs-LOD check) — the fit LOD is now floored at the validated method LOD
+with a warning; and the reprocess-and-store idempotency key exceeded the 64-character column (a 500).
+
+**Robust baseline, with numbers:** a copper-like bump (0.08 µA Gaussian at −550 mV, σ 25 mV) on a 45 µg/L trace used
+to tilt the least-squares background line and read 30.5 µg/L. With two-sided 3·MAD clipping (3 passes) it reads
+42.3 µg/L and carries a `BASELINE_OUTLIERS` warning and `secondary_peaks = 1`; a single 0.5 µA spike reads 45.3 µg/L.
+Standard-deviation clipping was tried first and failed because the bump inflated the SD it was judged against.
+
+**Still needs the bench and the field (not software):** LOD/LOQ with real blanks, interferents, drift, species
+recovery, the paired dataset itself, the energy budget, costs. Everything in `Docs/CLAIMS_REGISTER.md` marked *target*.
+
+---
+
 ## 5. API reference: everything added or changed
 
 | Method | Path | Since | Notes |
 | --- | --- | --- | --- |
+| POST | `/api/scans` | v5.8 | Store a native scan (checksum, versions, calibration, QC, features) and create its reading; `reading_idempotency_key` attaches a trace to a reading the device already sent |
+| GET | `/api/scans`, `/api/scans/{id}` | v5.8 | List (by device / reading / sample code) and fetch a trace with processed arrays and a checksum check |
+| POST | `/api/scans/{id}/reprocess` | v5.8 | Recompute with `calibration_id`; `store=true` writes a new reading linked to the original |
+| GET | `/api/data/export/paired` | v5.8 | Paired node-vs-lab table (CSV / JSON) for `Analysis/paired_validation.py` |
 | POST | `/api/readings` | changed v5.2–v5.4 | Write-protected; device key enforced if set; accepts `firmware_version`, `recorded_at` (UTC); validated `device_code` / `source_type`; publishes live events |
 | GET | `/api/readings/history` | v5.3 | `device_code`, `hours`, `limit`; oldest first |
 | GET | `/api/devices` | v5.3, trend v5.4 | Status, counts, firmware, latest, trend |

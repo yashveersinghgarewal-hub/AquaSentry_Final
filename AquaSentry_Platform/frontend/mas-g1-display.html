@@ -446,7 +446,7 @@
     mR2.textContent = (cfg.calR2!=null) ? cfg.calR2.toFixed(4) : '--';
     traceSvg.innerHTML='';
     scanStateEl.textContent='IDLE';
-    setImportStatus('', cfg.calSource==='default' ? '' : (cfg.calSource ? 'CAL: '+cfg.calSource : ''));
+    setImportStatus('', cfg.calSource==='default' ? 'CAL: synthetic example (not a lab calibration)' : (cfg.calSource ? 'CAL: '+cfg.calSource : ''));
     renderHistory();
   }
 

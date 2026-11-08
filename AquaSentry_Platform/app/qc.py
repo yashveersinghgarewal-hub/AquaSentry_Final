@@ -151,12 +151,13 @@ class ReadingQc:
 def assess_reading(db: Session, *, source_type: Optional[str], device: models.Device, arsenic_ppb: float,
                    device_qc_status: Optional[str], device_flags: Optional[List[str]]) -> ReadingQc:
     q = ReadingQc(flags=[f for f in (device_flags or []) if f])
-    if source_type != "hardware":
-        return q
+    is_hardware = source_type == "hardware"
 
+    # v5.8: a scan the pipeline rejected (or a device-reported fail) is a failed test whatever the source -
+    # a recorded replay or a practice scan of a dead electrode must never be stored as "0 µg/L, not detected".
     faults = [f for f in q.flags if f in QC_FAULT_FLAGS]
     if device_qc_status is None:
-        if qc_required():
+        if is_hardware and qc_required():
             q.flags.append("QC_NOT_REPORTED")
             q.failed = True
             q.reasons.append(QC_TEXT["QC_NOT_REPORTED"])
@@ -165,6 +166,8 @@ def assess_reading(db: Session, *, source_type: Optional[str], device: models.De
             q.flags.append("DEVICE_REPORTED_FAIL")
         q.failed = True
         q.reasons.extend(describe(faults) or [QC_TEXT["DEVICE_REPORTED_FAIL"]])
+    if not is_hardware:
+        return q   # check standards and calibration age are duties of a live instrument only
 
     if qc_required() and not q.failed:
         stale: List[str] = []

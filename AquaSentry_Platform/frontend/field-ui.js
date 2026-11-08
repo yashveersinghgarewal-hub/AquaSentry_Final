@@ -19,6 +19,9 @@
   // v5.7: "not detected" is not painted safe-green; a failed test is painted like a hazard (it must be looked at)
   const VERDICT_CLASS = { Safe: 'safe', 'Below Sensor LOD': 'clear', Caution: 'caution', Unsafe: 'unsafe', Hazardous: 'haz', 'Test Failed': 'haz' };
   const VKEY = { 'Below Sensor LOD': 'Clear', 'Test Failed': 'Failed' };
+  // v5.8: a borderline screening outcome is shown as "Retest" (amber), whatever the raw tier was
+  const vClass = (l) => (l.screening_outcome === 'retest' && l.classification !== 'Test Failed' ? 'caution' : VERDICT_CLASS[l.classification] || 'none');
+  const vKey = (l) => (l.screening_outcome === 'retest' && l.classification !== 'Test Failed' ? 'Retest' : VKEY[l.classification] || l.classification);
   const shownValue = (l) => (l.classification === 'Test Failed' ? '–' : l.arsenic_ppb < 20 ? '&lt; 20' : num(l.arsenic_ppb));
   const state = { devices: [], device: null, map: null, layer: null, leaflet: null };
 
@@ -72,12 +75,12 @@
       const paint = (cls) => style.getPropertyValue({ safe: '--paint-safe', clear: '--paint-clear', caution: '--paint-caution', unsafe: '--paint-unsafe', haz: '--paint-haz' }[cls] || '--ink-3').trim() || '#888';
       const bounds = [];
       pts.forEach((d) => {
-        const cls = d.latest ? VERDICT_CLASS[d.latest.classification] || 'none' : 'none';
+        const cls = d.latest ? vClass(d.latest) : 'none';
         const ll = [d.site.latitude, d.site.longitude];
         bounds.push(ll);
         const m = L.circleMarker(ll, { radius: 10, weight: 2, color: '#1b1b1b', fillColor: paint(cls), fillOpacity: 0.95 });
         const name = d.site.name || d.site.village || d.device_code;
-        const val = d.latest ? `${shownValue(d.latest)} µg/L · ${esc(t('class.' + (VKEY[d.latest.classification] || d.latest.classification)))}` : esc(t('verdict.none.title'));
+        const val = d.latest ? `${shownValue(d.latest)} µg/L · ${esc(t('class.' + vKey(d.latest)))}` : esc(t('verdict.none.title'));
         m.bindPopup(`<b>${esc(name)}</b><br>${val}<br><a href="device.html?code=${encodeURIComponent(d.device_code)}" target="_blank" rel="noopener">${esc(t('dev.page'))}</a>`);
         m.bindTooltip(`${esc(name)}: ${val}`);
         m.addTo(state.layer);

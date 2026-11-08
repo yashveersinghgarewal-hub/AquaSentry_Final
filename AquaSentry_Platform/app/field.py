@@ -39,7 +39,10 @@ def lab_dict(r: "models.LabResult") -> Dict:
             "reading_id": r.reading_id, "sample_code": r.sample_code, "sampled_at": _utc(r.sampled_at),
             "lab_name": r.lab_name, "lab_method": r.lab_method, "arsenic_ug_l": r.arsenic_ug_l,
             "as3_ug_l": r.as3_ug_l, "nabl_accredited": r.nabl_accredited, "notes": r.notes,
-            "node_arsenic_ug_l": r.reading.arsenic_ppb if r.reading is not None else None}
+            "reporting_limit_ug_l": r.reporting_limit_ug_l, "qualifier": r.qualifier, "species": r.species,
+            "censored": r.qualifier == "<",
+            "node_arsenic_ug_l": r.reading.arsenic_ppb if r.reading is not None else None,
+            "node_outcome": r.reading.screening_outcome if r.reading is not None else None}
 
 
 def latest_lab(db: Session, device_id: Optional[int]) -> Optional[Dict]:
@@ -189,8 +192,9 @@ def fit_standard_addition(sample_peak_ua: float, additions: Sequence[Tuple[float
 
 
 def factory_calibration() -> Dict:
+    from .standards import CALIBRATION_PROVENANCE, CALIBRATION_SOURCE
     return {"calibration_id": "factory", "slope_ua_per_mgl": CALIBRATION_SLOPE, "intercept_ua": CALIBRATION_INTERCEPT,
-            "lod_ug_l": LOD_UG_L, "source": "factory"}
+            "lod_ug_l": LOD_UG_L, "source": "factory", "origin": CALIBRATION_SOURCE, "provenance": CALIBRATION_PROVENANCE}
 
 
 def active_calibration(db: Session, device: "models.Device") -> Dict:

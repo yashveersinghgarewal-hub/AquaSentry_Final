@@ -45,3 +45,15 @@ Only the latest release on `main` gets fixes.
 - Simulated and demo alerts are never sent to `ALERT_WEBHOOK_URL` (set `ALERT_WEBHOOK_INCLUDE_SIMULATED=1` to test a receiver).
 - Measurement trust settings: `QC_REQUIRE_FOR_HARDWARE` (default 1), `QC_CHECK_MAX_AGE_HOURS` (168), `CALIBRATION_MAX_AGE_DAYS` (90).
 
+## v5.8 changes
+
+- Request bodies above 2 MB are refused with 413 before parsing (`MAX_BODY_BYTES`); a 4 000-point scan is about 120 kB.
+- A body carrying NaN or Infinity now gets a 422 with the field named; FastAPI's default handler crashed with a 500 while
+  echoing the value.
+- Stored scans carry a SHA-256 checksum; reprocessing a trace whose points no longer match it is refused (409), so a
+  changed database row cannot silently produce a new value.
+- `POST /api/scans` and `/reprocess` are behind the same write lock and device-key check as `/api/readings`. The bridge
+  sends `X-API-Key` from `--api-key` / `AQUASENTRY_API_KEY`.
+- Public exports (`/api/data/export/paired`, JJM CSV) include device coordinates: round or withhold the coordinates of
+  private wells before publishing (review item 30).
+

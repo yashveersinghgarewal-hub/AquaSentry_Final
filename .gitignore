@@ -34,3 +34,8 @@ vapid_private.pem
 
 # Firmware builds uploaded for nodes to pull (/api/admin/firmware)
 AquaSentry_Platform/firmware/
+
+# v5.8 bridge outbox and analysis outputs are local state
+AquaSentry_Platform/bridge/bridge_outbox.jsonl
+AquaSentry_Platform/bridge/bridge_outbox.jsonl.tmp
+Analysis/out/

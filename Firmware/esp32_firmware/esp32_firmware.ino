@@ -45,7 +45,7 @@
 #include "aquasentry_types.h" /* structs live in a header: the Arduino IDE writes function prototypes
                                 above the first function, so types defined later in the sketch break them */
 
-#define FIRMWARE_VERSION     "5.7.0"
+#define FIRMWARE_VERSION     "5.8.0"
 
 /* =====================================================================
  * Pin Assignments (per chip). Change them here if your wiring differs.
@@ -132,6 +132,10 @@ char DEVICE_API_KEY[73]      = "";
 #define CAL_SLOPE_UA_PER_MGL  0.8563f // app/standards.py CALIBRATION_SLOPE
 #define CAL_INTERCEPT_UA      0.0096f // app/standards.py CALIBRATION_INTERCEPT
 
+/* v5.8 evidence: after a reading is stored, the native current-vs-potential points of its last scan are
+ * uploaded to POST /api/scans and kept with the reading (SHA-256 checksum, re-processable on the server).
+ * Set to 0 on a metered connection; the reading itself (peak, QC, verdict) is always sent. */
+#define TRACE_UPLOAD         1
 #define SAMPLE_INTERVAL_MS   3600000UL // one full test per hour
 #define SCANS_PER_READING    3          // scans per round: noise falls by sqrt(N) (3 scans = about 3.5 minutes)
 #define MAX_SCANS_PER_READING 9         // borderline readings get up to 2 extra rounds (about 10.5 minutes)
@@ -490,6 +494,21 @@ static float asv_pot[ASV_MAX_POINTS];
 static float asv_raw[ASV_MAX_POINTS];
 static float asv_smooth[ASV_MAX_POINTS];
 
+/* v5.8: the last scan of the most recent reading, kept for upload as evidence (written by the measurement
+ * task once per reading, read by the telemetry task; trace_pending hands it over). */
+static float trace_pot[ASV_MAX_POINTS];
+static float trace_cur[ASV_MAX_POINTS];
+static volatile int trace_n = 0;
+static volatile uint32_t trace_seq = 0;
+static volatile uint32_t trace_utc = 0;
+static volatile bool trace_pending = false;
+
+/* v5.8 boot self-test (printed on the serial console and shown in /status.json) */
+static bool selftest_adc_ok = false, selftest_dac_ok = false, selftest_fs_ok = false;
+static uint32_t selftest_infer_us = 0;
+static int32_t selftest_cal_age_days = -1;      // -1 = unknown (clock not set or factory calibration)
+static uint32_t cal_saved_utc = 0;
+
 /* 5-point Savitzky-Golay smoothing - same coefficients as app/signal_processing.py */
 static void savgol5(const float* y, float* s, int n) {
     if (n < 5) { for (int i = 0; i < n; i++) s[i] = y[i]; return; }
@@ -801,6 +820,8 @@ void apply_calibration(float slope, float icpt, const char* id, bool save) {
             p.putFloat("slope", slope);
             p.putFloat("icpt", icpt);
             p.putString("id", cal_id);
+            cal_saved_utc = utc_now_or_zero();
+            p.putUInt("when", cal_saved_utc);
             p.end();
         }
     }
@@ -811,6 +832,7 @@ void load_calibration() {
     if (!p.begin("aqs_cal", true)) return;
     float sl = p.getFloat("slope", CAL_SLOPE_UA_PER_MGL), ic = p.getFloat("icpt", CAL_INTERCEPT_UA);
     String id = p.getString("id", "factory");
+    cal_saved_utc = p.getUInt("when", 0);
     p.end();
     apply_calibration(sl, ic, id.c_str(), false);
 }
@@ -1124,7 +1146,7 @@ static bool setup_allowed() {
 }
 
 void handle_status_json() {
-    char buf[1000];
+    char buf[1200];
     float as = last_arsenic_ug;
     int cls = last_class;
     snprintf(buf, sizeof(buf),
@@ -1134,7 +1156,9 @@ void handle_status_json() {
         "\"last_reading\":{\"seq\":%lu,\"utc\":%lu,\"arsenic_ug_l\":%s,\"verdict\":\"%s\"},"
         "\"free_heap\":%lu,\"ota_enabled\":%s,\"server_url\":\"%s\",\"https\":%s,"
         "\"battery_pct\":%d,\"battery_mv\":%d,\"low_power_mode\":%s,\"wake_count\":%lu,"
-        "\"arsenic_species\":\"%s\",\"calibration\":\"%s\",\"copper_check\":%s,\"pull_updates\":%s}",
+        "\"arsenic_species\":\"%s\",\"calibration\":\"%s\",\"copper_check\":%s,\"pull_updates\":%s,"
+        "\"trace_upload\":%s,\"trace_pending\":%s,"
+        "\"self_test\":{\"adc_ads1115\":%s,\"dac_mcp4725\":%s,\"storage\":%s,\"inference_us\":%lu,\"calibration_age_days\":%ld}}",
         DEVICE_CODE, FIRMWARE_VERSION, BOARD_NAME, (unsigned long)(millis() / 1000),
         is_wifi_connected ? "true" : "false", WiFi.localIP().toString().c_str(),
         is_wifi_connected ? (int)WiFi.RSSI() : 0, setup_ap_active ? "true" : "false",
@@ -1144,7 +1168,10 @@ void handle_status_json() {
         (unsigned long)ESP.getFreeHeap(), ota_enabled() ? "true" : "false", BACKEND_API_URL,
         backend_is_https() ? "true" : "false", last_battery_pct, last_battery_mv,
         LOW_POWER_MODE ? "true" : "false", (unsigned long)wake_count,
-        PIN_REAGENT_PUMP >= 0 ? "total" : "as3_only", cal_id, COPPER_CHECK ? "true" : "false", PULL_OTA ? "true" : "false");
+        PIN_REAGENT_PUMP >= 0 ? "total" : "as3_only", cal_id, COPPER_CHECK ? "true" : "false", PULL_OTA ? "true" : "false",
+        TRACE_UPLOAD ? "true" : "false", trace_pending ? "true" : "false",
+        selftest_adc_ok ? "true" : "false", selftest_dac_ok ? "true" : "false", selftest_fs_ok ? "true" : "false",
+        (unsigned long)selftest_infer_us, (long)selftest_cal_age_days);
     server.sendHeader("Access-Control-Allow-Origin", "*");   // read-only, no secrets in it
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", buf);
@@ -1329,6 +1356,48 @@ bool post_qc_run() {
     return code >= 200 && code < 300;
 }
 
+/* v5.8: upload the stored last scan of reading `trace_seq` as evidence (POST /api/scans, attached to the reading by
+ * its idempotency key). Returns 1 = stored, 0 = try again later (offline, or the reading itself is not stored yet),
+ * -1 = rejected for good. The reading is never delayed by this: it is sent first, the trace afterwards. */
+static char trace_body[ASV_MAX_POINTS * 18 + 320];
+int post_trace() {
+    if (!trace_pending || trace_n < 10) return -1;
+    HTTPClient http;
+    http.setTimeout(10000);
+    WiFiClient plain;
+    WiFiClientSecure secure;
+    if (backend_is_https() && !ROOT_CA_PEM[0] && !ALLOW_INSECURE_TLS) return 0;
+    if (!http_start(http, plain, secure, server_base() + "/api/scans")) return 0;
+    http.addHeader("Content-Type", "application/json");
+    if (DEVICE_API_KEY[0]) http.addHeader("X-API-Key", DEVICE_API_KEY);
+    const size_t cap = sizeof(trace_body);
+    int n = snprintf(trace_body, cap, "{\"device_code\":\"%s\",\"source_type\":\"hardware\",\"firmware_version\":\"%s\","
+                     "\"reading_idempotency_key\":\"%s-%lu\",\"idempotency_key\":\"%s-%lu-trace\"",
+                     DEVICE_CODE, FIRMWARE_VERSION, DEVICE_CODE, (unsigned long)trace_seq, DEVICE_CODE, (unsigned long)trace_seq);
+    if (trace_utc > 1700000000UL) {
+        time_t t = (time_t)trace_utc; struct tm tm_utc; gmtime_r(&t, &tm_utc);
+        char iso[32]; strftime(iso, sizeof(iso), "%Y-%m-%dT%H:%M:%SZ", &tm_utc);
+        n += snprintf(trace_body + n, cap - n, ",\"recorded_at\":\"%s\"", iso);
+    }
+    n += snprintf(trace_body + n, cap - n, ",\"scan_settings\":{\"deposition_mv\":%.0f,\"deposition_s\":%d,\"step_mv\":%.1f,\"step_ms\":%d,\"clean_mv\":%.0f}",
+                  VOLT_DEP_MV, VOLT_DEP_TIME_MS / 1000, VOLT_STEP_MV, VOLT_STEP_WAIT_MS, VOLT_CLEAN_MV);
+    n += snprintf(trace_body + n, cap - n, ",\"potentials_mv\":[");
+    for (int i = 0; i < trace_n && n < (int)cap - 40; i++) n += snprintf(trace_body + n, cap - n, "%s%.1f", i ? "," : "", trace_pot[i]);
+    n += snprintf(trace_body + n, cap - n, "],\"currents_ua\":[");
+    for (int i = 0; i < trace_n && n < (int)cap - 20; i++) n += snprintf(trace_body + n, cap - n, "%s%.5f", i ? "," : "", trace_cur[i]);
+    n += snprintf(trace_body + n, cap - n, "]}");
+    if (n >= (int)cap - 2) { Serial.println(F("[TRACE] Scan too long for the upload buffer - not sent.")); return -1; }
+    int code = http.POST(trace_body);
+    http.end();
+    if (code >= 200 && code < 300) { Serial.printf("[TRACE] Scan of reading #%lu stored as evidence.\n", (unsigned long)trace_seq); return 1; }
+    if (code == 404) return 0;                        // the reading is still in the offline buffer: send the trace after it
+    if (code >= 400 && code < 500 && code != 408 && code != 429) {
+        Serial.printf("[TRACE] Scan of reading #%lu rejected (HTTP %d) - dropped.\n", (unsigned long)trace_seq, code);
+        return -1;
+    }
+    return 0;
+}
+
 void TaskTelemetry(void *pvParameters) {
     (void) pvParameters;
 
@@ -1372,6 +1441,7 @@ void TaskTelemetry(void *pvParameters) {
             int res = is_wifi_connected ? post_reading(&r) : 0;
             if (res == 1) {
                 Serial.println(F("[HTTP] Ingested successfully"));
+                if (TRACE_UPLOAD && trace_pending && trace_seq == r.seq && post_trace() != 0) trace_pending = false;
             } else if (res == 0) {
                 // server not reachable (check IP, --host 0.0.0.0, firewall) or Wi-Fi down
                 offline_push(&r);
@@ -1386,10 +1456,13 @@ void TaskTelemetry(void *pvParameters) {
             is_uploading = false;
         }
 
-        // Upload buffered readings every 30 seconds while online
+        // Upload buffered readings every 30 seconds while online; then the pending scan evidence (v5.8)
         if (is_wifi_connected && (millis() - last_sync > 30000UL)) {
             is_uploading = true;
             offline_flush();
+            if (TRACE_UPLOAD && trace_pending && offline_count() == 0) {
+                if (post_trace() != 0) trace_pending = false;
+            }
             is_uploading = false;
             last_sync = millis();
         }
@@ -1543,7 +1616,7 @@ void TaskSensors(void *pvParameters) {
         //    RESCAN_Z standard errors of a verdict edge (10 / 20 / 150 ug/L), add SCANS_PER_READING more, up to
         //    MAX_SCANS_PER_READING. Clear readings stay fast; only borderline ones get the extra scans.
         asv_result_t asv = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN, 0};
-        int good_scans = 0, attempts = 0, cu_scans = 0;
+        int good_scans = 0, attempts = 0, cu_scans = 0, last_scan_points = 0;
         float peak_sum = 0.0f, snr_sum = 0.0f, cu_sum = 0.0f;
         float peaks[MAX_SCANS_PER_READING];
         uint16_t qc_bits = 0;
@@ -1551,6 +1624,7 @@ void TaskSensors(void *pvParameters) {
             for (int s = 0; s < SCANS_PER_READING && attempts < MAX_SCANS_PER_READING; s++, attempts++) {
                 asv_result_t one = execute_asv_cycle();
                 qc_bits |= one.qc;
+                last_scan_points = one.points;
                 // v5.7: only scans that passed their checks are averaged (was: any scan with 10+ points)
                 if (one.points >= 10 && !(one.qc & QC_FAULT_MASK)) {
                     peaks[good_scans] = one.net_peak_ua;
@@ -1623,6 +1697,19 @@ void TaskSensors(void *pvParameters) {
         reading.good_scans = (uint8_t)good_scans;
         reading.qc_bits = reading_qc;
 
+        // v5.8: keep the arsenic part of the last scan (raw currents, before smoothing) as evidence for this reading
+        if (TRACE_UPLOAD && last_scan_points >= 10) {
+            int k = 0;
+            for (int i = 0; i < last_scan_points && i < ASV_MAX_POINTS && asv_pot[i] <= VOLT_END_MV + 0.01f; i++, k++) {
+                trace_pot[k] = asv_pot[i];
+                trace_cur[k] = asv_raw[i];
+            }
+            trace_n = k;
+            trace_seq = reading.seq;
+            trace_utc = reading.timestamp_unix;
+            trace_pending = true;
+        }
+
         last_arsenic_ug = qc_failed ? NAN : arsenic_mg_l * 1000.0f;
         last_class = qc_failed ? -1 : (int)ai_res.predicted_class;
         last_reading_seq = reading.seq;
@@ -1649,6 +1736,32 @@ void TaskSensors(void *pvParameters) {
 /* =====================================================================
  * Main System Setup & Task Allocation
  * ===================================================================== */
+/* v5.8: boot self-test. Nothing here stops the node (a missing sensor is reported, and every scan is QC-checked
+ * anyway); it tells the installer at once what the node can see, and the same facts are in /status.json. */
+static bool i2c_present(uint8_t addr) {
+    Wire.beginTransmission(addr);
+    return Wire.endTransmission() == 0;
+}
+void boot_self_test() {
+    selftest_adc_ok = i2c_present(ADS1115_ADDR);
+    selftest_dac_ok = i2c_present(MCP4725_ADDR);
+    selftest_fs_ok = fs_ok;
+    uint32_t t0 = micros();
+    aquanet_result_t probe = aquanet_v3_predict_measured(0.03f, 7.0f, 500.0f, 2.0f, 25.0f);
+    selftest_infer_us = micros() - t0;
+    uint32_t now_s = utc_now_or_zero();
+    selftest_cal_age_days = (cal_saved_utc > 1700000000UL && now_s > cal_saved_utc) ? (int32_t)((now_s - cal_saved_utc) / 86400UL) : -1;
+    Serial.println(F("[SELFTEST] ---- boot self-test ----"));
+    Serial.printf("[SELFTEST] ADS1115 ADC (0x%02X): %s\n", ADS1115_ADDR, selftest_adc_ok ? "found" : "NOT FOUND - check SDA/SCL wiring and power");
+    Serial.printf("[SELFTEST] MCP4725 DAC (0x%02X): %s\n", MCP4725_ADDR, selftest_dac_ok ? "found" : "NOT FOUND - no potential can be applied");
+    Serial.printf("[SELFTEST] Offline storage: %s, %lu reading(s) waiting\n", fs_ok ? "LittleFS" : "RAM only", (unsigned long)offline_count());
+    Serial.printf("[SELFTEST] Calibration: %s%s\n", cal_id, strcmp(cal_id, "factory") == 0 ? " (synthetic example - get this node calibrated)" : "");
+    if (selftest_cal_age_days >= 0) Serial.printf("[SELFTEST] Calibration age: %ld day(s)%s\n", (long)selftest_cal_age_days, selftest_cal_age_days > 90 ? " - OVERDUE (90-day limit)" : "");
+    Serial.printf("[SELFTEST] AquaNet-V3 inference: %lu us (probe verdict %s)\n", (unsigned long)selftest_infer_us, probe.predicted_class_name);
+    Serial.printf("[SELFTEST] Scan evidence upload: %s\n", TRACE_UPLOAD ? "on" : "off");
+    Serial.println(F("[SELFTEST] -------------------------"));
+}
+
 void setup() {
     Serial.begin(115200);
     delay(500);
@@ -1682,6 +1795,7 @@ void setup() {
 
     load_settings();          // settings from the setup page override the defaults at the top
     offline_buffer_init();
+    boot_self_test();
     if (!ota_enabled())
         Serial.println(F("[OTA] Web OTA (and settings over your network) are disabled until OTA_PASS is changed."));
 

@@ -109,6 +109,14 @@ class Reading(Base):
     qc_flags = Column(String(128), nullable=True)         # comma list, e.g. "copper_interference"
     qc_status = Column(String(16), nullable=True)         # v5.7: pass | warning | fail (hardware readings)
     time_source = Column(String(24), nullable=True)       # v5.7: device_clock | device_age | unknown | server_receipt
+    # v5.8: the one screening outcome (invalid | not_detected | retest | screen_positive), the raw trace this value
+    # came from, and the versions that produced it, so any number can be traced back and recomputed later
+    screening_outcome = Column(String(24), nullable=True)
+    trace_id = Column(Integer, ForeignKey("raw_voltammetry_traces.id"), nullable=True, index=True)
+    analysis_version = Column(String(24), nullable=True)
+    sample_code = Column(String(64), nullable=True, index=True)   # parent sample ID shared with the lab split
+    electrode_lot = Column(String(64), nullable=True)
+    reprocessed_from_id = Column(Integer, nullable=True)          # reading id this one was recomputed from
     calibration_ref = Column(String(64), nullable=True)   # calibration_id the node used
 
     # --- Bookkeeping & Raw Evidence ---
@@ -119,6 +127,8 @@ class Reading(Base):
     device = relationship("Device", back_populates="readings")
 
     __table_args__ = (Index("ix_readings_device_recorded", "device_id", "recorded_at"),)
+
+    trace = relationship("RawVoltammetryTrace", foreign_keys=[trace_id], lazy="joined")
 
     @property
     def device_code(self):
@@ -196,6 +206,24 @@ class RawVoltammetryTrace(Base):
     raw_currents_json = Column(Text, nullable=False)   # JSON array of currents
     is_synthetic = Column(Boolean, default=True)
     recorded_at = Column(DateTime, default=utc_now)
+    # v5.8 (review items 21, 31, 44): the native scan as evidence. Stored once, never edited; results derived from
+    # it carry the analysis and calibration versions, so they can be recomputed without touching the original.
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=True, index=True)
+    source_type = Column(String(32), nullable=True)        # hardware | recorded_replay | simulated
+    checksum_sha256 = Column(String(64), nullable=True, index=True)
+    raw_file_name = Column(String(128), nullable=True)
+    n_points = Column(Integer, nullable=True)
+    firmware_version = Column(String(32), nullable=True)
+    analysis_version = Column(String(24), nullable=True)
+    calibration_id = Column(String(64), nullable=True)
+    estimated_ug_l = Column(Float, nullable=True)
+    uncertainty_ug_l = Column(Float, nullable=True)
+    qc_status = Column(String(16), nullable=True)          # PASS | WARNING | REJECTED
+    qc_flags = Column(Text, nullable=True)                 # comma list
+    features_json = Column(Text, nullable=True)            # peak height / area / width / slope / noise ... (item 12)
+    scan_settings_json = Column(Text, nullable=True)       # deposition, step, timing as the device reported them
+    sample_code = Column(String(64), nullable=True, index=True)
+    uploaded_at = Column(DateTime, default=utc_now)
 
     sample = relationship("Sample", back_populates="traces")
 
@@ -240,6 +268,10 @@ class LabResult(Base):
     arsenic_ug_l = Column(Float, nullable=False)
     as3_ug_l = Column(Float, nullable=True)                                  # As(III) only, if the lab speciated
     nabl_accredited = Column(Boolean, nullable=True)
+    # v5.8 (review item 26): censored results keep their reporting limit and "<" qualifier instead of becoming zeros
+    reporting_limit_ug_l = Column(Float, nullable=True)
+    qualifier = Column(String(8), nullable=True)                             # None | "<" (below reporting limit)
+    species = Column(String(16), nullable=True)                              # total | as3 | as5 | dissolved
     notes = Column(Text, nullable=True)
     entered_at = Column(DateTime, default=utc_now)
 

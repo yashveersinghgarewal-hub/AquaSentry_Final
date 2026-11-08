@@ -14,6 +14,7 @@ Provides:
 
 import os
 import io
+import math
 import re
 import uuid
 import asyncio
@@ -28,9 +29,10 @@ load_dotenv()
 import csv
 import time as _time
 from fastapi import FastAPI, Depends, HTTPException, Query, Response, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -61,7 +63,7 @@ from .deps import (
     _api_key, _check_device_key, _get_or_create_device, _is_loopback, _is_number, _key_ok, _utc, _val,
     active_model_name, now_utc, require_admin, require_writer,
 )
-from .routers import qc as qc_router
+from .routers import qc as qc_router, scans as scans_router
 from .routers import science as science_router, reports as reports_router, field as field_router, auth as auth_router, alerts as alerts_router, firmware as firmware_router
 from .field import latest_lab as _latest_lab, site_dict
 from .routers.reports import generate_potability_certificate_pdf  # noqa: F401
@@ -79,11 +81,27 @@ START_TIME = _time.time()
 app = FastAPI(
     title="AquaSentry Water Safety & Surveillance API",
     description="Scientific backend and edge neural classifier for autonomous water quality monitoring.",
-    version="1.7.0",
+    version="1.8.0",
 )
 
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 log = get_logger("api")
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error(request: Request, exc: RequestValidationError):
+    """v5.8 (review item 43): a request carrying NaN / Infinity must get a 422, not a 500. FastAPI's default handler
+    echoes the offending input, and JSON cannot carry a non-finite number, so those are rendered as text here."""
+    def clean(v):
+        if isinstance(v, float) and not math.isfinite(v):
+            return str(v)
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items()}
+        if isinstance(v, (list, tuple)):
+            return [clean(x) for x in v]
+        return v
+    errors = [{k: clean(v) for k, v in e.items() if k != "ctx"} for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
 app.include_router(science_router.router)
 app.include_router(reports_router.router)
 app.include_router(field_router.router)
@@ -91,6 +109,7 @@ app.include_router(auth_router.router)
 app.include_router(alerts_router.router)
 app.include_router(firmware_router.router)
 app.include_router(qc_router.router)
+app.include_router(scans_router.router)
 
 
 
@@ -137,6 +156,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(auth_router.ReadProtectionMiddleware)
 app.add_middleware(security.RateLimitMiddleware)
+app.add_middleware(security.BodySizeLimitMiddleware)
 _PAGES = ["index.html", "device.html", "market-research.html", "sales-expansion.html", "device-simulator.html", "mas-g1-display.html"]
 _FRONTEND_FOR_CSP = __import__("pathlib").Path(os.getenv("AQUASENTRY_FRONTEND_DIR",
                                                           __import__("pathlib").Path(__file__).resolve().parent.parent / "frontend"))
@@ -302,6 +322,9 @@ def _reading_response(reading: "models.Reading", eval_res, prefix: str = "") -> 
         uncertainty_ppb=eval_res.uncertainty_ppb,
         is_simulated=bool(reading.is_simulated),
         disclaimer=eval_res.disclaimer,
+        screening_outcome=eval_res.screening_outcome,
+        outcome_note=eval_res.outcome_note,
+        uncertainty_source="measured_from_scan" if reading.trace_id else "method_typical",
     )
 
 
@@ -319,6 +342,7 @@ def _classify_stored(rec: "models.Reading"):
         qc_failed=rec.qc_status == "fail",
         qc_reasons=qc_mod.describe([f for f in flags if f in QC_FAULT_FLAGS or f.startswith(("CHECK_", "CALIBRATION_"))]) or None,
         arsenic_species=rec.arsenic_species,
+        uncertainty_ppb=rec.uncertainty_ppb,
     )
 
 
@@ -326,18 +350,25 @@ def _classify_stored(rec: "models.Reading"):
           dependencies=[Depends(require_writer)])
 def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session = Depends(get_db)):
     """
-    Ingest a new arsenic reading from the autonomous vessel or simulator.
+    Ingest a new arsenic reading from the device, the dashboard simulator or an import.
     Evaluates risk with conservative public health precedence rules and stores full audit lineage.
     """
+    # A device with its own key must use it: nobody else on the network can post as that device.
+    _check_device_key(db, payload.device_code, request)
+    return ingest_reading(payload, db)
+
+
+def ingest_reading(payload: schemas.ReadingCreate, db: Session, *, trace: "models.RawVoltammetryTrace" = None,
+                   uncertainty_ppb: Optional[float] = None, analysis_version: Optional[str] = None,
+                   reprocessed_from_id: Optional[int] = None, notify: bool = True) -> schemas.ReadingResponse:
+    """The one path every reading takes (v5.8: also used by /api/scans, so a trace and a scalar upload get the same
+    checks). `trace` links the stored native scan; `uncertainty_ppb` is the value measured from that scan."""
     # Idempotency check: if an idempotency key was supplied and already exists, return existing reading
     if payload.idempotency_key:
         existing = db.query(models.Reading).filter_by(idempotency_key=payload.idempotency_key).first()
         if existing:
             # Same reading re-sent (e.g. the ESP32 retrying after a timeout): return what was stored.
             return _reading_response(existing, _classify_stored(existing), prefix="[Idempotent Cache Hit] ")
-
-    # A device with its own key must use it: nobody else on the network can post as that device.
-    _check_device_key(db, payload.device_code, request)
 
     source_type = payload.source_type or "simulated"
     device = _get_or_create_device(db, payload.device_code, payload.firmware_version)
@@ -356,11 +387,13 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
             qc_failed=rqc.failed,
             qc_reasons=rqc.reasons or None,
             arsenic_species=payload.arsenic_species,
+            uncertainty_ppb=uncertainty_ppb,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-    is_sim = source_type != "hardware"
+    # v5.8: a recorded replay is real instrument data played back; only live hardware readings raise alerts
+    is_sim = source_type not in ("hardware", "recorded_replay", "manual_import")
     ts = now_utc()
     # v5.7: when was the sample taken? A buffered reading must not look new.
     recorded_at, time_source = payload.recorded_at, "device_clock"
@@ -404,6 +437,12 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
                                                          payload.cu_peak_ua, payload.calibration_ref, source_type)),
         qc_status=rqc.status,
         time_source=time_source,
+        screening_outcome=eval_res.screening_outcome,
+        trace_id=trace.id if trace is not None else None,
+        analysis_version=analysis_version,
+        sample_code=payload.sample_code,
+        electrode_lot=payload.electrode_lot,
+        reprocessed_from_id=reprocessed_from_id,
     )
     db.add(reading)
     db.commit()
@@ -412,8 +451,9 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
     HUB.publish("reading", {"id": reading.id, "device_code": payload.device_code, "arsenic_ppb": reading.arsenic_ppb,
                             "classification": eval_res.label, "recorded_at": _utc(reading.recorded_at),
                             "source_type": reading.source_type})
-    # Imp 21: alert on every Unsafe / Hazardous verdict (not only arsenic, and at the current 10 µg/L limit)
-    alert = dispatch_emergency_alert({
+    # Imp 21: alert on every Unsafe / Hazardous verdict (not only arsenic, and at the current 10 µg/L limit).
+    # v5.8: a recomputation of an old trace is not a new event and raises no alert.
+    alert = None if not notify else dispatch_emergency_alert({
         "arsenic_ppb": reading.arsenic_ppb,
         "source_type": reading.source_type,
         "source_label": reading.source_label,
@@ -423,7 +463,7 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
     })
     if alert:
         HUB.publish("alert", alert)
-    elif reading.source_type == "hardware":
+    elif notify and reading.source_type == "hardware":
         # early warning: a statistically rising trend reaches WARNING-level subscribers (deduplicated per node)
         t = device_trend_cached(db, reading.device_id, 90)
         if t.get("direction") == "rising" and t.get("significant"):
@@ -577,7 +617,8 @@ def _device_out(db: Session, d: "models.Device", counts: dict, unsafe: dict, wit
         has_device_key=bool(d.api_key_hash), trend=trend,
         latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
                                        recorded_at=_utc(latest.recorded_at),
-                                       battery_pct=latest.battery_pct) if latest else None,
+                                       battery_pct=latest.battery_pct, screening_outcome=latest.screening_outcome,
+                                       uncertainty_ug_l=latest.uncertainty_ppb, qc_status=latest.qc_status) if latest else None,
         site=site_dict(d), lab=_latest_lab(db, d.id),
     )
 
@@ -766,6 +807,39 @@ def get_stats(device_code: Optional[str] = Query(None), db: Session = Depends(ge
 # Dashboard Projection (Supports True Empty State)
 # ---------------------------------------------------------------------------
 
+def corroborating_devices(db: Session, reading: "models.Reading", cutoff) -> List[str]:
+    me = reading.device
+    if me is None:
+        return []
+    rows = (db.query(models.Reading).join(models.Device)
+            .filter(models.Reading.classification.in_(["Unsafe", "Hazardous"]),
+                    models.Reading.recorded_at >= cutoff,
+                    models.Reading.device_id != reading.device_id,
+                    models.Reading.source_type == "hardware",
+                    models.Reading.qc_status != "fail").all())
+    out = []
+    for r in rows:
+        d = r.device
+        if d is None or d.device_code in out:
+            continue
+        same_place = False
+        if me.latitude is not None and me.longitude is not None and d.latitude is not None and d.longitude is not None:
+            same_place = _km(me.latitude, me.longitude, d.latitude, d.longitude) <= 2.0
+        elif me.village and d.village:
+            same_place = (me.village.strip().lower(), (me.district or "").strip().lower()) == \
+                         (d.village.strip().lower(), (d.district or "").strip().lower())
+        if same_place:
+            out.append(d.device_code)
+    return out
+
+
+def _km(lat1, lon1, lat2, lon2) -> float:
+    import math as _m
+    p1, p2 = _m.radians(lat1), _m.radians(lat2)
+    a = _m.sin((p2 - p1) / 2) ** 2 + _m.cos(p1) * _m.cos(p2) * _m.sin(_m.radians(lon2 - lon1) / 2) ** 2
+    return 2 * 6371.0 * _m.asin(_m.sqrt(a))
+
+
 @app.get("/api/dashboard/latest", response_model=schemas.DashboardReading, tags=["Dashboard"])
 def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Depends(get_db)):
     q = db.query(models.Reading)
@@ -779,16 +853,9 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
     if reading.classification in ("Unsafe", "Hazardous"):
         # SQLite stores naive UTC datetimes, so compare against a naive UTC cutoff.
         cutoff = (now_utc() - timedelta(hours=24)).replace(tzinfo=None)
-        confirmed_count = (
-            db.query(models.Reading.device_id)
-            .filter(
-                models.Reading.classification.in_(["Unsafe", "Hazardous"]),
-                models.Reading.recorded_at >= cutoff,
-                models.Reading.device_id != reading.device_id,
-            )
-            .distinct()
-            .count()
-        )
+        # v5.8 (review item 46): corroboration means OTHER real, QC-passed nodes at the SAME place (within 2 km, or
+        # the same village) that also found arsenic in the last 24 h. Unrelated devices never corroborate each other.
+        confirmed_count = len(corroborating_devices(db, reading, cutoff))
 
     rec_time = reading.recorded_at
     if rec_time.tzinfo is None:
@@ -1264,6 +1331,15 @@ Neural Network (AquaNet-V3, used for stored readings and on the ESP32):
   conductivity limits also apply.
 - AquaNet-V1 (5-8-6-4, 112 hand-set weights) is the original, kept for comparison.
 - All accuracy figures are from simulated data; the model has not been validated on real field samples.
+
+Screening outcomes (v5.8): every reading has ONE outcome. "invalid" = the test failed its checks (no value);
+"not_detected" = below the 20 µg/L detection limit by more than the uncertainty (NOT proof the water is safe);
+"retest" = within the uncertainty of the detection limit (borderline: repeat and confirm in a lab);
+"screen_positive" = arsenic detected, which is above the 10 µg/L limit (confirm in a lab; do not drink meanwhile).
+Each value carries an uncertainty (±, k = 2) measured from the scan's noise when a trace was processed; the model's
+"confidence" is a vote share, not measurement accuracy, and must never be quoted as accuracy.
+The factory calibration (slope 0.8563, R² 0.9967) comes from four SYNTHETIC standards made by the simulated scan
+generator; it is an example, not a laboratory calibration. Say so if asked about accuracy or calibration.
 
 Measurement trust (v5.7):
 - Without the acid + reducing-agent step (optional reagent pump, not yet built), the sensor sees As(III) only; As(V),
