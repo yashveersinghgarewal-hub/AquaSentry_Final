@@ -378,7 +378,7 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
         regulatory_tier=eval_res.regulatory_tier,
         is_safe_to_drink=eval_res.is_safe_to_drink,
         uncertainty_ppb=eval_res.uncertainty_ppb,
-        confidence=_val(payload.confidence, 0.95),
+        confidence=payload.confidence,   # v5.7: no invented 95 % when the device sends none
         source_type=payload.source_type or "simulated",
         is_simulated=is_sim,
         method_version=METHOD_NAME,
@@ -813,7 +813,7 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
         value_ppb=round(reading.arsenic_ppb, 2),
         unit="mg/L",
         safeLimit=round(WHO_GUIDELINE_UG_L / 1000.0, 3),
-        confidencePct=round(reading.confidence * 100, 1) if reading.confidence is not None else 95.0,
+        confidencePct=round(reading.confidence * 100, 1) if reading.confidence is not None else None,
         confirmedByHomes=confirmed_count,
         source=reading.source_label or "Water Body Survey",
         detectedAt=rec_time.strftime("%H:%M UTC"),
@@ -1024,8 +1024,9 @@ def commit_data_import(payload: schemas.DataImportCommitRequest, db: Session = D
                 continue
 
             eval_res = classify_arsenic_neural(
-                arsenic_ppb=as_ppb, ph=_val(ph, 7.2), conductivity_us_cm=_val(cond, 400.0),
-                turbidity_ntu=_val(turb, 2.0), temperature_c=_val(temp, 24.0), source_type=source_type,
+                # v5.7: a value missing from the file stays not measured (no assumed 7.2 / 400 / 2 / 24)
+                arsenic_ppb=as_ppb, ph=ph, conductivity_us_cm=cond,
+                turbidity_ntu=turb, temperature_c=temp, source_type=source_type,
             )
             recorded = _parse_time(r.get(mapping["recorded_at"])) if "recorded_at" in mapping else None
             lat, lon = get(r, "latitude"), get(r, "longitude")
@@ -1202,8 +1203,8 @@ def load_demo_data(db: Session = Depends(get_db)):
             temperature_c=p["temp"],
             conductivity_us_cm=p["ec"],
             turbidity_ntu=p["turb"],
-            latitude=18.5204 + (added * 0.005),
-            longitude=73.8567 + (added * 0.005),
+            latitude=None,    # v5.7: demo data has no real place, so no invented coordinates on the map
+            longitude=None,
             source_label=p["label"],
             recorded_at=now_utc() - timedelta(minutes=(5 - added) * 10),
             received_at=now_utc(),
