@@ -241,7 +241,7 @@ This round started from a research pass (web + code) that produced 19 findings; 
 - Fixed while testing: the devices grid was 429 px wide on a 390 px phone (grid items' min-content width), "1 lab results" wording, a missing disclosure arrow, English caveats on translated QR pages, and a low-contrast 3D hint.
 
 ### 19. Tests that open the pages
-- `tests_e2e/` (Playwright): no console errors or CSP violations at 1440 px and 390 px, no sideways scrolling, one map marker per placed node (tiles answered locally, so tests never hit OpenStreetMap), device tools, the lab summary, all five languages and the remembered choice, the QR page and sticker, lazy 3D loading, and an axe-core WCAG 2.2 AA audit in both themes (0 violations). CI runs them plus Lighthouse CI (local run: dashboard 96 / 100 / 100 / 100, QR page 100 across the board).
+- `tests_e2e/` (Playwright): no console errors or CSP violations at 1440 px and 390 px, no sideways scrolling, one map marker per placed node (tiles answered locally, so tests never hit OpenStreetMap), device tools, the lab summary, all five languages and the remembered choice, the QR page and sticker, lazy 3D loading, and an axe-core WCAG 2.2 AA audit in both themes (0 violations). CI runs them plus Lighthouse in CI (advisory; local run: dashboard 96 / 100 / 100 / 100, QR page 100 across the board).
 
 ### A bug CI found
 - GitHub's runners have SQLite 3.45, so the server ran in its single-connection mode (the WAL-reset guard from v5.5). `/api/health` then asked for a second connection while the request held the only one, waited 30 s and reported no schema revision. Health now reuses the request's session, the full suite was re-run in that mode (205 tests, 8 s), and CI now runs it on every push.

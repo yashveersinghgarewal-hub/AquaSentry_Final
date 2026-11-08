@@ -98,12 +98,17 @@ jobs:
           AXE_PATH: ${{ github.workspace }}/node_modules/axe-core/axe.min.js
         run: python -m pytest -q tests_e2e
       - name: Lighthouse (advisory; the axe audit above is the accessibility gate)
-        # the dashboard keeps a live event stream and an animated background, so cap the waits
         continue-on-error: true
-        timeout-minutes: 8
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: npx --yes @lhci/cli@0.14.0 autorun
+        timeout-minutes: 10
+        run: |
+          cp AquaSentry_Platform/aquasentry.db /tmp/lh.db
+          (cd AquaSentry_Platform && DATABASE_URL=sqlite:////tmp/lh.db python -m uvicorn app.main:app --port 8077 &)
+          sleep 6
+          for u in "index.html" "device.html?code=DEMO-BOT-01"; do
+            npx --yes lighthouse@12.2.1 "http://127.0.0.1:8077/$u" --quiet --preset=desktop --max-wait-for-load=30000 \
+              --output=json --output-path=/tmp/lh.json --chrome-flags="--headless=new --no-sandbox"
+            python -c "import json,sys; c=json.load(open('/tmp/lh.json'))['categories']; s={k: round(v['score']*100) for k, v in c.items()}; print(sys.argv[1], s); sys.exit(0 if s['accessibility'] >= 95 else 1)" "$u"
+          done
 
   firmware:
     # Real compile of the ESP32 sketch with Espressif's Arduino core, for every supported chip.

@@ -26,7 +26,7 @@ Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_
 - Map of nodes (Leaflet, bundled; loads when scrolled to), device tools (public page, QR sticker, JJM CSV), lab checks panel with an entry form, quality caveats under the verdict, "Get alerts on this phone", sign-in dialog, history chart without the tangle (daily-highest line when there are many sources).
 - **Bengali, Assamese and Punjabi** (language menu; files load on demand; safety-critical text translated, the rest falls back to English). Dates in the chosen locale.
 - **Strict style CSP** (`style-src 'self'`) on the dashboard and public page: all inline `style` attributes replaced; OpenStreetMap tiles allowed in `img-src` (`MAP_TILE_URL`). 3D model lazy-loaded; service worker v5.6 with push notifications.
-- Browser tests (`tests_e2e/`, Playwright): no console errors or CSP violations, no sideways scroll at 390 px, map markers, languages, QR page, lazy 3D, axe WCAG 2.2 AA; Lighthouse CI (local run: dashboard 96 / 100 / 100 / 100, public page 100 / 100 / 100 / 100).
+- Browser tests (`tests_e2e/`, Playwright): no console errors or CSP violations, no sideways scroll at 390 px, map markers, languages, QR page, lazy 3D, axe WCAG 2.2 AA; Lighthouse in CI (advisory; local run: dashboard 96 / 100 / 100 / 100, public page 100 / 100 / 100 / 100).
 - Tests: 236 (22 toolkit + 214 platform) + 9 browser tests.
 
 ## v5.5 — signed alerts, metrics, low-power ESP32, Docker and GitHub readiness
