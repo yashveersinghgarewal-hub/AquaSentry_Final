@@ -34,6 +34,16 @@ public:
   String& operator+=(char c) { s += c; return *this; }
   friend String operator+(const String& a, const String& b) { return String(a.s + b.s); }
   friend String operator+(const String& a, const char* b) { return String(a.s + b); }
+  friend String operator+(const char* a, const String& b) { return String(std::string(a) + b.s); }
+  int indexOf(const String& k) const { auto i = s.find(k.s); return i == std::string::npos ? -1 : (int)i; }
+  int indexOf(char c, unsigned int from = 0) const { auto i = s.find(c, from); return i == std::string::npos ? -1 : (int)i; }
+  String substring(unsigned int a, unsigned int b) const { return String(s.substr(a, b - a)); }
+  String substring(unsigned int a) const { return String(s.substr(a)); }
+  bool startsWith(const String& p) const { return s.rfind(p.s, 0) == 0; }
+  bool operator==(const String& o) const { return s == o.s; }
+  bool operator==(const char* o) const { return s == o; }
+  bool operator!=(const String& o) const { return s != o.s; }
+  bool operator!=(const char* o) const { return s != o; }
 };
 class Print { public: virtual ~Print() {} };
 class HardwareSerial : public Print {

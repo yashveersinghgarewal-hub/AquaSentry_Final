@@ -85,6 +85,11 @@ jobs:
             flags: "-DLOW_POWER_MODE=1 -DPIN_BATTERY_ADC=35 -DALLOW_INSECURE_TLS=1"
           - fqbn: esp32:esp32:esp32c3
             flags: "-DLOW_POWER_MODE=1 -DPIN_BATTERY_ADC=0 -DALLOW_INSECURE_TLS=1"
+          # v5.6: total arsenic (reagent pump), all water-quality sensors and server-pulled updates
+          - fqbn: esp32:esp32:esp32
+            flags: "-DPULL_OTA=1 -DPIN_REAGENT_PUMP=13 -DPIN_TEMP_NTC=32 -DPIN_PH_ADC=36 -DPIN_EC_ADC=39 -DPIN_TURBIDITY_ADC=33"
+          - fqbn: esp32:esp32:esp32s3
+            flags: "-DPULL_OTA=1 -DPIN_REAGENT_PUMP=15 -DPIN_TEMP_NTC=10 -DPIN_PH_ADC=1"
     steps:
       - uses: actions/checkout@v4
 

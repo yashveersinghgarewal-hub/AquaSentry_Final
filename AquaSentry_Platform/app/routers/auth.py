@@ -24,7 +24,7 @@ from ..deps import _is_loopback, _key_ok
 
 router = APIRouter()
 COOKIE = "aqs_session"
-OPEN_PREFIXES = ("/api/health", "/api/auth/", "/api/public/")
+OPEN_PREFIXES = ("/api/health", "/api/auth/", "/api/public/", "/api/firmware/")   # firmware is open source
 SESSION_DAYS = 30
 
 

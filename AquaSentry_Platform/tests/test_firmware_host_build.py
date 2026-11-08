@@ -109,7 +109,8 @@ def test_pins_are_safe_on_each_chip():
 @pytest.mark.parametrize("target", sorted(TARGETS))
 def test_sketch_type_checks_with_optional_features_on(target):
     """HTTPS-without-CA, battery monitor and low-power deep sleep, all switched on as build flags."""
-    flags = ["-DLOW_POWER_MODE=1", "-DPIN_BATTERY_ADC=35", "-DALLOW_INSECURE_TLS=1"]
+    flags = ["-DLOW_POWER_MODE=1", "-DPIN_BATTERY_ADC=35", "-DALLOW_INSECURE_TLS=1", "-DPULL_OTA=1", "-DPIN_REAGENT_PUMP=4",
+             "-DPIN_TEMP_NTC=1", "-DPIN_PH_ADC=2", "-DPIN_EC_ADC=3", "-DPIN_TURBIDITY_ADC=5", "-DCOPPER_CHECK=0"]
     cmd = [GXX, "-std=gnu++20", "-Wall", "-Wextra", "-Wformat=2", "-Wvolatile", "-Werror", "-fsyntax-only", "-x", "c++",
            *TARGETS[target], *flags, "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), SKETCH]
     out = subprocess.run(cmd, capture_output=True, text=True)
@@ -117,18 +118,23 @@ def test_sketch_type_checks_with_optional_features_on(target):
 
 
 @pytest.mark.skipif(GXX is None, reason="no C++ compiler")
-def test_offline_record_size_unchanged_by_battery_field():
-    """battery_pct sits in what used to be padding, so readings already buffered on LittleFS by
-    older firmware stay readable after an update (the buffer checks record_size)."""
+def test_offline_record_v55_size_and_migration():
+    """5.6 records grew from 52 to 60 bytes; buffered 5.5 readings are converted, not thrown away."""
     body = re.search(r"typedef struct \{\n(\s+float arsenic_mg_l;[\s\S]*?)\} sensor_reading_t;", TYPES).group(1)
-    old = "\n".join(l for l in body.splitlines() if "battery_pct" not in l)
+    new_fields = ("arsenic_species", "cal_tag", "cu_peak_ua")
+    old = "\n".join(l for l in body.splitlines() if not any(f in l for f in new_fields)) + "\n"
     src = ("#include <cstdint>\ntypedef struct {\n%s} new_t;\ntypedef struct {\n%s} old_t;\n"
-           "static_assert(sizeof(new_t) == sizeof(old_t), \"record size changed\");\nint main(){return 0;}\n") % (body, old)
+           "static_assert(sizeof(old_t) == 52, \"v5.5 record\");\nstatic_assert(sizeof(new_t) == 60, \"v5.6 record\");\n"
+           "int main(){return 0;}\n") % (body, old)
     work = tempfile.mkdtemp()
     cpp = os.path.join(work, "size.cpp")
     open(cpp, "w").write(src)
     out = subprocess.run([GXX, "-std=c++17", "-fsyntax-only", cpp], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
+    assert "#define RECORD_SIZE_V55 52" in TYPES
+    mig = re.search(r"static bool obuf_migrate_from_v55\(\)[\s\S]*?\n\}", SRC).group(0)
+    assert "memcpy(&r, buf, RECORD_SIZE_V55)" in mig and "rename(\"/offline.tmp\", OFFLINE_FILE)" in mig
+    assert SRC.index("obuf_migrate_from_v55();") < SRC.index('File f = LittleFS.open(OFFLINE_FILE, "r");\n    bool valid')
 
 
 def test_battery_curve_is_monotonic_and_https_is_checked():
@@ -174,3 +180,18 @@ def test_sketch_compiles_after_arduino_prototype_insertion():
            *TARGETS["esp32"], "-I", os.path.join(FW_DIR, "host_check"), "-I", os.path.join(FW_DIR, "esp32_firmware"), out_path]
     out = subprocess.run(cmd, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr[-3000:]
+
+
+def test_v56_firmware_features_are_wired():
+    # quality fields reach the server
+    for key in ("arsenic_species", "peak_current_ua", "cu_peak_ua", "calibration_ref"):
+        assert f'\\"{key}\\"' in SRC, key
+    # the reagent is dosed after the other sensors are read (it changes pH and conductivity)
+    assert SRC.index("float ec = read_conductivity(temp);") < SRC.index("digitalWrite((uint8_t)reagent_pin, HIGH);")
+    # copper extension never feeds the arsenic background fit
+    asv = re.search(r"asv_result_t execute_asv_cycle\(\)[\s\S]*?\n\}", SRC).group(0)
+    assert asv.count("for (int i = 0; i < n_as; i++)") == 2
+    # calibration from the server is sanity-checked and used for the arsenic value
+    assert "sl > 0.05f && sl < 50.0f" in SRC and "arsenic_ug_from_peak(peak_current_ua) / 1000.0f" in SRC
+    # server updates: never mid-test, and the new build confirms itself after a successful upload
+    assert "if (is_measuring) return;" in SRC and "esp_ota_mark_app_valid_cancel_rollback();" in SRC

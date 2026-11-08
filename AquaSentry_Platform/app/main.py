@@ -58,7 +58,7 @@ from .deps import (  # noqa: F401  (re-exported: tests and older imports use app
     _api_key, _check_device_key, _get_or_create_device, _is_loopback, _is_number, _key_ok, _utc, _val,
     active_model_name, now_utc, require_admin, require_writer,
 )
-from .routers import science as science_router, reports as reports_router, field as field_router, auth as auth_router, alerts as alerts_router
+from .routers import science as science_router, reports as reports_router, field as field_router, auth as auth_router, alerts as alerts_router, firmware as firmware_router
 from .field import latest_lab as _latest_lab, site_dict
 from .routers.reports import generate_potability_certificate_pdf  # noqa: F401
 from .chat_policy import (
@@ -85,6 +85,7 @@ app.include_router(reports_router.router)
 app.include_router(field_router.router)
 app.include_router(auth_router.router)
 app.include_router(alerts_router.router)
+app.include_router(firmware_router.router)
 
 
 

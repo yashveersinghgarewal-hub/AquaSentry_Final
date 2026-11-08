@@ -146,7 +146,8 @@ def test_read_protection(client, monkeypatch):
     assert auth.reader_allowed(_req("192.168.1.20", cookies=f"{auth.COOKIE}={good}"))
     expired = auth._sign(int(datetime.now().timestamp()) - 1, "viewer-secret")
     assert not auth.reader_allowed(_req("192.168.1.20", cookies=f"{auth.COOKIE}={expired}"))
-    assert not auth.reader_allowed(_req("192.168.1.20", cookies=f"{auth.COOKIE}={good[:-1]}0"))
+    tampered = good[:-1] + ("1" if good[-1] == "0" else "0")
+    assert not auth.reader_allowed(_req("192.168.1.20", cookies=f"{auth.COOKIE}={tampered}"))
     assert client.post("/api/auth/login", json={"key": "wrong"}).status_code == 401
     ok = client.post("/api/auth/login", json={"key": "viewer-secret"})
     assert ok.status_code == 200 and auth.COOKIE in ok.cookies
@@ -167,3 +168,17 @@ def test_read_protection_middleware_blocks_network_reads(monkeypatch):
 
 def test_health_reports_schema_revision(client):
     assert client.get("/api/health").json()["diagnostics"]["schema_revision"].startswith("0002")
+
+
+def test_firmware_upload_latest_and_download(client):
+    fake = bytes([0xE9]) + b"\x00" * 1000
+    assert client.post("/api/admin/firmware?board=esp32&version=5.6.1", content=b"nope").status_code == 422
+    assert client.post("/api/admin/firmware?board=esp8266&version=5.6.1", content=fake).status_code == 422
+    up = client.post("/api/admin/firmware?board=esp32&version=5.6.1", content=fake).json()
+    assert up["size"] == 1001 and len(up["md5"]) == 32
+    lat = client.get("/api/firmware/latest?board=esp32&current=5.6.0").json()
+    assert lat["version"] == "5.6.1" and lat["url"] == "/api/firmware/download/esp32/5.6.1"
+    assert client.get("/api/firmware/latest?board=esp32&current=5.6.1").status_code == 204
+    assert client.get("/api/firmware/latest?board=esp32c3&current=5.6.0").status_code == 204
+    dl = client.get(lat["url"])
+    assert dl.content == fake and dl.headers["x-md5"] == up["md5"]

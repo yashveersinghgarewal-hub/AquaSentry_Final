@@ -66,7 +66,7 @@ Allow Python through Windows Firewall on **Private** networks when asked. The ne
 
 ## What the firmware sends
 `POST /api/readings` with JSON in the format the server expects:
-`{"device_code":"TANK-001","arsenic_concentration_mg_l":0.0371,"source_type":"hardware","source_label":"ESP32 node","idempotency_key":"TANK-001-42","firmware_version":"5.5.0","recorded_at":"2026-11-08T04:00:12Z", ...}`.
+`{"device_code":"TANK-001","arsenic_concentration_mg_l":0.0371,"source_type":"hardware","source_label":"ESP32 node","idempotency_key":"TANK-001-42","firmware_version":"5.6.0","recorded_at":"2026-11-08T04:00:12Z", ...}`.
 pH, conductivity, turbidity and temperature are included **only** when you fit those sensors. Write the code in `read_ph()`, `read_conductivity()`, `read_turbidity()` and `read_temperature()`; until then they return NAN and are not sent. The idempotency key stops a reading that is re-sent from the offline buffer from being stored twice.
 
 Once Wi-Fi connects the board sets its clock by NTP, and each reading carries `"recorded_at"` (UTC), so readings buffered while offline keep the time they were taken. If the server sets `AQUASENTRY_API_KEY`, put the same value in `DEVICE_API_KEY`; the board sends it as the `X-API-Key` header. A reading the server rejects for good (any 4xx except 408/429, e.g. bad data or a wrong key) is logged and dropped instead of blocking the offline queue forever.
@@ -106,6 +106,35 @@ Set them near the top of the sketch, or as build flags (PlatformIO: the `esp32de
 | **Low-power mode** | `LOW_POWER_MODE 1` | Deep-sleeps between tests (chip about 10 µA). After a test it stays awake up to 90 s (`LOW_POWER_AWAKE_MS`) to upload it and the offline backlog, then sleeps for the rest of the hour. Pages and OTA work only while it is awake; it never sleeps while the setup hotspot is open. **Fit a 10 kΩ pull-up from the A4988 EN pin to 3.3 V**: Pololu-style boards pull EN low (motor ON) and the pin is otherwise floating during sleep. The firmware also holds EN high through sleep (`gpio_hold_en`, plus `gpio_deep_sleep_hold_en` on C3/S3). |
 
 For HTTPS the `ROOT_CA_PEM` is the certificate of the authority that signed the server's certificate (for Let's Encrypt, *ISRG Root X1*), pasted as a C string with `\n` line endings. The telemetry task has 16 KB of stack for the TLS handshake.
+
+## Measurement quality and sensors (v5.6)
+
+**Total arsenic vs As(III) only.** Groundwater carries arsenic as As(III) and As(V). On a gold electrode, As(V) gives no signal until the sample is acidified with a reducing supporting electrolyte (Metrohm's method uses sulfamic acid, citric acid and KCl). Without that step the node measures **As(III) only** and says so (`"arsenic_species":"as3_only"`); the server then warns that the number can be too low and that "No arsenic detected" cannot rule arsenic out. With a small dosing pump switched by a logic-level MOSFET on `PIN_REAGENT_PUMP` (add a 100 kΩ pull-down on the gate), the node reads the other sensors first, doses the electrolyte (`REAGENT_PUMP_MS`), waits `REAGENT_MIX_MS` and reports total arsenic. **Bench-test the dose, mixing time and deposition potential with As(V) standards before trusting total-arsenic numbers.**
+
+**Copper check.** With `COPPER_CHECK 1` (default) the sweep continues `COPPER_OFFSET_MV` past the arsenic peak and measures the copper peak (`cu_peak_ua`). Copper hides arsenic on gold; the server flags readings where copper is more than `COPPER_FLAG_RATIO` (3) times the arsenic peak. Confirm the copper window with one scan of a copper standard.
+
+**Calibration from the server.** At start-up and once a day the node fetches `GET /api/devices/<code>/calibration` (its own calibration, else a global one, else the factory numbers) and stores it in flash. Make calibrations on the dashboard's API: external standards (`POST /api/admin/calibrations/external`) or **standard addition** in the real water (`POST /api/admin/calibrations/standard-addition`), which builds matrix effects into the slope. Each reading says which calibration it used (`calibration_ref`).
+
+**Water-quality sensors** (all optional, `-1` = not fitted, ADC1 pins only; 5 V boards need a divider):
+
+| Sensor | Setting | Notes |
+| --- | --- | --- |
+| Temperature | `PIN_TEMP_NTC` | 10 kΩ NTC (B 3950) to GND, 10 kΩ from 3.3 V to the pin |
+| pH | `PIN_PH_ADC`, `PH_MV_AT_7`, `PH_MV_AT_4`, `PH_DIVIDER` | Two-buffer calibration; the serial monitor prints the board's mV |
+| Conductivity | `PIN_EC_ADC`, `EC_DIVIDER`, `EC_CELL_K` | Compensated to 25 °C with the measured temperature |
+| Turbidity | `PIN_TURBIDITY_ADC`, `TURBIDITY_DIVIDER` | SEN0189-style curve |
+
+Free pins that are safe to use (ADC1 for the sensors, because ADC2 stops working when Wi-Fi is on):
+
+| Board | Sensors (ADC1) | Reagent pump (output) | Notes |
+| --- | --- | --- | --- |
+| ESP32 DevKit | NTC 32, pH 36, EC 39, turbidity 33, battery 35 | 13 | `esp32dev-field` environment in `platformio.ini` |
+| ESP32-S3 | 10 and 1 (two sensors; battery takes 1) | 15 | GPIO 11-20 are ADC2; GPIO 3 is a strapping pin |
+| ESP32-C3 | 0 (one sensor, or the battery) | 0, if no sensor uses it | Only five ADC1 pins and the node already uses three; 2, 8 and 9 are strapping pins. Use an ESP32 or S3 for a full sensor set |
+
+**Updates from the server** (`PULL_OTA 1`). Upload a build: `curl -X POST --data-binary @build/esp32_firmware.ino.bin -H "X-API-Key: <key>" "http://<server>:8000/api/admin/firmware?board=esp32&version=5.6.1"`. Nodes check `/api/firmware/latest` once a day, never during a test, download with an MD5 check and restart. The new build confirms itself after its first successful upload (`esp_ota_mark_app_valid_cancel_rollback`); with a rollback-enabled bootloader, a build that never gets that far is undone.
+
+Buffered readings from firmware 5.2-5.5 are converted to the new 60-byte record on first start; nothing waiting is lost.
 
 ## Over-The-Air (OTA) Updates
 Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. OTA is **disabled while `OTA_PASS` is still `change-me`** (or shorter than 8 characters), so nobody can flash the board with the default login. Pick a long password, then re-flash over USB once.
