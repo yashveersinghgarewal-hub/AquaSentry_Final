@@ -121,7 +121,9 @@ def test_sketch_type_checks_with_optional_features_on(target):
 def test_offline_record_v55_size_and_migration():
     """5.6 records grew from 52 to 60 bytes; buffered 5.5 readings are converted, not thrown away."""
     body = re.search(r"typedef struct \{\n(\s+float arsenic_mg_l;[\s\S]*?)\} sensor_reading_t;", TYPES).group(1)
-    new_fields = ("arsenic_species", "cal_tag", "cu_peak_ua")
+    new_fields = ("arsenic_species", "cal_tag", "cu_peak_ua",
+                  # v5.7 fields live in former padding, so the record stays 60 bytes (checked below)
+                  "qc_result", "good_scans", "qc_reserved", "qc_bits")
     old = "\n".join(l for l in body.splitlines() if not any(f in l for f in new_fields)) + "\n"
     src = ("#include <cstdint>\ntypedef struct {\n%s} new_t;\ntypedef struct {\n%s} old_t;\n"
            "static_assert(sizeof(old_t) == 52, \"v5.5 record\");\nstatic_assert(sizeof(new_t) == 60, \"v5.6 record\");\n"
@@ -190,7 +192,8 @@ def test_v56_firmware_features_are_wired():
     assert SRC.index("float ec = read_conductivity(temp);") < SRC.index("digitalWrite((uint8_t)reagent_pin, HIGH);")
     # copper extension never feeds the arsenic background fit
     asv = re.search(r"asv_result_t execute_asv_cycle\(\)[\s\S]*?\n\}", SRC).group(0)
-    assert asv.count("for (int i = 0; i < n_as; i++)") == 2
+    # background fit (2 loops) and, since v5.7, the arsenic peak search stop at the arsenic sweep
+    assert asv.count("for (int i = 0; i < n_as; i++)") == 3
     # calibration from the server is sanity-checked and used for the arsenic value
     assert "sl > 0.05f && sl < 50.0f" in SRC and "arsenic_ug_from_peak(peak_current_ua) / 1000.0f" in SRC
     # server updates: never mid-test, and the new build confirms itself after a successful upload

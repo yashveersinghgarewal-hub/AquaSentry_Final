@@ -1,4 +1,4 @@
-# AquaSentry improvement log (v5.1 → v5.6)
+# AquaSentry improvement log (v5.1 → v5.7)
 
 Every change made to this repository since the v5.1 baseline (commit `667a469`, "black & blue UI with a motion layer"), with the reason for it, where it lives, and how it is tested. Newest release last, so it reads as a story; `CHANGELOG.md` has the short version.
 
@@ -246,6 +246,37 @@ This round started from a research pass (web + code) that produced 19 findings; 
 ### A bug CI found
 - GitHub's runners have SQLite 3.45, so the server ran in its single-connection mode (the WAL-reset guard from v5.5). `/api/health` then asked for a second connection while the request held the only one, waited 30 s and reported no schema revision. Health now reuses the request's session, the full suite was re-run in that mode (205 tests, 8 s), and CI now runs it on every push.
 - The Docker smoke test then found a worse one in the same mode: upgrading an existing database at start-up held the only connection while the old column patches asked for another, so **the container never started**. The patches now run before the migration takes its connection; a test starts a fresh process on a copy of the shipped v5.5 database in both connection modes (it fails on the old code), and the image was rebuilt and checked: migrated to 0002, push key in `/data`, 30 parallel uploads, integrity check ok.
+
+---
+
+## 4d. v5.7: harm review of v5.6
+
+A review asked one question of every part: *could this make someone drink contaminated water, or send wrong
+information to an authority?* v5.6 had already fixed the arsenic limit, the "Safe to drink" headline and the
+As(III) blind spot. These were still open:
+
+| # | Problem in v5.6 | Harm | Fix in v5.7 |
+| --- | --- | --- | --- |
+| 1 | Any scan with 10+ points was averaged; the server rejected only clipped scans | A dead, dry or disconnected electrode gives a flat line = 0 µg/L = "No arsenic detected" | Scan QC on the ESP32 and the server (flat, noise vs LOD, peak at window edge, clipping, scans disagree, < 2 good scans) → **Test failed** |
+| 2 | Nothing checked the sensor between calibrations | A drifting electrode reads low, again looking clean | Check standards (`/qc` page, `POST /api/qc/runs`, 80–120 % recovery); low readings need one in the last 7 days and an electrode calibration ≤ 90 days old |
+| 3 | Missing sensors were fed to the verdict as pH 7.2, 400 µS/cm, 2 NTU, 24 °C | Verdicts and messages implied checks that never happened | `None` = not measured in Python, JS and C; messages name what was not measured |
+| 4 | Dashboard practice tests copied pH 7.3, battery 71 % and GPS 25.61°N 85.14°E; reports had no source line | A practice result could be emailed to a district office with an invented location | Practice tests measure arsenic only, under `SIM-DASHBOARD`; reports show the source and are blocked for practice / demo / failed tests; PDF stamped |
+| 5 | Below-LOD values shown as numbers (e.g. 9.6 µg/L) and painted safe-green on the map, QR page and device list | Reads as "measured, under the limit" | "< 20", "Not detected: not confirmed safe", clear-blue paint |
+| 6 | No warning when a device's last reading was old; buffered readings without a clock got the upload time | A dead device's last "not detected" stays on screen | 2-hour staleness warning; `time_source` stored; "time unknown" shown |
+| 7 | Writes open to the whole network without a key; CORS `*` | Fake readings / alerts from any device, or from a web page via `localhost` | Local-only writes without a key, Origin check, CORS limited |
+| 8 | Simulated alerts went to the webhook | False alarms at the receiving end | Only hardware / imported readings |
+| 9 | Pages and chatbot claimed LoRa, GPS geotagging, "ready to deploy", accuracy without "simulated", facts about AccuSense | Misleading pitches and answers | Rewritten as planned features / design targets; competitor facts marked as public information only |
+| 10 | PDF V3 confidence import pointed at a module that does not exist | Confidence silently missing | Fixed |
+
+**Correction to the first harm review:** it said the BIS 50 µg/L "permissible" limit still applied. It does not:
+IS 10500 Amendment No. 1 (June 2015) removed that relaxation, as v5.2 implemented. v5.7 keeps the 10 µg/L limit.
+
+**Verified by:** `tests/test_v57_safety.py` (scan QC on synthetic traces; trust rules; Python / JS / C parity with missing
+inputs; PDF text via pypdf; write lock; the sketch's own `execute_asv_cycle()` run on a simulated ADC with a healthy,
+dead, noisy and shifted-peak electrode; offline record layout). The browser tests and WCAG 2.2 AA audit pass.
+
+**Next real-world steps:** tune the QC thresholds on real scans; prepare a 50 µg/L check standard (and a blank) for
+the weekly check; bench-test firmware 5.7.0 on a board.
 
 ---
 

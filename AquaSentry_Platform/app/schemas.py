@@ -116,6 +116,7 @@ class ReadingOut(BaseModel):
     qc_flags: Optional[str] = None
     qc_status: Optional[str] = None
     time_source: Optional[str] = None
+    device_code: Optional[str] = None
     calibration_ref: Optional[str] = None
     recorded_at: datetime
     received_at: datetime

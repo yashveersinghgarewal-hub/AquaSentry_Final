@@ -33,3 +33,15 @@ Only the latest release on `main` gets fixes.
   `espefuse` + an encrypted NVS partition; see Espressif's "Flash Encryption" and "NVS Encryption" guides).
   This burns eFuses and cannot be undone, so practise on a spare board first. Revoke a lost node's key
   with `DELETE /api/admin/devices/{code}/key`.
+
+## v5.7 changes
+
+- With no `AQUASENTRY_API_KEY`, the server now accepts new data **only from this computer**. Set the key (and the same
+  `DEVICE_API_KEY` in the firmware) before connecting an ESP32. `AQUASENTRY_OPEN_WRITES=1` reopens writes to the
+  network without a key; use it only on a closed test network.
+- A web page open in a browser on the server computer can no longer post data through `localhost`: writes that carry
+  an `Origin` other than the dashboard's are refused (403).
+- CORS defaults to the dashboard's own origins instead of `*`. Add others with `CORS_ORIGINS=https://a,https://b`.
+- Simulated and demo alerts are never sent to `ALERT_WEBHOOK_URL` (set `ALERT_WEBHOOK_INCLUDE_SIMULATED=1` to test a receiver).
+- Measurement trust settings: `QC_REQUIRE_FOR_HARDWARE` (default 1), `QC_CHECK_MAX_AGE_HOURS` (168), `CALIBRATION_MAX_AGE_DAYS` (90).
+

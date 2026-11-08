@@ -268,3 +268,74 @@ def test_qc_flag_list_fits_its_column():
     s = qc.merge_flags(["CHECK_STANDARD_MISSING", "CALIBRATION_MISSING", "QC_NOT_REPORTED", "DEVICE_REPORTED_FAIL",
                         "PEAK_AT_WINDOW_EDGE", "NOISE_ABOVE_LOD", "FLAT_SIGNAL"], ["as3_only", "uncalibrated"])
     assert len(s) <= 128 and not s.endswith(",") and s.startswith("CHECK_STANDARD_MISSING")
+
+
+# ------------------------------------------------------------------ 7. the ESP32's own scan checks, run on this computer
+SKETCH = os.path.join(FW, "esp32_firmware.ino")
+
+
+@pytest.mark.skipif(shutil.which("g++") is None, reason="no C++ compiler")
+def test_firmware_scan_qc_catches_a_dead_electrode():
+    """Runs the sketch's real execute_asv_cycle() against a simulated ADC (healthy, dead, noisy, shifted peak)."""
+    import re
+    src = open(SKETCH, encoding="utf-8").read()
+    defines = "\n".join(l for l in src.splitlines()
+                        if re.match(r"#define (VOLT_|PEAK_|BASELINE_EXCLUDE|ASV_MAX_POINTS|COPPER_OFFSET|COPPER_HALF|QC_)", l))
+    qc_names = re.search(r"static const struct \{ uint16_t bit; const char\* name; \} QC_NAMES\[\] = \{.*?\n\};\n", src, re.S).group(0)
+    arrays = "\n".join(re.findall(r"^static float asv_\w+\[ASV_MAX_POINTS\];$", src, re.M))
+    savgol = re.search(r"static void savgol5\(.*?\n\}\n", src, re.S).group(0)
+    cycle = re.search(r"asv_result_t execute_asv_cycle\(\) \{.*?\n\}\n", src, re.S).group(0)
+    harness = r'''
+#include <cstdio>
+#include <cstdint>
+#include <cmath>
+#include "aquasentry_types.h"
+using std::isnan;
+#define F(x) (x)
+#define COPPER_CHECK 0
+struct SerialT { template <class... A> void printf(const char*, A...) {} void println(const char*) {} } Serial;
+static void delay(unsigned long) {}
+volatile float cal_slope = 0.8563f, cal_icpt = 0.0096f;
+static int mode = 0; static float conc = 0.05f, cur_mv = 0; static unsigned seed = 1;
+static void dac_set_potential(float mv) { cur_mv = mv; }
+static float rnd() { seed = seed * 1103515245u + 12345u; return ((seed >> 16) & 0x7fff) / 32767.0f - 0.5f; }
+static int16_t ads1115_read_differential() {
+  if (mode == 1) return (int16_t)(rnd() > 0.3f ? 1 : 0);                      // dead electrode: ADC noise only
+  float centre = mode == 3 ? -925.0f : -800.0f;
+  float ua = -0.15f + 0.00015f * (cur_mv + 1100.0f) + (0.8563f * conc + 0.0096f) * expf(-0.5f * powf((cur_mv - centre) / 35.0f, 2));
+  ua += rnd() * (mode == 2 ? 0.12f : 0.002f);
+  return (int16_t)lroundf(ua / 0.000625f);
+}
+''' + defines + "\n" + qc_names + arrays + "\n" + savgol + cycle + r'''
+int main() { for (mode = 0; mode < 4; mode++) { asv_result_t r = execute_asv_cycle();
+  printf("%d %u %.4f\n", mode, (unsigned)r.qc, r.net_peak_ua); } return 0; }
+'''
+    work = tempfile.mkdtemp()
+    cpp, exe = os.path.join(work, "qc.cpp"), os.path.join(work, "qc")
+    open(cpp, "w").write(harness)
+    subprocess.run(["g++", "-std=c++17", "-Wall", "-I", FW, cpp, "-o", exe], check=True)
+    rows = [l.split() for l in subprocess.run([exe], capture_output=True, text=True, check=True).stdout.split("\n") if l]
+    fault = {int(m): int(bits) for m, bits, _ in rows}
+    names = {n: int(v, 16) for n, v in re.findall(r"#define (QC_\w+)\s+(0x[0-9A-Fa-f]+)", src)}
+    mask = sum(names[k] for k in ("QC_FLAT_SIGNAL", "QC_NOISE_ABOVE_LOD", "QC_BASELINE_UNSTABLE", "QC_PEAK_AT_EDGE",
+                                  "QC_TOO_FEW_SCANS", "QC_SCANS_DISAGREE", "QC_ADC_SATURATION"))
+    assert fault[0] & mask == 0, rows                                  # healthy electrode, 50 ug/L
+    assert fault[1] & names["QC_FLAT_SIGNAL"], rows                     # dead electrode
+    assert fault[2] & (names["QC_NOISE_ABOVE_LOD"] | names["QC_BASELINE_UNSTABLE"]), rows
+    assert fault[3] & mask, rows                                       # peak at -925 mV, outside the window
+
+
+@pytest.mark.skipif(shutil.which("g++") is None, reason="no C++ compiler")
+def test_offline_record_layout_unchanged_for_buffered_v56_readings():
+    work = tempfile.mkdtemp()
+    cpp = os.path.join(work, "off.cpp")
+    open(cpp, "w").write('#include <cstddef>\n#include "aquasentry_types.h"\n'
+                         'static_assert(sizeof(sensor_reading_t) == 60, "size");\n'
+                         'static_assert(offsetof(sensor_reading_t, confidence_pct) == 40, "confidence");\n'
+                         'static_assert(offsetof(sensor_reading_t, battery_pct) == 49, "battery");\n'
+                         'static_assert(offsetof(sensor_reading_t, arsenic_species) == 50, "species");\n'
+                         'static_assert(offsetof(sensor_reading_t, cal_tag) == 52, "cal_tag");\n'
+                         'static_assert(offsetof(sensor_reading_t, cu_peak_ua) == 56, "copper");\n'
+                         'int main(){return 0;}\n')
+    out = subprocess.run(["g++", "-std=c++17", "-fsyntax-only", "-I", FW, cpp], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr

@@ -136,5 +136,28 @@ Free pins that are safe to use (ADC1 for the sensors, because ADC2 stops working
 
 Buffered readings from firmware 5.2-5.5 are converted to the new 60-byte record on first start; nothing waiting is lost.
 
+## Scan checks and check standards (v5.7)
+
+A dead, dry, worn or disconnected electrode reads LOW, and a low reading looks like clean water. Firmware 5.7.0
+checks every scan and never averages a bad one in:
+
+| Check | Meaning | Effect |
+| --- | --- | --- |
+| `FLAT_SIGNAL` | the whole scan varies by less than 0.005 µA | scan rejected |
+| `NOISE_ABOVE_LOD` / `BASELINE_UNSTABLE` | background noise too high to see 20 µg/L | scan rejected |
+| `PEAK_AT_WINDOW_EDGE` | the biggest current is at the edge of the ±100 mV search window and still rising | scan rejected |
+| `ADC_SATURATION_HIGH` | more than 3 points clipped | scan rejected |
+| `TOO_FEW_GOOD_SCANS` / `SCANS_DISAGREE` | fewer than 2 good scans, or they disagree by more than max(0.01 µA, 25 %) | reading sent as `"qc_status":"fail"` |
+| `PEAK_SHIFTED`, `LOW_SNR` | peak more than 60 mV from -800 mV; weak peak | warning only |
+
+The server shows a failed reading as **Test failed**, never as a value. Readings buffered by firmware 5.6 are
+uploaded without `qc_status` and are reported as unchecked.
+
+**Weekly check standard.** Open `http://<device-ip>/qc` (same login as `/update`), put a known arsenic solution
+(for example 50 µg/L) in the chamber, choose *Check standard*, enter its value and start. It must read 80–120 %.
+Without a passing check standard in the last 7 days (and a calibration made on this electrode), the server reports
+this node's LOW readings as **Test failed**; detected arsenic is still reported. A *Blank* (arsenic-free water)
+must read below 10 µg/L. The thresholds are starting values: tune them on scans from your own electrode.
+
 ## Over-The-Air (OTA) Updates
 Navigate to `http://<device-ip>/update` in any web browser and log in with `OTA_USER` / `OTA_PASS` to upload a compiled `.bin` wirelessly. OTA is **disabled while `OTA_PASS` is still `change-me`** (or shorter than 8 characters), so nobody can flash the board with the default login. Pick a long password, then re-flash over USB once.

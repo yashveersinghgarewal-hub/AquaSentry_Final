@@ -12,6 +12,20 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 | Desktop app | `desktop_app.py` | Opens the dashboard in its own window |
 | Docs | `Docs/`, `AQUASENTRY_CODE_GUIDE.md` | Code guide, neural-network guide, explainer video, hardware manuals |
 
+## What changed in v5.7
+
+Safety release from a harm review of v5.6. Nothing here needs new hardware; it makes the software refuse to look reassuring when it cannot know.
+
+- **A dead or drifting electrode can no longer look like clean water.** Every scan is checked on the ESP32 and on the server: a flat signal (disconnected, dry or worn electrode), too much noise to see the 20 µg/L detection limit, or a peak outside the search window rejects the scan. A reading needs at least 2 good scans that agree, or it is reported as **Test failed**, never as a low value.
+- **Check standards.** A low reading from a device is only trusted if the sensor passed a check standard (a known arsenic solution, 80–120 % recovery) in the last 7 days and has a calibration made on its electrode. Run one from the device's new `/qc` page or `POST /api/qc/runs`. Detected arsenic is always kept, with a warning, even from an unverified sensor.
+- **Nothing is assumed for sensors that are not fitted.** pH, conductivity, turbidity and temperature that were not measured are "Not measured" in the verdict, the message, the PDF and the dashboard (the verdict used to assume 7.2 / 400 / 2 / 24). Python, JavaScript and the ESP32's C engine agree on this.
+- **Honest headlines.** Below 20 µg/L the dashboard says **"Not detected: not confirmed safe"** and shows "< 20" instead of a noise value like 9.6; the public QR page and the map do the same, and "not detected" is no longer painted safe-green.
+- **Practice data stays practice.** Dashboard tests no longer copy invented pH, battery or GPS values (25.61°N, 85.14°E); they are stored under `SIM-DASHBOARD`, cannot be sent to authorities, and their PDF is stamped **"SIMULATED / DEMO DATA: NOT A REAL WATER TEST"**. Simulated alerts never reach the alert webhook.
+- **Old data is flagged.** A device reading older than 2 hours is marked "may be offline: do not rely on it"; a reading whose device did not report its sample time says so.
+- **Writes locked down.** Without `AQUASENTRY_API_KEY`, only this computer can add data (before: the whole network). Another website open in your browser can no longer post readings through `localhost`, and CORS is limited to the dashboard (was `*`).
+- **Claims corrected.** LoRa and GPS are described as planned (the firmware uses Wi-Fi); accuracy figures say "simulated"; the market page no longer states unverified facts about AccuSense; the incident report says "As(III) only" unless total arsenic was measured.
+- **ESP32 firmware 5.7.0:** scan QC, wider peak search (±100 mV) with a "shifted peak" warning, `qc_status` and `qc_scan_flags` in each upload, the `/qc` page, and the on-chip model treats missing sensors as not measured. Buffered 5.6 readings stay readable (the new fields use padding bytes) and are reported as unchecked.
+
 ## What changed in v5.6
 
 - **Is the reading trustworthy?** Each reading now says what the sensor can see. Without the acid electrolyte step the gold electrode only detects **As(III)**, so the dashboard warns that the number can be too low. An optional dosing pump measures total arsenic. Copper interference and factory-only calibration are flagged too.

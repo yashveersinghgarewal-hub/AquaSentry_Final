@@ -281,21 +281,30 @@ def test_firmware_upload_json_is_valid():
     struct = re.search(r"typedef struct \{\n    float arsenic_mg_l;.*?\} sensor_reading_t;", types, re.S).group(0)
     utc = re.search(r"uint32_t utc_now_or_zero\(\) \{.*?\n\}\n", src, re.S).group(0)
     build = re.search(r"int build_reading_json\(.*?\n\}\n", src, re.S).group(0)
+    qc_defs = re.search(r"#define QC_FLAT_SIGNAL .*?\n\};\n", src, re.S).group(0)   # v5.7 scan QC codes
     work = tempfile.mkdtemp()
     cpp = os.path.join(work, "j.cpp")
     open(cpp, "w").write(
         "#include <cstdio>\n#include <cstdint>\n#include <math.h>\n#include <ctime>\n#include <cstddef>\nusing std::isnan;\n"
         'const char* DEVICE_CODE = "TANK-001";\n#define FIRMWARE_VERSION "9.9.9"\n'
-        'char cal_id[48] = "CAL-20261108-abc123";\nvolatile uint16_t cal_tag_now = 777;\n' + struct + "\n" + utc + "\n" + build +
+        'char cal_id[48] = "CAL-20261108-abc123";\nvolatile uint16_t cal_tag_now = 777;\n' + struct + "\n" + qc_defs + "\n" + utc + "\n" + build +
         "int main(){ sensor_reading_t r = {}; r.arsenic_mg_l = 0.0351f; r.ph = NAN; r.conductivity_us_cm = 512.0f;"
         " r.turbidity_ntu = 0.0f; r.temperature_c = NAN; r.seq = 42; r.cu_peak_ua = NAN; r.peak_current_ua = 0.04f;"
         " r.arsenic_species = 1; r.cal_tag = 777;"
-        " char out[640]; r.timestamp_unix = 1793000000u; build_reading_json(&r, out, sizeof out); puts(out);"
-        " r.timestamp_unix = 3600u; build_reading_json(&r, out, sizeof out); puts(out); return 0; }\n")
+        " char out[900]; r.timestamp_unix = 1793000000u; build_reading_json(&r, out, sizeof out); puts(out);"
+        " r.timestamp_unix = 3600u; build_reading_json(&r, out, sizeof out); puts(out);"
+        " r.qc_result = 2; r.good_scans = 1; r.qc_bits = QC_FLAT_SIGNAL | QC_TOO_FEW_SCANS; r.peak_mv = -800;"
+        " build_reading_json(&r, out, sizeof out); puts(out);"
+        " r.qc_result = 1; r.good_scans = 3; r.qc_bits = QC_PEAK_SHIFTED; build_reading_json(&r, out, sizeof out); puts(out); return 0; }\n")
     exe = os.path.join(work, "j")
     subprocess.run(["g++", "-std=c++11", cpp, "-o", exe], check=True)
     lines = subprocess.run([exe], capture_output=True, text=True, check=True).stdout.strip().splitlines()
     with_time, legacy = json.loads(lines[0]), json.loads(lines[1])
+    failed, passed = json.loads(lines[2]), json.loads(lines[3])
+    # v5.7: old buffered records (qc_result 0) send no qc_status, so the server does not trust them
+    assert "qc_status" not in with_time
+    assert failed["qc_status"] == "fail" and failed["qc_scan_flags"] == ["FLAT_SIGNAL", "TOO_FEW_GOOD_SCANS"]
+    assert passed["qc_status"] == "pass" and passed["qc_scan_flags"] == ["PEAK_SHIFTED"] and passed["scans_averaged"] == 3
     assert with_time["idempotency_key"] == "TANK-001-42"
     assert with_time["firmware_version"] == "9.9.9"
     assert with_time["turbidity_ntu"] == 0.0 and "ph" not in with_time and "temperature_c" not in with_time

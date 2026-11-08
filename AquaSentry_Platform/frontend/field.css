@@ -236,7 +236,8 @@ input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--primary)
 .dv-name { font-weight: 700; }
 .dv-meta { grid-column: 2 / 4; color: var(--ink-3); font-size: .9rem; }
 .dv-latest { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 3px; color: #fff; font-size: .95rem; }
-.dv-latest.c-Safe, .dv-latest.c-BelowSensorLOD { background: var(--paint-safe); }
+.dv-latest.c-Safe { background: var(--paint-safe); }
+.dv-latest.c-BelowSensorLOD { background: var(--paint-clear); }   /* v5.7: "not detected" is not safe-green */
 .dv-latest.c-Caution { background: var(--paint-caution); }
 .dv-latest.c-Unsafe { background: var(--paint-unsafe); }
 .dv-latest.c-Hazardous { background: var(--paint-haz); }
@@ -435,8 +436,8 @@ button, [role="button"], summary, .chip, .btn, .nav-link, .dv-row { cursor: poin
 
 /* v5.7: failed tests, old data, sensors that are not fitted, practice data kept out of reports */
 .verdict[data-tone="Failed"] { --paint: var(--paint-haz); }
-.vchip.c-TestFailed { background: var(--paint-haz); }
-.meta-warn { color: var(--paint-unsafe); font-weight: 600; }
+.vchip.c-TestFailed, .dv-latest.c-TestFailed { background: var(--paint-haz); }
+.meta-warn { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .reading-nm { font-size: 1rem; font-weight: 600; opacity: .75; }
 .dispatch-blocked { color: var(--paint-unsafe); font-weight: 600; }
 .chip-fault { border-style: dashed; }

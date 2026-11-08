@@ -16,7 +16,10 @@
   const online = () => !!(UI() && UI().online);
   const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = (u) => (u < 10 ? Number(u).toFixed(1) : String(Math.round(u)));
-  const VERDICT_CLASS = { Safe: 'safe', 'Below Sensor LOD': 'safe', Caution: 'caution', Unsafe: 'unsafe', Hazardous: 'haz' };
+  // v5.7: "not detected" is not painted safe-green; a failed test is painted like a hazard (it must be looked at)
+  const VERDICT_CLASS = { Safe: 'safe', 'Below Sensor LOD': 'clear', Caution: 'caution', Unsafe: 'unsafe', Hazardous: 'haz', 'Test Failed': 'haz' };
+  const VKEY = { 'Below Sensor LOD': 'Clear', 'Test Failed': 'Failed' };
+  const shownValue = (l) => (l.classification === 'Test Failed' ? '–' : l.arsenic_ppb < 20 ? '&lt; 20' : num(l.arsenic_ppb));
   const state = { devices: [], device: null, map: null, layer: null, leaflet: null };
 
   async function api(path, opts) {
@@ -66,7 +69,7 @@
       const L = window.L;
       state.layer.clearLayers();
       const style = getComputedStyle(document.documentElement);
-      const paint = (cls) => style.getPropertyValue({ safe: '--paint-safe', caution: '--paint-caution', unsafe: '--paint-unsafe', haz: '--paint-haz' }[cls] || '--ink-3').trim() || '#888';
+      const paint = (cls) => style.getPropertyValue({ safe: '--paint-safe', clear: '--paint-clear', caution: '--paint-caution', unsafe: '--paint-unsafe', haz: '--paint-haz' }[cls] || '--ink-3').trim() || '#888';
       const bounds = [];
       pts.forEach((d) => {
         const cls = d.latest ? VERDICT_CLASS[d.latest.classification] || 'none' : 'none';
@@ -74,7 +77,7 @@
         bounds.push(ll);
         const m = L.circleMarker(ll, { radius: 10, weight: 2, color: '#1b1b1b', fillColor: paint(cls), fillOpacity: 0.95 });
         const name = d.site.name || d.site.village || d.device_code;
-        const val = d.latest ? `${num(d.latest.arsenic_ppb)} µg/L · ${esc(t('class.' + (d.latest.classification === 'Below Sensor LOD' ? 'Clear' : d.latest.classification)))}` : esc(t('verdict.none.title'));
+        const val = d.latest ? `${shownValue(d.latest)} µg/L · ${esc(t('class.' + (VKEY[d.latest.classification] || d.latest.classification)))}` : esc(t('verdict.none.title'));
         m.bindPopup(`<b>${esc(name)}</b><br>${val}<br><a href="device.html?code=${encodeURIComponent(d.device_code)}" target="_blank" rel="noopener">${esc(t('dev.page'))}</a>`);
         m.bindTooltip(`${esc(name)}: ${val}`);
         m.addTo(state.layer);

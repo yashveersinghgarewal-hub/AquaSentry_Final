@@ -107,7 +107,7 @@
     'auth.f.method': 'Method',
     'auth.f.methodVal': 'Anodic stripping voltammetry (screening), AquaNet-V3 + BIS 10500 safety rules',
     'auth.f.geotag': 'Location',
-    'auth.f.noGps': 'No GPS fix — please add the village / hand-pump name',
+    'auth.f.noGps': 'Not recorded (the device has no GPS yet) — please add the village / hand-pump name',
     'auth.f.time': 'Time',
     'auth.mail.subject': 'Water quality alert from AquaSentry {code}',
     'auth.mail.intro': 'An AquaSentry screening device recorded the following water quality result. Please arrange a confirmatory laboratory test and advise residents.',
@@ -285,7 +285,7 @@
     'auth.f.method': 'तरीका',
     'auth.f.methodVal': 'एनोडिक स्ट्रिपिंग वोल्टामेट्री (जाँच), AquaNet-V3 + BIS 10500 सुरक्षा नियम',
     'auth.f.geotag': 'स्थान',
-    'auth.f.noGps': 'GPS नहीं मिला — कृपया गाँव / हैंडपंप का नाम जोड़ें',
+    'auth.f.noGps': 'दर्ज नहीं (उपकरण में अभी GPS नहीं) — कृपया गाँव / हैंडपंप का नाम जोड़ें',
     'auth.f.time': 'समय',
     'auth.mail.subject': 'AquaSentry {code} से पानी की गुणवत्ता की चेतावनी',
     'auth.mail.intro': 'AquaSentry जाँच उपकरण ने पानी की गुणवत्ता का यह नतीजा दर्ज किया है। कृपया पुष्टि के लिए लैब जाँच करवाएँ और लोगों को सलाह दें।',
@@ -637,7 +637,7 @@
     "ov.source.import": "imported data",
     "read.nm": "Not measured",
     "test.fault": "Electrode fault",
-    "test.failed": "Test failed: {why}. Not saved as a result.",
+    "test.failed": "Test failed. {why} Not saved as a result.",
     "test.refused": "The server refused the save ({why}). The result is shown here only."
   });
   window.I18N.extend('hi', {
@@ -676,7 +676,7 @@
     "ov.source.import": "आयात किया गया डेटा",
     "read.nm": "मापा नहीं गया",
     "test.fault": "इलेक्ट्रोड ख़राबी",
-    "test.failed": "जाँच विफल: {why}। नतीजे के रूप में सहेजा नहीं गया।",
+    "test.failed": "जाँच विफल। {why} नतीजे के रूप में सहेजा नहीं गया।",
     "test.refused": "सर्वर ने सहेजने से मना किया ({why})। नतीजा केवल यहीं दिखाया गया है।"
   });
 })();

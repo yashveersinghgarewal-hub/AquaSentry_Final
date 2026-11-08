@@ -59,10 +59,10 @@ def server():
     now = time.time()
     for i, v in enumerate([22, 26, 30, 34, 38, 42, 46, 50]):
         t = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now - (7 - i) * 5 * 86400))
-        _post(base, "/api/readings", {"device_code": "E2E-HP-01", "arsenic_ppb": v, "source_type": "hardware",
+        _post(base, "/api/readings", {"device_code": "E2E-HP-01", "arsenic_ppb": v, "source_type": "hardware", "qc_status": "pass",
                                       "recorded_at": t, "arsenic_species": "as3_only", "peak_current_ua": 0.03})
-    _post(base, "/api/readings", {"device_code": "E2E-TW-02", "arsenic_ppb": 8, "source_type": "hardware", "arsenic_species": "total"})
-    _post(base, "/api/readings", {"device_code": "E2E-HP-03", "arsenic_ppb": 185, "source_type": "hardware"})
+    _post(base, "/api/readings", {"device_code": "E2E-TW-02", "arsenic_ppb": 8, "source_type": "hardware", "qc_status": "pass", "arsenic_species": "total"})
+    _post(base, "/api/readings", {"device_code": "E2E-HP-03", "arsenic_ppb": 185, "source_type": "hardware", "qc_status": "pass"})
     for code, lat, lon in (("E2E-HP-01", 25.55, 84.66), ("E2E-TW-02", 22.95, 88.57), ("E2E-HP-03", 25.76, 84.47)):
         _post(base, f"/api/admin/devices/{code}/site", {"name": code + " pump", "village": "Simri", "latitude": lat,
                                                         "longitude": lon, "source_kind": "handpump"}, method="PUT")

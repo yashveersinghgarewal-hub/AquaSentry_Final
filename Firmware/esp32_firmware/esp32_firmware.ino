@@ -45,7 +45,7 @@
 #include "aquasentry_types.h" /* structs live in a header: the Arduino IDE writes function prototypes
                                 above the first function, so types defined later in the sketch break them */
 
-#define FIRMWARE_VERSION     "5.6.0"
+#define FIRMWARE_VERSION     "5.7.0"
 
 /* =====================================================================
  * Pin Assignments (per chip). Change them here if your wiring differs.
@@ -126,7 +126,8 @@ char DEVICE_API_KEY[73]      = "";
 
 /* Peak finding and calibration - identical to the server */
 #define PEAK_CENTER_MV       -800.0f  // app/standards.py PEAK_POTENTIAL_MV
-#define PEAK_SEARCH_MV        60.0f   // peak searched in -860 .. -740 mV (SWEEP_WINDOW_MV)
+#define PEAK_EXPECT_MV        60.0f   // peak expected in -860 .. -740 mV (SWEEP_WINDOW_MV); further out = PEAK_SHIFTED
+#define PEAK_SEARCH_MV       100.0f   // v5.7: peak searched in -900 .. -700 mV (PEAK_SEARCH_MV) so a shifted peak is not missed
 #define BASELINE_EXCLUDE_MV  105.0f   // background line fitted outside -905 .. -695 mV
 #define CAL_SLOPE_UA_PER_MGL  0.8563f // app/standards.py CALIBRATION_SLOPE
 #define CAL_INTERCEPT_UA      0.0096f // app/standards.py CALIBRATION_INTERCEPT
@@ -135,6 +136,31 @@ char DEVICE_API_KEY[73]      = "";
 #define SCANS_PER_READING    3          // scans per round: noise falls by sqrt(N) (3 scans = about 3.5 minutes)
 #define MAX_SCANS_PER_READING 9         // borderline readings get up to 2 extra rounds (about 10.5 minutes)
 #define RESCAN_Z             2.0f       // re-scan while within 2 standard errors of a limit
+
+/* Scan quality control (v5.7) - same numbers as app/standards.py. A dead, dry or disconnected electrode
+ * reads LOW, and a low reading looks like clean water, so a scan that fails these checks is never averaged
+ * in, and a reading without enough good scans is sent as "qc_status":"fail" (the server shows "Test failed"). */
+#define QC_FLAT_RANGE_UA     0.005f     // whole scan varies less than this: electrode disconnected / dry / dead
+#define QC_MAX_NOISE_UA      0.05f      // background noise above this: scan rejected
+#define QC_DETECT_SNR        3.0f       // 3 x noise must be below the 20 ug/L detection limit
+#define QC_LOD_UG_L          20.0f
+#define QC_MIN_GOOD_SCANS    2          // at least this many good scans per reading
+#define QC_DISAGREE_UA       0.010f     // repeat scans must agree within max(this, 25 % of their mean)
+#define QC_FLAT_SIGNAL       0x0001
+#define QC_NOISE_ABOVE_LOD   0x0002
+#define QC_BASELINE_UNSTABLE 0x0004
+#define QC_PEAK_AT_EDGE      0x0008
+#define QC_PEAK_SHIFTED      0x0010     // warning only
+#define QC_TOO_FEW_SCANS     0x0020
+#define QC_SCANS_DISAGREE    0x0040
+#define QC_ADC_SATURATION    0x0080
+#define QC_LOW_SNR           0x0100     // warning only
+#define QC_FAULT_MASK        (QC_FLAT_SIGNAL | QC_NOISE_ABOVE_LOD | QC_BASELINE_UNSTABLE | QC_PEAK_AT_EDGE | QC_TOO_FEW_SCANS | QC_SCANS_DISAGREE | QC_ADC_SATURATION)
+static const struct { uint16_t bit; const char* name; } QC_NAMES[] = {
+    {QC_FLAT_SIGNAL, "FLAT_SIGNAL"}, {QC_NOISE_ABOVE_LOD, "NOISE_ABOVE_LOD"}, {QC_BASELINE_UNSTABLE, "BASELINE_UNSTABLE"},
+    {QC_PEAK_AT_EDGE, "PEAK_AT_WINDOW_EDGE"}, {QC_PEAK_SHIFTED, "PEAK_SHIFTED"}, {QC_TOO_FEW_SCANS, "TOO_FEW_GOOD_SCANS"},
+    {QC_SCANS_DISAGREE, "SCANS_DISAGREE"}, {QC_ADC_SATURATION, "ADC_SATURATION_HIGH"}, {QC_LOW_SNR, "LOW_SNR"},
+};
 
 /* ---------------------------------------------------------------------
  * OPTIONAL FEATURES (all off by default). Change them here, or set them as build flags
@@ -326,6 +352,15 @@ static bool due_daily(uint32_t* last, uint32_t now_s, uint32_t hours) {
     return true;
 }
 volatile uint32_t last_reading_seq = 0, last_reading_time = 0, readings_dropped = 0;
+/* v5.7 quality-control runs requested from the /qc page: 1 = blank (arsenic-free water), 2 = check standard.
+ * The sensor task measures, the telemetry task posts the result to /api/qc/runs. */
+volatile int qc_request = 0;
+volatile float qc_request_expected = 0.0f;
+volatile bool qc_done = false;
+volatile int qc_done_type = 0;
+volatile float qc_done_expected = 0.0f, qc_done_peak = 0.0f;
+volatile uint16_t qc_done_bits = 0;
+volatile int qc_done_scans = 0;
 volatile int last_battery_pct = -1, last_battery_mv = 0;
 
 /* =====================================================================
@@ -467,7 +502,7 @@ static void savgol5(const float* y, float* s, int n) {
 }
 
 asv_result_t execute_asv_cycle() {
-    asv_result_t res = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN};
+    asv_result_t res = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN, 0};
     Serial.println(F("[ASV] --- Starting ASV Anodic Stripping Cycle ---"));
 
     // Step 1: Electrochemical pre-cleaning pulse
@@ -484,11 +519,12 @@ asv_result_t execute_asv_cycle() {
     Serial.println(F("[ASV] Step 3: Sweeping -1100 -> -500 mV..."));
     // with the copper check the sweep carries on past the arsenic window, through the copper peak
     const float sweep_end = COPPER_CHECK ? (PEAK_CENTER_MV + COPPER_OFFSET_MV + COPPER_HALF_WIN_MV + 20.0f) : VOLT_END_MV;
-    int n = 0;
+    int n = 0, clipped = 0;
     for (float mv = VOLT_START_MV; mv <= sweep_end + 0.01f && n < ASV_MAX_POINTS; mv += VOLT_STEP_MV) {
         dac_set_potential(mv);
         delay(VOLT_STEP_WAIT_MS);
         int16_t raw_diff = ads1115_read_differential();
+        if (raw_diff >= 32760 || raw_diff <= -32760) clipped++;
         // ADS1115 LSB = 62.5 uV at +/-2.048 V; transimpedance Rf = 100 kOhm -> 100 mV = 1 uA
         asv_pot[n] = mv;
         asv_raw[n] = (raw_diff * 0.0000625f / 100000.0f) * 1e6f;
@@ -498,8 +534,10 @@ asv_result_t execute_asv_cycle() {
     res.points = n;
     if (n < 10) {
         Serial.println(F("[ASV] Too few points recorded - check the DAC/ADC wiring."));
+        res.qc |= QC_FLAT_SIGNAL;
         return res;
     }
+    if (clipped > 3) res.qc |= QC_ADC_SATURATION;
 
     // Step 4: smooth, fit the background line away from the peak, subtract it
     savgol5(asv_raw, asv_smooth, n);
@@ -530,16 +568,37 @@ asv_result_t execute_asv_cycle() {
         if (noise < 1e-6f) noise = 1e-6f;
     }
 
-    // Step 5: biggest net current inside the arsenic window
+    // Step 4b (v5.7 QC): a flat scan = dead / dry / disconnected electrode; too much noise = the 20 ug/L
+    // detection limit was not reached in this scan, so "nothing found" would be false reassurance.
+    float lo = asv_raw[0], hi = asv_raw[0];
+    for (int i = 1; i < n_as; i++) { if (asv_raw[i] < lo) lo = asv_raw[i]; if (asv_raw[i] > hi) hi = asv_raw[i]; }
+    if (hi - lo < QC_FLAT_RANGE_UA) res.qc |= QC_FLAT_SIGNAL;
+    if (noise > QC_MAX_NOISE_UA) res.qc |= QC_BASELINE_UNSTABLE;
+    else if (QC_DETECT_SNR * noise / cal_slope * 1000.0f > QC_LOD_UG_L) res.qc |= QC_NOISE_ABOVE_LOD;
+
+    // Step 5: biggest net current inside the (wide) arsenic search window
     float best = -1e9f;
-    for (int i = 0; i < n; i++) {
+    int best_i = -1, first_i = -1, last_i = -1;
+    for (int i = 0; i < n_as; i++) {
         if (fabsf(asv_pot[i] - PEAK_CENTER_MV) <= PEAK_SEARCH_MV) {
+            if (first_i < 0) first_i = i;
+            last_i = i;
             float net = asv_smooth[i] - (b_slope * asv_pot[i] + b_icpt);
-            if (net > best) { best = net; res.peak_mv = asv_pot[i]; }
+            if (net > best) { best = net; res.peak_mv = asv_pot[i]; best_i = i; }
         }
     }
     res.net_peak_ua = best > 0.0f ? best : 0.0f;
     res.snr = res.net_peak_ua / noise;
+    if (res.net_peak_ua > cal_icpt) {
+        // still rising at the edge of the window: the real peak is outside it, so arsenic would be under-read
+        if (best_i == first_i || best_i == last_i) {
+            int nb = best_i == first_i ? best_i - 1 : best_i + 1;
+            if (nb >= 0 && nb < n_as && asv_smooth[nb] - (b_slope * asv_pot[nb] + b_icpt) >= best) res.qc |= QC_PEAK_AT_EDGE;
+        }
+        if (fabsf(res.peak_mv - PEAK_CENTER_MV) > PEAK_EXPECT_MV) res.qc |= QC_PEAK_SHIFTED;
+        if (res.snr < QC_DETECT_SNR) res.qc |= QC_LOW_SNR;
+    }
+    if (res.qc) Serial.printf("[ASV] Scan QC bits 0x%04X%s\n", res.qc, (res.qc & QC_FAULT_MASK) ? " (rejected)" : "");
 
     // Step 6 (copper check): peak height above a straight line joining the copper window's edges
     if (COPPER_CHECK) {
@@ -669,6 +728,18 @@ int build_reading_json(const sensor_reading_t* r, char* out, size_t cap) {
     n += snprintf(out + n, cap - n, ",\"peak_current_ua\":%.4f", r->peak_current_ua);
     if (!isnan(r->cu_peak_ua)) n += snprintf(out + n, cap - n, ",\"cu_peak_ua\":%.4f", r->cu_peak_ua);
     if (r->cal_tag != 0 && r->cal_tag == cal_tag_now) n += snprintf(out + n, cap - n, ",\"calibration_ref\":\"%s\"", cal_id);
+    // v5.7 scan QC. Records buffered by older firmware have qc_result 0: no qc_status is sent, and the server
+    // reports them as "Test failed" rather than trusting a reading whose scans were never checked.
+    if (r->qc_result == 1 || r->qc_result == 2) {
+        n += snprintf(out + n, cap - n, ",\"qc_status\":\"%s\",\"scans_averaged\":%u,\"peak_potential_mv\":%.0f",
+                      r->qc_result == 1 ? "pass" : "fail", (unsigned)r->good_scans, r->peak_mv);
+        int k = 0;
+        for (size_t i = 0; i < sizeof(QC_NAMES) / sizeof(QC_NAMES[0]); i++) {
+            if (r->qc_bits & QC_NAMES[i].bit)
+                n += snprintf(out + n, cap - n, "%s\"%s\"", k++ ? "," : ",\"qc_scan_flags\":[", QC_NAMES[i].name);
+        }
+        if (k) n += snprintf(out + n, cap - n, "]");
+    }
     n += snprintf(out + n, cap - n, "}");
     return n;
 }
@@ -813,7 +884,7 @@ int post_reading(const sensor_reading_t* r) {
     if (!started) { Serial.println(F("[HTTP] Server address not understood - check it on the setup page.")); return 0; }
     http.addHeader("Content-Type", "application/json");
     if (DEVICE_API_KEY[0]) http.addHeader("X-API-Key", DEVICE_API_KEY);
-    char payload[640];
+    char payload[900];
     build_reading_json(r, payload, sizeof(payload));
     int code = http.POST(payload);
     http.end();
@@ -1096,7 +1167,7 @@ void handle_root() {
     h += "</dd><dt>Status</dt><dd>";
     h += is_measuring ? "measuring now" : "idle";
     h += "</dd></dl><p class='muted'>Screening device, not a lab test. Machine-readable: <a href='/status.json'>/status.json</a></p>"
-         "<p><a href='/setup'>Settings</a> &middot; <a href='/update'>Firmware update</a></p></div></body></html>";
+         "<p><a href='/setup'>Settings</a> &middot; <a href='/qc'>Quality check</a> &middot; <a href='/update'>Firmware update</a></p></div></body></html>";
     server.send(200, "text/html", h);
 }
 
@@ -1146,8 +1217,42 @@ void handle_setup_post() {
     ESP.restart();
 }
 
+/* v5.7: /qc - run a blank (arsenic-free water) or a check standard (a known arsenic solution). The server
+ * only trusts this node's LOW readings after a passing check standard in the last 7 days. */
+void handle_qc_get() {
+    if (!setup_allowed()) return server.requestAuthentication();
+    String h = String("<!DOCTYPE html><html><head><title>AquaSentry quality check</title>") + PAGE_STYLE +
+        "</head><body><form class='card' method='POST' action='/qc'><h2>Quality check</h2>"
+        "<p class='muted'>Put the solution in the sample chamber first. A check standard is a solution with a known "
+        "arsenic level (for example 50 &micro;g/L); it must read within 80-120 %. Run one at least once a week, "
+        "or the server reports low readings from this node as <b>Test failed</b>.</p>"
+        "<label><input type='radio' name='type' value='2' checked> Check standard</label> "
+        "<label><input type='radio' name='type' value='1'> Blank (arsenic-free water)</label>"
+        "<label>Known arsenic level of the check standard (&micro;g/L)<input name='expected' type='number' min='1' max='1000' step='0.1' value='50'></label>"
+        "<button type='submit'>Start (takes about 4 minutes)</button></form>";
+    if (qc_done) h += "<p class='card muted'>Last run is waiting to be sent to the server.</p>";
+    h += "</body></html>";
+    server.send(200, "text/html", h);
+}
+
+void handle_qc_post() {
+    if (!setup_allowed()) return server.requestAuthentication();
+    int type = atoi(server.arg("type").c_str());
+    float expected = (float)atof(server.arg("expected").c_str());
+    if (type != 1 && type != 2) return server.send(400, "text/plain", "Choose blank or check standard.");
+    if (type == 2 && !(expected > 0.0f && expected <= 1000.0f)) return server.send(400, "text/plain", "Enter the known arsenic level (1-1000 ug/L).");
+    qc_request_expected = expected;
+    qc_request = type;
+    server.send(200, "text/html", String("<!DOCTYPE html><html><head><title>Quality check started</title>") + PAGE_STYLE +
+        "</head><body><div class='card'><h2>Quality check queued</h2><p>It starts within a few seconds (after any test "
+        "already running) and the result is sent to the server. See the serial monitor or the dashboard.</p>"
+        "<p><a href='/'>Back</a></p></div></body></html>");
+}
+
 void setup_webserver() {
     server.on("/", HTTP_GET, handle_root);
+    server.on("/qc", HTTP_GET, handle_qc_get);
+    server.on("/qc", HTTP_POST, handle_qc_post);
     server.on("/status.json", HTTP_GET, handle_status_json);
     server.on("/setup", HTTP_GET, handle_setup_get);
     server.on("/setup", HTTP_POST, handle_setup_post);
@@ -1197,6 +1302,33 @@ void setup_webserver() {
 /* =====================================================================
  * Telemetry task (core 0): Wi-Fi, setup hotspot, web pages, uploads, offline buffer
  * ===================================================================== */
+/* v5.7: send a finished blank / check-standard run to the server. Returns true when it is stored. */
+bool post_qc_run() {
+    HTTPClient http;
+    http.setTimeout(8000);
+    WiFiClient plain;
+    WiFiClientSecure secure;
+    if (backend_is_https() && !ROOT_CA_PEM[0] && !ALLOW_INSECURE_TLS) return false;
+    if (!http_start(http, plain, secure, server_base() + "/api/qc/runs")) return false;
+    http.addHeader("Content-Type", "application/json");
+    if (DEVICE_API_KEY[0]) http.addHeader("X-API-Key", DEVICE_API_KEY);
+    char body[400];
+    int n = snprintf(body, sizeof(body), "{\"device_code\":\"%s\",\"run_type\":\"%s\",\"peak_current_ua\":%.4f",
+                     DEVICE_CODE, qc_done_type == 1 ? "blank" : "check_standard", qc_done_peak);
+    if (qc_done_type == 2) n += snprintf(body + n, sizeof(body) - n, ",\"expected_ug_l\":%.2f", qc_done_expected);
+    int k = 0;
+    for (size_t i = 0; i < sizeof(QC_NAMES) / sizeof(QC_NAMES[0]); i++)
+        if (qc_done_bits & QC_NAMES[i].bit)
+            n += snprintf(body + n, sizeof(body) - n, "%s\"%s\"", k++ ? "," : ",\"qc_scan_flags\":[", QC_NAMES[i].name);
+    if (k) n += snprintf(body + n, sizeof(body) - n, "]");
+    snprintf(body + n, sizeof(body) - n, "}");
+    int code = http.POST(body);
+    String resp = http.getString();
+    http.end();
+    Serial.printf("[QC] Server answer (HTTP %d): %s\n", code, resp.c_str());
+    return code >= 200 && code < 300;
+}
+
 void TaskTelemetry(void *pvParameters) {
     (void) pvParameters;
 
@@ -1244,6 +1376,13 @@ void TaskTelemetry(void *pvParameters) {
                 // server not reachable (check IP, --host 0.0.0.0, firewall) or Wi-Fi down
                 offline_push(&r);
             }
+            is_uploading = false;
+        }
+
+        // v5.7: a finished blank / check-standard run
+        if (qc_done && is_wifi_connected) {
+            is_uploading = true;
+            if (post_qc_run()) qc_done = false;
             is_uploading = false;
         }
 
@@ -1310,6 +1449,39 @@ void low_power_sleep_after_test(uint32_t cycle_start_ms) {
 /* =====================================================================
  * Sensor task (core 1, or core 0 on single-core chips): pump, scans, AquaNet-V3
  * ===================================================================== */
+/* v5.7: measure a blank or a check standard that the operator has put in the sample cup / chamber.
+ * Same scans and checks as a normal test; the result goes to the server, which then trusts (or stops
+ * trusting) this node's low readings. A drifting or dying electrode is caught here before it can make
+ * contaminated water look clean. */
+void run_qc_measurement() {
+    int type = qc_request;
+    float expected = qc_request_expected;
+    qc_request = 0;
+    is_measuring = true;
+    Serial.printf("[QC] %s run requested%s\n", type == 1 ? "Blank" : "Check-standard", type == 2 ? "" : "");
+    pump_purge_and_relax(3200);
+    uint16_t bits = 0;
+    int good = 0;
+    float sum = 0.0f;
+    if (!check_chamber_liquid_presence()) bits |= QC_FLAT_SIGNAL;   // nothing to measure
+    else {
+        for (int s = 0; s < SCANS_PER_READING; s++) {
+            asv_result_t one = execute_asv_cycle();
+            bits |= one.qc;
+            if (one.points >= 10 && !(one.qc & QC_FAULT_MASK)) { sum += one.net_peak_ua; good++; }
+        }
+    }
+    if (good < QC_MIN_GOOD_SCANS) bits |= QC_TOO_FEW_SCANS;
+    qc_done_type = type;
+    qc_done_expected = expected;
+    qc_done_peak = good ? sum / good : 0.0f;
+    qc_done_bits = bits;
+    qc_done_scans = good;
+    qc_done = true;
+    is_measuring = false;
+    Serial.printf("[QC] Done: peak %.4f uA from %d good scan(s), bits 0x%04X\n", qc_done_peak, good, bits);
+}
+
 void TaskSensors(void *pvParameters) {
     (void) pvParameters;
 
@@ -1370,13 +1542,20 @@ void TaskSensors(void *pvParameters) {
         //    Adaptive re-scan: start with SCANS_PER_READING scans; while the arsenic estimate is within
         //    RESCAN_Z standard errors of a verdict edge (10 / 20 / 150 ug/L), add SCANS_PER_READING more, up to
         //    MAX_SCANS_PER_READING. Clear readings stay fast; only borderline ones get the extra scans.
-        asv_result_t asv = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN};
+        asv_result_t asv = {0.0f, PEAK_CENTER_MV, 0.0f, 0, NAN, 0};
         int good_scans = 0, attempts = 0, cu_scans = 0;
         float peak_sum = 0.0f, snr_sum = 0.0f, cu_sum = 0.0f;
+        float peaks[MAX_SCANS_PER_READING];
+        uint16_t qc_bits = 0;
         while (attempts < MAX_SCANS_PER_READING) {
             for (int s = 0; s < SCANS_PER_READING && attempts < MAX_SCANS_PER_READING; s++, attempts++) {
                 asv_result_t one = execute_asv_cycle();
-                if (one.points >= 10) { peak_sum += one.net_peak_ua; snr_sum += one.snr; asv.peak_mv = one.peak_mv; good_scans++; }
+                qc_bits |= one.qc;
+                // v5.7: only scans that passed their checks are averaged (was: any scan with 10+ points)
+                if (one.points >= 10 && !(one.qc & QC_FAULT_MASK)) {
+                    peaks[good_scans] = one.net_peak_ua;
+                    peak_sum += one.net_peak_ua; snr_sum += one.snr; asv.peak_mv = one.peak_mv; good_scans++;
+                }
                 if (!isnan(one.cu_peak_ua)) { cu_sum += one.cu_peak_ua; cu_scans++; }
             }
             if (good_scans == 0) break;                         // hardware problem - don't keep scanning
@@ -1390,15 +1569,28 @@ void TaskSensors(void *pvParameters) {
         Serial.printf("[ASV] Averaged %d scan(s): net peak %.4f uA\n", good_scans, asv.net_peak_ua);
         float peak_current_ua = asv.net_peak_ua;
 
+        // 5b. v5.7 reading QC: enough good scans, and the good scans agree with each other
+        if (good_scans < QC_MIN_GOOD_SCANS) qc_bits |= QC_TOO_FEW_SCANS;
+        if (good_scans >= 2) {
+            float mean = peak_sum / good_scans, var = 0.0f;
+            for (int i = 0; i < good_scans; i++) var += (peaks[i] - mean) * (peaks[i] - mean);
+            float sd = sqrtf(var / (good_scans - 1));
+            if (sd > fmaxf(QC_DISAGREE_UA, 0.25f * fabsf(mean))) qc_bits |= QC_SCANS_DISAGREE;
+        }
+        // faults seen only in scans that were then replaced by good ones do not fail the reading
+        uint16_t reading_qc = qc_bits & ~(uint16_t)(QC_FAULT_MASK & ~(QC_TOO_FEW_SCANS | QC_SCANS_DISAGREE));
+        bool qc_failed = (qc_bits & (QC_TOO_FEW_SCANS | QC_SCANS_DISAGREE)) != 0;
+        if (qc_failed) reading_qc = qc_bits;                   // report what went wrong
+        if (qc_failed) Serial.printf("[QC] Reading FAILED its checks (0x%04X) - sent as \"Test failed\", never as a low value.\n", qc_bits);
+
         // 6. Calibration: As (mg/L) = (Ip - intercept) / slope, with this node's calibration from the server
         //    (factory: (Ip - 0.0096) / 0.8563, identical to app/standards.py)
         float arsenic_mg_l = arsenic_ug_from_peak(peak_current_ua) / 1000.0f;
 
-        // 7. Imp 15: on-device AquaNet-V3 (same model and safety rules as the server). The model needs all
-        //    five inputs, so sensors that are not fitted use typical values here ONLY for this local
-        //    estimate; they are never uploaded.
-        aquanet_result_t ai_res = aquanet_v3_predict(arsenic_mg_l,
-            isnan(ph) ? 7.2f : ph, isnan(ec) ? 400.0f : ec, isnan(turb) ? 2.0f : turb, isnan(temp) ? 24.0f : temp);
+        // 7. Imp 15: on-device AquaNet-V3 (same model and safety rules as the server). v5.7: sensors that are
+        //    not fitted (NAN) are "not measured": neutral network input and no rule, never a typical value.
+        aquanet_result_t ai_res = aquanet_v3_predict_measured(arsenic_mg_l, ph, ec, turb, temp);
+        if (qc_failed) Serial.println(F("[AQUANET V3] (test failed - the verdict below is not used)"));
 
         Serial.println(F("=================================================="));
         Serial.printf("[AQUANET V3] Predicted Safety: %s (Confidence: %.1f%%)\n",
@@ -1427,9 +1619,12 @@ void TaskSensors(void *pvParameters) {
         reading.arsenic_species = reagent_pin >= 0 ? 2 : 1;
         reading.cal_tag = cal_tag_now;
         reading.cu_peak_ua = asv.cu_peak_ua;
+        reading.qc_result = qc_failed ? 2 : 1;
+        reading.good_scans = (uint8_t)good_scans;
+        reading.qc_bits = reading_qc;
 
-        last_arsenic_ug = arsenic_mg_l * 1000.0f;
-        last_class = (int)ai_res.predicted_class;
+        last_arsenic_ug = qc_failed ? NAN : arsenic_mg_l * 1000.0f;
+        last_class = qc_failed ? -1 : (int)ai_res.predicted_class;
         last_reading_seq = reading.seq;
         last_reading_time = reading.timestamp_unix;
         if (xQueueSend(readingQueue, &reading, 2000 / portTICK_PERIOD_MS) != pdTRUE) {
@@ -1442,8 +1637,12 @@ void TaskSensors(void *pvParameters) {
 
         if (LOW_POWER_MODE) low_power_sleep_after_test(cycle_start);   // does not return when it sleeps
 
-        // Wait until the next sampling cycle
-        vTaskDelay(SAMPLE_INTERVAL_MS / portTICK_PERIOD_MS);
+        // Wait until the next sampling cycle, running any blank / check standard requested on the /qc page
+        uint32_t wait_start = millis();
+        while (millis() - wait_start < SAMPLE_INTERVAL_MS) {
+            if (qc_request) run_qc_measurement();
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
 }
 

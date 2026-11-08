@@ -120,6 +120,11 @@ class Reading(Base):
 
     __table_args__ = (Index("ix_readings_device_recorded", "device_id", "recorded_at"),)
 
+    @property
+    def device_code(self):
+        """v5.7: returned with every reading, so the dashboard shows the right device."""
+        return self.device.device_code if self.device is not None else None
+
 
 class Sample(Base):
     """Normalized Sample event container supporting multi-analyte observations."""

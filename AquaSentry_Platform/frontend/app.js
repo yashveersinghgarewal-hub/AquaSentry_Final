@@ -419,7 +419,7 @@
     }
     setReading(reading);
     btn.disabled = false; btn.textContent = t('test.run');
-    if (out.failed) $('testMsg').textContent = t('test.failed', { why: failNotes.map((k) => t(k)).join(' ') || t('class.Failed') });
+    if (out.failed) $('testMsg').textContent = t('test.failed', { why: failNotes.map((k) => t(k)).join(' ') });
     else if (!quiet) $('testMsg').textContent = refused && online() ? t('test.refused', { why: refused }) : t(saved ? 'test.savedServer' : 'test.saved');
   }
 
@@ -470,8 +470,10 @@
   const NN_IDS = [['nnAs', 'nnOutAs', (v) => `${(v * 1000).toFixed(0)} µg/L`], ['nnPh', 'nnOutPh', (v) => v.toFixed(2)], ['nnEc', 'nnOutEc', (v) => `${Math.round(v)} µS/cm`], ['nnTurb', 'nnOutTurb', (v) => `${v.toFixed(1)} NTU`], ['nnTemp', 'nnOutTemp', (v) => `${v.toFixed(1)} °C`]];
   function nnValues() { return NN_IDS.map(([id]) => parseFloat($(id).value)); }
   function syncNetworkInputs(r) {
-    const vals = [Math.min(0.3, r.asMgL), val(r, 'ph'), val(r, 'ec'), Math.min(25, val(r, 'turb')), val(r, 'temp')];
-    NN_IDS.forEach(([id], i) => { $(id).value = vals[i]; UI().fillRange($(id)); });
+    // The explorer is a what-if tool with sliders; a sensor that was not measured leaves its slider where it is
+    // (v5.7: nothing is filled in for it, and the verdict above never uses the slider values).
+    const vals = [Math.min(0.3, r.asMgL), r.ph, r.ec, r.turb == null ? null : Math.min(25, r.turb), r.temp];
+    NN_IDS.forEach(([id], i) => { if (vals[i] != null) { $(id).value = vals[i]; UI().fillRange($(id)); } });
     updateNetwork();
   }
   function updateNetwork() {
@@ -706,7 +708,7 @@
 
   // ---------------- devices & history ----------------
   const NS_SVG = 'http://www.w3.org/2000/svg';
-  const PAINT = { Safe: '--paint-safe', 'Below Sensor LOD': '--paint-safe', Caution: '--paint-caution', Unsafe: '--paint-unsafe', Hazardous: '--paint-haz' };
+  const PAINT = { Safe: '--paint-safe', 'Below Sensor LOD': '--paint-clear', Caution: '--paint-caution', Unsafe: '--paint-unsafe', Hazardous: '--paint-haz', 'Test Failed': '--paint-haz' };
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function seenText(mins) {
@@ -766,7 +768,10 @@
       : `<tr class="empty-row"><td colspan="4">${esc(t('hist.empty'))}</td></tr>`;
   }
   function deviceRow(d) {
-    const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${fmtUgNum(d.latest.arsenic_ppb)} µg/L</span>` : '<span></span>';
+    // v5.7: a failed test shows no number, and a value below the 20 µg/L detection limit is shown as "< 20"
+    const lv = !d.latest ? '' : d.latest.classification === 'Test Failed' ? t('class.Failed')
+      : d.latest.arsenic_ppb < CAL.lodUg ? '&lt; ' + CAL.lodUg + ' µg/L' : fmtUgNum(d.latest.arsenic_ppb) + ' µg/L';
+    const latest = d.latest ? `<span class="dv-latest c-${esc(d.latest.classification.replace(/\s+/g, ''))}">${lv}</span>` : '<span></span>';
     const count = d.reading_count === 1 ? t('fleet.count.one', { u: d.unsafe_count }) : t('fleet.count', { n: d.reading_count, u: d.unsafe_count });
     const batt = d.latest && d.latest.battery_pct != null ? t('fleet.batt', { n: Math.round(d.latest.battery_pct) }) : '';
     const lab = d.lab ? t('fleet.lab', { v: fmtUgNum(d.lab.arsenic_ug_l) }) : '';
@@ -854,7 +859,7 @@
     points.forEach((p) => {
       const c = add('circle', { class: 'h-pt', cx: X(p.t.getTime()), cy: Y(p.ppb), r: points.length > 120 ? 3 : 5, fill: cssVar(PAINT[p.cls] || '--ink-3') });
       const tt = document.createElementNS(NS_SVG, 'title');
-      tt.textContent = `${fmtUgNum(p.ppb)} µg/L, ${t('class.' + (p.cls === 'Below Sensor LOD' ? 'Clear' : p.cls))}, ${fmtDateTime(p.t)}${p.device_code ? ', ' + p.device_code : ''}`;
+      tt.textContent = `${fmtUgNum(p.ppb)} µg/L, ${t('class.' + (SERVER_KEY[p.cls] || p.cls))}, ${fmtDateTime(p.t)}${p.device_code ? ', ' + p.device_code : ''}`;
       c.appendChild(tt);
     });
     fillHistTable(points);
