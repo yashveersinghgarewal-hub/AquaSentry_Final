@@ -2,7 +2,7 @@
 AquaSentry Backend API.
 
 Provides:
-- Ingestion of electrochemical sensor telemetry from Arduino / LoRa / Bluetooth bridge
+- Ingestion of electrochemical sensor telemetry from the ESP32 (Wi-Fi) or a USB / Bluetooth bridge
 - Scientific classification & conservative safety precedence evaluation
 - AquaNet-V1 Multimodal Deep Neural Classifier inference
 - Multi-contaminant / multi-analyte registry and capability matrix
@@ -54,10 +54,14 @@ from .analytes import (
 )
 from .logs import get_logger, request_id_var
 from .quality import qc_flags, caveats as qc_caveats
-from .deps import (  # noqa: F401  (re-exported: tests and older imports use app.main.<name>)
+from . import qc as qc_mod
+from .standards import QC_FAULT_FLAGS
+from .deps import (
+    trusted_origins,  # noqa: F401  (re-exported: tests and older imports use app.main.<name>)
     _api_key, _check_device_key, _get_or_create_device, _is_loopback, _is_number, _key_ok, _utc, _val,
     active_model_name, now_utc, require_admin, require_writer,
 )
+from .routers import qc as qc_router
 from .routers import science as science_router, reports as reports_router, field as field_router, auth as auth_router, alerts as alerts_router, firmware as firmware_router
 from .field import latest_lab as _latest_lab, site_dict
 from .routers.reports import generate_potability_certificate_pdf  # noqa: F401
@@ -86,6 +90,7 @@ app.include_router(field_router.router)
 app.include_router(auth_router.router)
 app.include_router(alerts_router.router)
 app.include_router(firmware_router.router)
+app.include_router(qc_router.router)
 
 
 
@@ -112,17 +117,18 @@ V3_SIZES, V3_NODES, V3_WEIGHTS, V3_PARAMS = _v3_topology()
 # Set AQUASENTRY_API_KEY in .env to require an X-API-Key header on every request that changes data
 # (ESP32 uploads, imports, demo loading, admin). Requests from this computer itself (the dashboard
 # opened at http://localhost:8000) are always allowed, so the UI keeps working without the key.
-# Without a key, writes stay open as before (handy on a home network), and /api/health says so.
+# Without a key, only this computer can write (v5.7; before, the whole network could). Set
+# AQUASENTRY_OPEN_WRITES=1 to reopen writes on a closed test network. /api/health reports the mode.
 
 
 if _api_key() is None:
-    log.warning("AQUASENTRY_API_KEY is not set, so any device on the network can add readings. "
-          "Set it in .env (and DEVICE_API_KEY in the firmware) before deploying.")
+    log.warning("AQUASENTRY_API_KEY is not set, so only this computer can add readings; the ESP32 and other "
+                "machines are refused. Set it in .env (and DEVICE_API_KEY in the firmware).")
 
-cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+# v5.7: only the dashboard's own origins by default (was "*"); add more with CORS_ORIGINS=a,b
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins or ["*"],
+    allow_origins=trusted_origins(),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
@@ -268,7 +274,9 @@ def dispatch_emergency_alert(data: Dict[str, Any]):
     log.warning("%s alert: %s", alert["level"], alert.get("message", ""),
                 extra={"event": "alert", "device_code": alert.get("device_code"), "status": alert["level"]})
     webhook_url = os.getenv("ALERT_WEBHOOK_URL")
-    if webhook_url:
+    real = alert.get("source_type") in ("hardware", "manual_import")
+    # v5.7: simulated / demo alerts never leave this server unless explicitly asked for (testing a receiver)
+    if webhook_url and (real or os.getenv("ALERT_WEBHOOK_INCLUDE_SIMULATED") == "1"):
         # Signed (ALERT_WEBHOOK_SECRET), retried, and on a background thread: never blocks the ESP32's upload.
         webhooks.deliver_in_background(webhook_url, alert)
     if alert.get("source_type") == "hardware":    # demo and simulated data never reach people's phones
@@ -298,13 +306,19 @@ def _reading_response(reading: "models.Reading", eval_res, prefix: str = "") -> 
 
 
 def _classify_stored(rec: "models.Reading"):
+    """Rebuild the verdict of a stored reading from what was stored: sensors that were not measured stay
+    not measured (v5.7), and a reading that failed QC stays "Test Failed"."""
+    flags = [f for f in (rec.qc_flags or "").split(",") if f]
     return classify_arsenic_neural(
         arsenic_ppb=rec.arsenic_ppb,
-        ph=_val(rec.ph, 7.2),
-        conductivity_us_cm=_val(rec.conductivity_us_cm, 400.0),
-        turbidity_ntu=_val(rec.turbidity_ntu, 2.0),
-        temperature_c=_val(rec.temperature_c, 24.0),
+        ph=rec.ph,
+        conductivity_us_cm=rec.conductivity_us_cm,
+        turbidity_ntu=rec.turbidity_ntu,
+        temperature_c=rec.temperature_c,
         source_type=rec.source_type or "simulated",
+        qc_failed=rec.qc_status == "fail",
+        qc_reasons=qc_mod.describe([f for f in flags if f in QC_FAULT_FLAGS or f.startswith(("CHECK_", "CALIBRATION_"))]) or None,
+        arsenic_species=rec.arsenic_species,
     )
 
 
@@ -325,21 +339,36 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
     # A device with its own key must use it: nobody else on the network can post as that device.
     _check_device_key(db, payload.device_code, request)
 
+    source_type = payload.source_type or "simulated"
+    device = _get_or_create_device(db, payload.device_code, payload.firmware_version)
+    # v5.7: is the measurement itself trustworthy? (device scan QC, check standard, calibration)
+    rqc = qc_mod.assess_reading(db, source_type=source_type, device=device, arsenic_ppb=payload.arsenic_ppb,
+                                device_qc_status=payload.qc_status, device_flags=payload.qc_scan_flags)
     try:
+        # v5.7: sensors that were not measured stay None (no "normal" values are assumed for the verdict)
         eval_res = classify_arsenic_neural(
             arsenic_ppb=payload.arsenic_ppb,
-            ph=_val(payload.ph, 7.2),
-            conductivity_us_cm=_val(payload.conductivity_us_cm, 400.0),
-            turbidity_ntu=_val(payload.turbidity_ntu, 2.0),
-            temperature_c=_val(payload.temperature_c, 24.0),
-            source_type=payload.source_type or "simulated",
+            ph=payload.ph,
+            conductivity_us_cm=payload.conductivity_us_cm,
+            turbidity_ntu=payload.turbidity_ntu,
+            temperature_c=payload.temperature_c,
+            source_type=source_type,
+            qc_failed=rqc.failed,
+            qc_reasons=rqc.reasons or None,
+            arsenic_species=payload.arsenic_species,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-    device = _get_or_create_device(db, payload.device_code, payload.firmware_version)
-    is_sim = payload.source_type != "hardware"
+    is_sim = source_type != "hardware"
     ts = now_utc()
+    # v5.7: when was the sample taken? A buffered reading must not look new.
+    recorded_at, time_source = payload.recorded_at, "device_clock"
+    if recorded_at is None and payload.age_seconds is not None:
+        recorded_at, time_source = ts - timedelta(seconds=payload.age_seconds), "device_age"
+    if recorded_at is None:
+        recorded_at = ts
+        time_source = "unknown" if source_type == "hardware" else "server_receipt"
 
     reading = models.Reading(
         device_id=device.id,
@@ -364,14 +393,17 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
         longitude=payload.longitude,
         battery_pct=payload.battery_pct,
         source_label=payload.source_label,
-        recorded_at=payload.recorded_at or ts,
+        recorded_at=recorded_at,
         received_at=ts,
         raw_payload=payload.raw_payload,
         arsenic_species=payload.arsenic_species,
         cu_peak_ua=payload.cu_peak_ua,
         calibration_ref=payload.calibration_ref,
-        qc_flags=",".join(qc_flags(payload.arsenic_species, payload.peak_current_ua, payload.cu_peak_ua,
-                                    payload.calibration_ref, payload.source_type)) or None,
+        # v5.7: fault / verification codes first, so they survive the 128-character column
+        qc_flags=qc_mod.merge_flags(rqc.flags, qc_flags(payload.arsenic_species, payload.peak_current_ua,
+                                                         payload.cu_peak_ua, payload.calibration_ref, source_type)),
+        qc_status=rqc.status,
+        time_source=time_source,
     )
     db.add(reading)
     db.commit()
@@ -399,7 +431,13 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
                                           "message": t.get("message"), "source_type": "hardware",
                                           "arsenic_ppb": reading.arsenic_ppb})
 
-    return _reading_response(reading, eval_res)
+    resp = _reading_response(reading, eval_res)
+    extra = " ".join(rqc.warnings)
+    if time_source == "unknown":
+        extra += " The device did not say when the sample was taken; the time shown is when it arrived."
+    if extra.strip():
+        resp.message += " " + extra.strip()
+    return resp
 
 
 # ---------------------------------------------------------------------------
@@ -434,10 +472,14 @@ def list_readings(
 
 
 @app.get("/api/readings/latest", response_model=schemas.ReadingOut, tags=["Readings"])
-def latest_reading(device_code: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def latest_reading(device_code: Optional[str] = Query(None),
+                   source_type: Optional[str] = Query(None, description="e.g. hardware: newest real device reading"),
+                   db: Session = Depends(get_db)):
     q = db.query(models.Reading)
     if device_code:
         q = q.join(models.Device).filter(models.Device.device_code == device_code)
+    if source_type:
+        q = q.filter(models.Reading.source_type == source_type)
     reading = q.order_by(models.Reading.recorded_at.desc()).first()
     if reading is None:
         raise HTTPException(status_code=404, detail="No readings found yet.")
@@ -1222,12 +1264,23 @@ Neural Network (AquaNet-V3, used for stored readings and on the ESP32):
 - AquaNet-V1 (5-8-6-4, 112 hand-set weights) is the original, kept for comparison.
 - All accuracy figures are from simulated data; the model has not been validated on real field samples.
 
-Robot Hardware Specs:
-- Twin-hull catamaran (1.05m x 0.62m, 11.4kg displacement).
-- Solar 6V/5W + 18650 Li-ion 3000mAh buffer; 6-hour duty cycle consuming 0.6-1.0 Wh/day.
-- Non-immersion microfluidic sampling: 15 mL peristaltic pump chamber protects sensors from open-water biofilm fouling.
-- Communications: LoRa (2 km+) + HC-05 Bluetooth + GPS geotagging.
+Measurement trust (v5.7):
+- Without the acid + reducing-agent step (optional reagent pump, not yet built), the sensor sees As(III) only; As(V),
+  often most of the arsenic in groundwater, is missed, so total arsenic can be higher than the reading. Say so.
+- A scan that fails quality checks (flat signal from a dead or dry electrode, too much noise, peak outside the window)
+  is reported as "Test failed". That NEVER means the water is clean.
+- A low reading from a device without a recent passing check standard or a calibration made on its electrode is also
+  "Test failed", because a drifting electrode reads low.
+- Sensors that are not fitted are "not measured"; nothing is assumed for them.
+
+Hardware status (design; NOT built yet):
+- Planned twin-hull catamaran (1.05m x 0.62m), solar 6V/5W + 18650 cell, 15 mL peristaltic sampling chamber.
+- The current ESP32 firmware connects by Wi-Fi. LoRa radio and GPS are PLANNED, not implemented; device locations are
+  entered by hand. Never say readings are GPS-tagged or sent by LoRa.
 """
+
+CHAT_FOOTER = ("\n\n_This answer was written by an AI model and has not been checked by a person. It is not medical "
+               "advice. Never decide that water is safe to drink from this chat; use a laboratory test._")
 
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
@@ -1279,7 +1332,8 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
                 temperature=0.2,
             ),
         )
-        return schemas.ChatResponse(reply=response.text or "(no answer returned)", intent="in_scope", grounded=True)
+        return schemas.ChatResponse(reply=(response.text or "(no answer returned)") + CHAT_FOOTER, intent="in_scope",
+                                    grounded=True)
     except Exception as e:
         # No internet, quota, or a retired model: still answer from the data instead of only apologising.
         error_str = str(e)

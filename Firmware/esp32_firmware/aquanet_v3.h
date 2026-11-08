@@ -21,6 +21,12 @@ extern "C" {
 aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conductivity_us_cm,
                                     float turbidity_ntu, float temperature_c);
 
+/* Same model, but pH / conductivity / turbidity / temperature may be NAN = "sensor not fitted".
+ * A missing input is fed to the network at its training mean (a neutral value) and its safety rule is
+ * skipped; it is never treated as a normal reading. Arsenic must be a real number. */
+aquanet_result_t aquanet_v3_predict_measured(float arsenic_mg_l, float ph, float conductivity_us_cm,
+                                             float turbidity_ntu, float temperature_c);
+
 #ifdef __cplusplus
 }
 #endif

@@ -139,9 +139,19 @@ class TestImportColumns:
 
 # ---------------------------------------------------------------- 4. auth
 class TestWriteProtection:
-    def test_open_without_key(self, monkeypatch):
+    def test_lan_writes_closed_without_key(self, monkeypatch):
+        # v5.7: with no key configured, only this computer can write (was: the whole network)
         monkeypatch.delenv("AQUASENTRY_API_KEY", raising=False)
-        require_writer(_request("192.168.1.50"))   # no exception
+        monkeypatch.delenv("AQUASENTRY_OPEN_WRITES", raising=False)
+        with pytest.raises(HTTPException) as e:
+            require_writer(_request("192.168.1.50"))
+        assert e.value.status_code == 401
+        require_writer(_request("127.0.0.1"))
+
+    def test_open_writes_opt_in(self, monkeypatch):
+        monkeypatch.delenv("AQUASENTRY_API_KEY", raising=False)
+        monkeypatch.setenv("AQUASENTRY_OPEN_WRITES", "1")
+        require_writer(_request("192.168.1.50"))   # explicit opt-in for a closed test network
 
     def test_key_required_for_lan_device(self, monkeypatch):
         monkeypatch.setenv("AQUASENTRY_API_KEY", "s3cret-key")

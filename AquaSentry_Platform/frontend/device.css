@@ -6,7 +6,8 @@ body.pub { background: var(--bg); color: var(--ink); min-height: 100vh; margin: 
 .pub-brand svg { width: 26px; height: 26px; color: var(--primary); }
 .pub-card { padding: 22px 20px; border-radius: 8px; border: 1px solid var(--line-strong); border-left: 10px solid var(--line-strong);
   background: var(--surface); }
-.pub-card.v-Safe, .pub-card.v-Clear { border-left-color: var(--paint-safe); }
+.pub-card.v-Safe { border-left-color: var(--paint-safe); }
+.pub-card.v-Clear { border-left-color: var(--paint-clear); }   /* v5.7: "not detected" is not painted safe-green */
 .pub-card.v-Caution { border-left-color: var(--paint-caution); }
 .pub-card.v-Unsafe { border-left-color: var(--paint-unsafe); }
 .pub-card.v-Hazardous { border-left-color: var(--paint-haz); }

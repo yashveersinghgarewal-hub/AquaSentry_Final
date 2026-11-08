@@ -120,6 +120,7 @@
               <button class="chip" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
               <button class="chip" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
               <button class="chip" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
+              <button class="chip chip-fault" type="button" data-quick="fault" data-i18n="test.fault">Electrode fault</button>
             </div>
           </aside>
         </div>
@@ -262,7 +263,7 @@
           </article>
           <article class="card proto spot tilt d-240" data-reveal>
             <span class="proto-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span>
-            <div class="proto-n">04</div><h3 data-i18n="act.s4.t">Tell the local authorities</h3><p data-i18n="act.s4.d"></p>
+            <div class="proto-n">04</div><h3 data-i18n="act.s4.t">Tell the local authorities</h3><p data-i18n="act.s4.d">A ready-made report with the reading and time is prepared below; add the village or hand-pump name. Send it to the water department or Gram Panchayat. Only real device readings can be sent.</p>
             <a href="#authorities" class="btn btn-quiet js-start mt-4" data-i18n="act.s4.btn">Open the report</a>
           </article>
         </div>
@@ -476,7 +477,7 @@
           <div class="spec-list d-100" data-reveal>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 17h20l-3 4H5Z"/><path d="M12 3v14M12 4l6 8h-6"/></svg></span><div><h3 data-i18n="dev.s1.t">Twin-hull autonomous catamaran</h3><p data-i18n="dev.s1.d"></p></div></article>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/></svg></span><div><h3 data-i18n="dev.s2.t">Non-immersion microfluidic sampling</h3><p data-i18n="dev.s2.d"></p></div></article>
-            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.5"/><path d="M12 13.5V21"/></svg></span><div><h3 data-i18n="dev.s3.t">Long-range radio and GPS maps</h3><p data-i18n="dev.s3.d"></p></div></article>
+            <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.5"/><path d="M12 13.5V21"/></svg></span><div><h3 data-i18n="dev.s3.t">Planned: long-range radio and GPS</h3><p data-i18n="dev.s3.d">Planned for the robot: a LoRa radio (865–867 MHz band in India) to send results to a shore station without SIM fees, and GPS to tag each reading. The current firmware uses Wi-Fi, and each device's location is entered by hand.</p></div></article>
             <article class="card spec spot"><span class="dir-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></span><div><h3 data-i18n="dev.s4.t">AquaNet-V3 on the ESP32</h3><p data-i18n="dev.s4.d"></p></div></article>
           </div>
         </div>

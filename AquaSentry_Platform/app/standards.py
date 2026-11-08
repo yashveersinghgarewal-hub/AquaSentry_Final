@@ -29,7 +29,25 @@ METHOD_VERSION = "MAS-G1-v1.2"
 SENSOR_STRIP_MODEL = "As-M003050"
 STRIP_CHEMISTRY = "Screen-printed carbon with gold nanoparticle / bismuth modifier"
 PEAK_POTENTIAL_MV = -800.0  # vs pseudo-reference electrode
-SWEEP_WINDOW_MV = 60.0      # +/- search window around peak
+SWEEP_WINDOW_MV = 60.0      # +/- where the arsenic peak is expected; a peak found further out is flagged PEAK_SHIFTED
+PEAK_SEARCH_MV = 100.0      # +/- how far the peak is searched for (wider, so a shifted peak is not missed)
+
+# ==============================================================================
+# Scan quality control (v5.7). A scan that fails these is reported as "Test failed", never as clean water:
+# a dead, dry or noisy electrode reads LOW, and a low reading otherwise looks like safe water.
+# ==============================================================================
+QC_FLAT_RANGE_UA = 0.005        # whole scan varies less than this: electrode disconnected, dry or dead
+QC_MAX_NOISE_UA = 0.05          # background noise above this: scan rejected
+QC_DETECT_SNR = 3.0             # net peak must be 3x the background noise to count as a detection
+QC_MIN_GOOD_SCANS = 2           # the device must average at least this many good scans
+QC_CHECK_RECOVERY = (80.0, 120.0)   # a check standard must read 80-120 % of its true value
+QC_BLANK_MAX_UG_L = 10.0        # a blank (arsenic-free water) must read below this
+# Fault codes: any of these means the measurement itself is not trustworthy.
+QC_FAULT_FLAGS = {
+    "ADC_SATURATION_HIGH", "ADC_SATURATION_LOW", "FLAT_SIGNAL", "BASELINE_UNSTABLE", "NOISE_ABOVE_LOD",
+    "PEAK_AT_WINDOW_EDGE", "NO_POINTS_IN_WINDOW", "TOO_FEW_GOOD_SCANS", "SCANS_DISAGREE", "NO_LIQUID",
+    "QC_NOT_REPORTED", "DEVICE_REPORTED_FAIL",
+}
 
 # Detection and Quantification Limits (in micrograms per litre, µg/L = ppb)
 LOD_UG_L = 20.0   # 0.020 mg/L - Method Limit of Detection

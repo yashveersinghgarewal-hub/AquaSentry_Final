@@ -58,6 +58,16 @@ class ReadingCreate(BaseModel):
     peak_current_ua: Optional[float] = Field(None, ge=-1000, le=1000, description="Net arsenic stripping peak (µA)")
     cu_peak_ua: Optional[float] = Field(None, ge=0, le=1000, description="Copper stripping peak (µA), if scanned")
     calibration_ref: Optional[str] = Field(None, max_length=64, description="calibration_id the node used")
+    # v5.7 scan quality and timing, reported by the device (qc_status is required for hardware readings)
+    qc_status: Optional[Literal["pass", "fail"]] = Field(
+        None, description="Result of the device's own scan checks. Hardware readings without it are 'Test Failed'.")
+    qc_scan_flags: Optional[List[str]] = Field(
+        None, max_length=20, description="QC codes from the device, e.g. FLAT_SIGNAL, NOISE_ABOVE_LOD, PEAK_SHIFTED")
+    snr: Optional[float] = Field(None, ge=0, le=1e6, description="Averaged peak signal-to-noise ratio")
+    peak_potential_mv: Optional[float] = Field(None, ge=-2000, le=2000)
+    scans_averaged: Optional[int] = Field(None, ge=0, le=100)
+    age_seconds: Optional[float] = Field(None, ge=0, le=60 * 60 * 24 * 400,
+                                         description="For a device without a set clock: how long ago the sample was taken")
 
     @field_validator("recorded_at", mode="after")
     @classmethod
@@ -104,6 +114,8 @@ class ReadingOut(BaseModel):
     arsenic_species: Optional[str] = None
     cu_peak_ua: Optional[float] = None
     qc_flags: Optional[str] = None
+    qc_status: Optional[str] = None
+    time_source: Optional[str] = None
     calibration_ref: Optional[str] = None
     recorded_at: datetime
     received_at: datetime
@@ -365,3 +377,15 @@ class ChatResponse(BaseModel):
     reply: str
     intent: Optional[str] = "in_scope"
     grounded: Optional[bool] = True
+
+
+class QcRunCreate(BaseModel):
+    """v5.7: a blank (arsenic-free water) or check-standard (known arsenic) run on a device."""
+    device_code: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")
+    run_type: Literal["blank", "check_standard"]
+    expected_ug_l: Optional[float] = Field(None, ge=0, le=5000, description="True value of the check standard")
+    measured_ug_l: Optional[float] = Field(None, ge=0, le=50000)
+    peak_current_ua: Optional[float] = Field(None, ge=-1000, le=1000,
+                                             description="If given, arsenic is computed from it with the device's calibration")
+    qc_scan_flags: Optional[List[str]] = Field(None, max_length=20)
+    recorded_at: Optional[datetime] = None

@@ -48,6 +48,7 @@
   function forward(model, raw) {
     const mean = model.mean || MEAN, std = model.std || STD;
     const x = raw.map((v, i) => {
+      if (v === null || v === undefined) return 0;   // not measured: training mean = neutral input (z = 0)
       let u = isFinite(v) ? v : 0;
       if (i === 0 && model.logAs) u = Math.log10(Math.max(u, 0) + 0.001);
       return (u - mean[i]) / std[i];
@@ -69,9 +70,11 @@
 
   const RANK = { Safe: 0, Caution: 1, Unsafe: 2, Hazardous: 3 };
 
+  /** ph / ec / turb / temp may be null = sensor not fitted: never treated as a normal reading, rule skipped. */
   function evaluate(asMgL, ph, ec, turb, temp, modelId) {
     const model = MODELS[modelId] || V1_MODEL;
-    const raw = [asMgL, ph, ec, turb, temp];
+    const nm = (v) => v === null || v === undefined;
+    const raw = [asMgL, ph, ec, turb, temp].map((v, i) => (i > 0 && nm(v) ? null : v));
     const f = forward(model, raw);
     let best = 0;
     for (let i = 1; i < 4; i++) if (f.probs[i] > f.probs[best]) best = i;
@@ -81,8 +84,9 @@
     let override = false;
     const raise = (cls) => { if (RANK[cls] > RANK[final]) { final = cls; override = true; } };
 
-    const finite = raw.every((v) => typeof v === 'number' && isFinite(v));
-    const oob = !finite || raw.some((v, i) => v < BOUNDS[i][0] || v > BOUNDS[i][1]);
+    const measured = raw.filter((v) => v !== null);
+    const finite = measured.every((v) => typeof v === 'number' && isFinite(v));
+    const oob = !finite || raw.some((v, i) => v !== null && (v < BOUNDS[i][0] || v > BOUNDS[i][1]));
     if (oob) { raise('Unsafe'); reasons.push({ code: 'OOB' }); }
 
     if (asMgL > LIMITS.asHaz) { raise('Hazardous'); reasons.push({ code: 'AS_HAZ' }); }
@@ -91,19 +95,25 @@
     else { reasons.push({ code: 'AS_OK' }); }
 
     if (!oob) {
-      if (ph < 6.0 || ph > 9.0) { raise('Unsafe'); reasons.push({ code: 'PH_SEVERE', v: ph.toFixed(2) }); }
+      if (nm(ph)) { /* not measured */ }
+      else if (ph < 6.0 || ph > 9.0) { raise('Unsafe'); reasons.push({ code: 'PH_SEVERE', v: ph.toFixed(2) }); }
       else if (ph < LIMITS.phMin || ph > LIMITS.phMax) { raise('Caution'); reasons.push({ code: 'PH_ADV', v: ph.toFixed(2) }); }
-      if (turb > 10) { raise('Unsafe'); reasons.push({ code: 'TURB_HIGH', v: turb.toFixed(1) }); }
+      if (nm(turb)) { /* not measured */ }
+      else if (turb > 10) { raise('Unsafe'); reasons.push({ code: 'TURB_HIGH', v: turb.toFixed(1) }); }
       else if (turb > LIMITS.turb) { raise('Caution'); reasons.push({ code: 'TURB_ADV', v: turb.toFixed(1) }); }
-      if (ec > 2000) { raise('Unsafe'); reasons.push({ code: 'EC_HIGH', v: Math.round(ec) }); }
+      if (nm(ec)) { /* not measured */ }
+      else if (ec > 2000) { raise('Unsafe'); reasons.push({ code: 'EC_HIGH', v: Math.round(ec) }); }
       else if (ec > LIMITS.ec) { raise('Caution'); reasons.push({ code: 'EC_ADV', v: Math.round(ec) }); }
     }
 
     const H = entropy(f.probs);
     if (H > 0.65 && !override && final === 'Safe') { final = 'Caution'; override = true; reasons.push({ code: 'UNCERTAIN' }); }
     if (asMgL < LIMITS.lod) reasons.push({ code: 'LOD' });
+    const notMeasured = ['ph', 'ec', 'turb', 'temp'].filter((k, i) => raw[i + 1] === null);
+    notMeasured.forEach((k) => reasons.push({ code: 'NM', v: k }));
 
     return {
+      notMeasured,
       model: model.id, sizes: model.sizes, layers: f.layers, logits: f.logits, probs: f.probs,
       vote, final, override, confidence: f.probs[best], entropy: H, reasons, belowLod: asMgL < LIMITS.lod,
     };

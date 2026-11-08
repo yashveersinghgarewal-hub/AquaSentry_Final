@@ -61,20 +61,19 @@ static void raise_to(aquanet_class_t *cls, aquanet_class_t at_least, const char 
     if (*cls < at_least) { *cls = at_least; *reason = why; }
 }
 
-aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conductivity_us_cm,
-                                    float turbidity_ntu, float temperature_c) {
+static aquanet_result_t v3_core(const float raw[N_IN], const int measured[N_IN]) {
+    static const float LO[N_IN] = {0.0f, 4.5f, 50.0f, 0.0f, 5.0f};
+    static const float HI[N_IN] = {2.0f, 10.5f, 5000.0f, 100.0f, 45.0f};
     aquanet_result_t r;
-    const float raw[N_IN] = {arsenic_mg_l, ph, conductivity_us_cm, turbidity_ntu, temperature_c};
     float x[N_IN], h1[N_H1], h2[N_H2], z[N_OUT];
     int i, j;
 
-    int finite = 1;
-    for (i = 0; i < N_IN; i++) if (!isfinite(raw[i])) finite = 0;
-    r.is_out_of_bounds = !finite || arsenic_mg_l < 0.0f || arsenic_mg_l > 2.0f || ph < 4.5f || ph > 10.5f ||
-        conductivity_us_cm < 50.0f || conductivity_us_cm > 5000.0f || turbidity_ntu < 0.0f || turbidity_ntu > 100.0f ||
-        temperature_c < 5.0f || temperature_c > 45.0f;
+    r.is_out_of_bounds = 0;
+    for (i = 0; i < N_IN; i++)
+        if (measured[i] && (!isfinite(raw[i]) || raw[i] < LO[i] || raw[i] > HI[i])) r.is_out_of_bounds = 1;
 
     for (i = 0; i < N_IN; i++) {
+        if (!measured[i]) { x[i] = 0.0f; continue; }   /* not measured: training mean = neutral input */
         float v = isfinite(raw[i]) ? raw[i] : 0.0f;
         if (i == 0) v = log10f((v > 0.0f ? v : 0.0f) + 0.001f);
         x[i] = (v - V3_MEAN[i]) / V3_STD[i];
@@ -94,6 +93,7 @@ aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conducti
     r.entropy = aquanet_calculate_entropy(r.probabilities);
     r.high_uncertainty = r.entropy > 0.65f;
 
+    const float arsenic_mg_l = raw[0], ph = raw[1], conductivity_us_cm = raw[2], turbidity_ntu = raw[3];
     aquanet_class_t cls = (aquanet_class_t)best;
     const char *reason = "NOMINAL_NEURAL_V3";
     if (r.is_out_of_bounds) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_OUT_OF_BOUNDS");
@@ -101,12 +101,18 @@ aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conducti
     else if (arsenic_mg_l >= 0.020f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_ARSENIC_EXCEEDS_BIS"); /* detected >= LOD: above IS 10500 10 ug/L */
     else if (arsenic_mg_l > 0.010f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_ARSENIC_ABOVE_WHO");
     if (!r.is_out_of_bounds) {
-        if (ph < 6.0f || ph > 9.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_SEVERE_PH_VIOLATION");
-        else if (ph < 6.5f || ph > 8.5f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_PH_EXCEEDANCE");
-        if (turbidity_ntu > 10.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_HIGH_TURBIDITY");
-        else if (turbidity_ntu > 5.0f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_TURBIDITY");
-        if (conductivity_us_cm > 2000.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_HIGH_SALINITY");
-        else if (conductivity_us_cm > 1500.0f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_CONDUCTIVITY");
+        if (measured[1]) {
+            if (ph < 6.0f || ph > 9.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_SEVERE_PH_VIOLATION");
+            else if (ph < 6.5f || ph > 8.5f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_PH_EXCEEDANCE");
+        }
+        if (measured[3]) {
+            if (turbidity_ntu > 10.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_HIGH_TURBIDITY");
+            else if (turbidity_ntu > 5.0f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_TURBIDITY");
+        }
+        if (measured[2]) {
+            if (conductivity_us_cm > 2000.0f) raise_to(&cls, AQUANET_CLASS_UNSAFE, &reason, "SAFETY_OVERRIDE_HIGH_SALINITY");
+            else if (conductivity_us_cm > 1500.0f) raise_to(&cls, AQUANET_CLASS_CAUTION, &reason, "POTABILITY_ADVISORY_CONDUCTIVITY");
+        }
     }
     if (r.high_uncertainty && cls == AQUANET_CLASS_SAFE) { cls = AQUANET_CLASS_CAUTION; reason = "ADVISORY_HIGH_UNCERTAINTY"; }
 
@@ -115,4 +121,18 @@ aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conducti
     r.reason_code = reason;
     r.predicted_class_name = V3_CLASS_NAMES[cls];
     return r;
+}
+
+aquanet_result_t aquanet_v3_predict(float arsenic_mg_l, float ph, float conductivity_us_cm,
+                                    float turbidity_ntu, float temperature_c) {
+    const float raw[N_IN] = {arsenic_mg_l, ph, conductivity_us_cm, turbidity_ntu, temperature_c};
+    const int all[N_IN] = {1, 1, 1, 1, 1};
+    return v3_core(raw, all);
+}
+
+aquanet_result_t aquanet_v3_predict_measured(float arsenic_mg_l, float ph, float conductivity_us_cm,
+                                             float turbidity_ntu, float temperature_c) {
+    const float raw[N_IN] = {arsenic_mg_l, ph, conductivity_us_cm, turbidity_ntu, temperature_c};
+    const int m[N_IN] = {1, !isnan(ph), !isnan(conductivity_us_cm), !isnan(turbidity_ntu), !isnan(temperature_c)};
+    return v3_core(raw, m);
 }

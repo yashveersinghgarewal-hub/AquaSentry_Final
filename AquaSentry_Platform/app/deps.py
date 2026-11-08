@@ -65,10 +65,34 @@ def _check_device_key(db: Session, device_code: str, request: Request):
             raise HTTPException(status_code=401, detail=f"Device '{device_code}' has its own API key; send it as X-API-Key.")
 
 
+def trusted_origins() -> list:
+    """Browser origins allowed to call the API (CORS) and to write from this computer."""
+    raw = (os.getenv("CORS_ORIGINS") or "").strip()
+    if raw and raw != "*":
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    port = os.getenv("AQUASENTRY_PORT", "8000")
+    return sorted({f"http://localhost:{port}", f"http://127.0.0.1:{port}", "http://localhost:8000", "http://127.0.0.1:8000"})
+
+
+def _origin_ok(request: Request) -> bool:
+    """A web page you visit runs in your browser on this computer, so its requests also come from 127.0.0.1.
+    Browsers send an Origin header with such requests; only the dashboard's own origin may write."""
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True                       # not a browser cross-site request (ESP32, scripts, same-origin GET)
+    host = request.headers.get("host", "")
+    return origin in (f"http://{host}", f"https://{host}") or origin in trusted_origins()
+
+
 def require_writer(request: Request):
-    """Writes are allowed from this computer, with the global key, or with any registered device key
-    (the device key is then checked against the device_code in the body by _check_device_key)."""
-    if _api_key() is None or _is_loopback(request) or _key_ok(request):
+    """Writes are allowed from this computer (but not from another website open in its browser), with the global
+    key, or with any registered device key (then checked against the body's device_code by _check_device_key).
+    v5.7: with no AQUASENTRY_API_KEY set, network clients can no longer write (was: open to the whole network)."""
+    if _key_ok(request):
+        return
+    if _is_loopback(request):
+        if not _origin_ok(request):
+            raise HTTPException(status_code=403, detail="Writes from another website are not allowed.")
         return
     given = request.headers.get("x-api-key")
     if given and given.startswith(security.KEY_PREFIX):
@@ -76,12 +100,15 @@ def require_writer(request: Request):
         with SessionLocal() as db:
             if db.query(models.Device).filter(models.Device.api_key_hash == security.hash_key(given)).first():
                 return
-    raise HTTPException(status_code=401, detail="Missing or wrong X-API-Key header (see AQUASENTRY_API_KEY in .env).")
+    if _api_key() is None and os.getenv("AQUASENTRY_OPEN_WRITES") == "1":
+        return                            # explicit opt-in for a closed test network only
+    raise HTTPException(status_code=401, detail="Missing or wrong X-API-Key header. Set AQUASENTRY_API_KEY in .env "
+                                                "on the server and the same key in the device.")
 
 
 def require_admin(request: Request):
     """Admin actions never run for an anonymous network client, even with writes open."""
-    if _is_loopback(request) or _key_ok(request):
+    if _key_ok(request) or (_is_loopback(request) and _origin_ok(request)):
         return
     raise HTTPException(status_code=403, detail="Admin endpoints are only available from this computer or with X-API-Key.")
 

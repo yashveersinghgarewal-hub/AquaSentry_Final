@@ -10,8 +10,13 @@
   const $ = (id) => document.getElementById(id);
   const UI = () => window.AquaUI;
   const DEVICE = 'AQUA-001';
-  const CAL = { slope: 0.8563, intercept: 0.0096, peakMv: -800, windowMv: 60, excludeMv: 105 };
-  const TONE_HEX = { none: '#3B82F6', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E' };
+  const SIM_DEVICE = 'SIM-DASHBOARD';   // v5.7: dashboard practice tests never share a code with a real device
+  // windowMv: where the peak is expected; searchMv: how far it is searched (v5.7, same as app/standards.py)
+  const CAL = { slope: 0.8563, intercept: 0.0096, peakMv: -800, windowMv: 60, searchMv: 100, excludeMv: 105, lodUg: 20 };
+  // v5.7 scan checks, same numbers as app/standards.py: a dead / dry / noisy electrode reads LOW, so it must fail
+  const QC = { flatUa: 0.005, maxNoiseUa: 0.05, snr: 3 };
+  const STALE_MIN = 120;                // a node reports hourly; older than 2 h = possibly offline
+  const TONE_HEX = { none: '#3B82F6', Safe: '#34D399', Caution: '#F59E0B', Unsafe: '#FB923C', Hazardous: '#F43F5E', Clear: '#3B82F6', Failed: '#F43F5E' };
   const CONTACT_KEY = 'aquasentry.contacts';
 
   const state = {
@@ -53,23 +58,36 @@
     Caution: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M28 5L52 48H4Z"/><path d="M28 21v13M28 41v1"/></svg>',
     Unsafe: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><circle cx="28" cy="28" r="24"/><path d="M19 19l18 18M37 19L19 37"/></svg>',
     Hazardous: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4h20l14 14v20L38 52H18L4 38V18Z"/><path d="M28 16v16M28 40v1"/></svg>',
+    Failed: '<svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="44" height="44" rx="6"/><path d="M19 19l18 18M37 19L19 37"/></svg>',
   };
 
   // ---------------- readings ----------------
-  // Sensors that are not fitted stay null (shown as "not measured"); the model still needs a number,
-  // so typical values are used for the vote only, exactly like the ESP32 firmware does.
-  const TYPICAL = { ph: 7.2, ec: 400, turb: 2.0, temp: 24 };
-  const val = (r, k) => (r[k] == null ? TYPICAL[k] : r[k]);
-  function evaluate(r) { return window.AquaNet.evaluate(r.asMgL, val(r, 'ph'), val(r, 'ec'), val(r, 'turb'), val(r, 'temp'), state.model); }
-  // A "Safe" vote with arsenic below the 20 µg/L LOD is shown as "No arsenic detected", never "Safe to drink":
-  // the sensor cannot see the 10 µg/L limit.
-  function verdictKey(res) { return res.final === 'Safe' && res.belowLod ? 'Clear' : res.final; }
+  // v5.7: sensors that are not fitted stay null all the way through: the model gets a neutral input and their
+  // rule is skipped (neural.js), and nothing is assumed or shown for them (was: typical values for the vote).
+  const nn = (v) => (v === undefined ? null : v);
+  function evaluate(r) { return window.AquaNet.evaluate(r.asMgL, nn(r.ph), nn(r.ec), nn(r.turb), nn(r.temp), state.model); }
+  const SERVER_KEY = { 'Below Sensor LOD': 'Clear', 'Test Failed': 'Failed' };
+  // What the screen shows. A failed test is "Test failed" (never a clean result). Below the 20 µg/L LOD a "Safe"
+  // vote is "Not detected: not confirmed safe", never "Safe to drink". A verdict stored by the server wins,
+  // because it includes the scan QC, check-standard and calibration checks the browser cannot see.
+  function verdictKey(res, r) {
+    r = r || state.reading;
+    if (r && r.failed) return 'Failed';
+    if (r && r.serverLabel && (SERVER_KEY[r.serverLabel] || res.final !== r.serverLabel)) {
+      const k = SERVER_KEY[r.serverLabel] || r.serverLabel;
+      if (ICONS[k] || k === 'Clear') return k;
+    }
+    return res.final === 'Safe' && res.belowLod ? 'Clear' : res.final;
+  }
+  const paintKey = (vk) => (vk === 'Clear' || vk === 'Failed' ? vk : vk);
+  function belowLod(r) { return ugl(r.asMgL) < CAL.lodUg; }
   function setReading(r, opts) {
     state.reading = r;
     const res = evaluate(r);
-    r.verdict = res.final;
+    const vk = verdictKey(res, r);
+    r.verdict = vk === 'Failed' ? 'Test Failed' : vk === 'Clear' ? 'Below Sensor LOD' : res.final;
     if (!opts || !opts.noHistory) {
-      state.history.unshift({ time: r.time, asMgL: r.asMgL, verdict: res.final, source: r.source, ph: r.ph, ec: r.ec, turb: r.turb, temp: r.temp });
+      state.history.unshift({ time: r.time, asMgL: r.asMgL, verdict: r.verdict, source: r.source, ph: r.ph, ec: r.ec, turb: r.turb, temp: r.temp });
       state.history = state.history.slice(0, 50);
     }
     renderOverview();
@@ -158,51 +176,81 @@
       return;
     }
     const res = evaluate(r);
-    const vk = verdictKey(res);
-    v.dataset.tone = vk === 'Clear' ? 'Clear' : res.final;   // "not detected" gets its own paint, never the "safe" green
-    $('verdictIcon').innerHTML = vk === 'Clear' ? ICONS.none : ICONS[res.final];
+    const vk = verdictKey(res, r);
+    v.dataset.tone = paintKey(vk);   // "not detected" gets its own paint, never the "safe" green; failed is red
+    $('verdictIcon').innerHTML = vk === 'Clear' ? ICONS.none : (ICONS[vk] || ICONS[res.final]);
     $('verdictBadge').textContent = t('class.' + vk);
     const vt = t('verdict.' + vk + '.title');
     if ($('verdictTitle').textContent !== vt) { if (window.AquaMotion) window.AquaMotion.decode($('verdictTitle'), vt, 650); else $('verdictTitle').textContent = vt; }
     $('verdictAction').textContent = t('verdict.' + vk + '.action');
     $('verdictTime').textContent = fmtTime(r.time);
-    UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
-    $('asMgl').textContent = t('ov.mgl', { v: r.asMgL.toFixed(4) });
+    // v5.7: below the detection limit the number is noise, so it is shown as "< 20"; a failed test shows no number
+    const failed = vk === 'Failed', low = !failed && belowLod(r);
+    const shownUg = failed ? null : low ? CAL.lodUg : ugl(r.asMgL);
+    if (failed) { $('asValue').textContent = '–'; $('asValue')._v = 0; }
+    else if (low) { $('asValue').textContent = '<' + CAL.lodUg; $('asValue')._v = 0; }
+    else UI().countTo($('asValue'), ugl(r.asMgL), fmtUgNum, 1200);
+    $('asMgl').textContent = failed ? t('auth.f.notValid') : low ? t('auth.f.notDetected') : t('ov.mgl', { v: r.asMgL.toFixed(4) });
     const pin = $('stripPin');
-    if (pin.hidden) { pin.style.left = stripPercent(0) + '%'; pin.hidden = false; void pin.offsetWidth; }   // first reading slides in from 0
-    pin.style.left = stripPercent(ugl(r.asMgL)) + '%';
-    pin.style.setProperty('--sample', kitColour(ugl(r.asMgL)));
-    $('stripPinLabel').textContent = t('chart.you', { v: fmtUg(r.asMgL) + ' µg/L' });
-    // keep the label inside the chart near the ends (the marker itself stays exact)
-    const lab = $('stripPinLabel'), bodyW = pin.parentElement.clientWidth, x = stripPercent(ugl(r.asMgL)) / 100 * bodyW, half = lab.offsetWidth / 2;
-    pin.style.setProperty('--shift', (x - half < 0 ? half - x : x + half > bodyW ? bodyW - half - x : 0) + 'px');
-    setRing(ugl(r.asMgL));
-    if (state.fx) state.fx.setColor(TONE_HEX[res.final]);
-    if (state.device) state.device.setRim(TONE_HEX[res.final]);
+    if (failed) pin.hidden = true;
+    else {
+      if (pin.hidden) { pin.style.left = stripPercent(0) + '%'; pin.hidden = false; void pin.offsetWidth; }   // first reading slides in from 0
+      pin.style.left = stripPercent(shownUg) + '%';
+      pin.style.setProperty('--sample', kitColour(shownUg));
+      $('stripPinLabel').textContent = t('chart.you', { v: (low ? '< ' + CAL.lodUg : fmtUg(r.asMgL)) + ' µg/L' });
+      // keep the label inside the chart near the ends (the marker itself stays exact)
+      const lab = $('stripPinLabel'), bodyW = pin.parentElement.clientWidth, x = stripPercent(shownUg) / 100 * bodyW, half = lab.offsetWidth / 2;
+      pin.style.setProperty('--shift', (x - half < 0 ? half - x : x + half > bodyW ? bodyW - half - x : 0) + 'px');
+    }
+    setRing(failed ? null : shownUg);
+    if (low && $('ringNum')) $('ringNum').textContent = '<' + CAL.lodUg;
+    if (state.fx) state.fx.setColor(TONE_HEX[vk] || TONE_HEX[res.final]);
+    if (state.device) state.device.setRim(TONE_HEX[vk] || TONE_HEX[res.final]);
 
     const why = $('whyList');
     why.innerHTML = '';
-    res.reasons.filter((x) => x.code !== 'LOD').forEach((x) => {
-      const li = document.createElement('li');
-      li.textContent = t('reason.' + x.code, { v: x.v });
-      why.appendChild(li);
-    });
-    $('labNote').hidden = !res.belowLod;
+    if (!failed) {
+      res.reasons.filter((x) => x.code !== 'LOD').forEach((x) => {
+        const li = document.createElement('li');
+        li.textContent = x.code === 'NM' ? t('reason.NM', { v: t(NM_LABEL[x.v] || 'read.' + x.v) }) : t('reason.' + x.code, { v: x.v });
+        why.appendChild(li);
+      });
+    }
+    $('labNote').hidden = failed || !res.belowLod;
     $('labNote').textContent = t('ov.labNote');
-    renderQc(state.reading && state.reading.qc);
+    renderQc(r.qc, r.failNotes);
 
     // alert banner
     const b = $('alertBanner');
     b.hidden = false;
-    b.className = 'alert-banner' + (res.final === 'Safe' ? ' ok' : res.final === 'Caution' ? ' warn' : '');
+    b.className = 'alert-banner' + (vk === 'Safe' ? ' ok' : vk === 'Caution' || vk === 'Clear' ? ' warn' : '');
     $('alertTitle').textContent = t('alert.' + vk + '.t');
     $('alertText').textContent = t('alert.' + vk + '.d');
-    $('alertBtn1').hidden = res.final === 'Safe';
-    $('alertBtn2').hidden = res.final === 'Safe' || res.final === 'Caution';
+    $('alertBtn1').hidden = vk === 'Safe';
+    $('alertBtn2').hidden = vk === 'Safe' || vk === 'Caution' || vk === 'Clear' || vk === 'Failed';
 
-    const src = t('ov.source.' + r.source);
-    $('ovMeta').textContent = `${t('ov.device', { code: r.device || DEVICE })}, ${t('ov.lastReading', { time: fmtTime(r.time) })} (${src})`;
+    renderMeta();
     renderReadingsGrid(r);
+  }
+
+  const NM_LABEL = { ph: 'read.ph', ec: 'read.ec', turb: 'read.turb', temp: 'read.temp' };
+  /** Device line under the verdict, with a warning when a real device's last reading is old (v5.7). */
+  function ageText(min) {
+    if (min < 120) return Math.round(min) + ' min';
+    if (min < 48 * 60) return Math.round(min / 60) + ' h';
+    return Math.round(min / 1440) + ' d';
+  }
+  function renderMeta() {
+    const r = state.reading;
+    if (!r) return;
+    const src = t('ov.source.' + r.source);
+    let meta = `${t('ov.device', { code: r.device || DEVICE })}, ${t('ov.lastReading', { time: fmtTime(r.time) })} (${src})`;
+    const ageMin = (Date.now() - r.time.getTime()) / 60000;
+    const stale = r.source === 'device' && ageMin > STALE_MIN;
+    if (stale) meta += ' · ' + t('ov.stale', { age: ageText(ageMin) });
+    if (r.timeUnknown) meta += ' · ' + t('qc.TIME_UNKNOWN');
+    $('ovMeta').textContent = meta;
+    $('ovMeta').classList.toggle('meta-warn', stale || !!r.timeUnknown);
   }
 
   const READ_DEFS = [
@@ -222,7 +270,7 @@
       const st = val === null || !d.ok ? '' : `<span class="reading-state ${inRange ? 'ok' : 'bad'}">${t(inRange ? 'read.ok' : 'read.bad')}</span>`;
       return `<div class="card reading spot">
         <div class="reading-name">${t(d.label)}</div>
-        <div class="reading-val">${val === null ? '–' : d.fmt(val)}${d.unit ? `<small>${d.unit}</small>` : ''}</div>
+        <div class="reading-val">${val === null ? `<span class="reading-nm">${t('read.nm')}</span>` : d.fmt(val) + (d.unit ? `<small>${d.unit}</small>` : '')}</div>
         <div class="gauge">${okBand}${dot}</div>
         <div class="reading-foot"><span>${t(d.good)}</span>${st}</div>
       </div>`;
@@ -238,18 +286,29 @@
   }
 
   // ---------------- server data ----------------
+  const SOURCE_KEY = { hardware: 'device', manual_import: 'import', simulated: 'sim', synthetic_demo: 'demo', synthetic_fixture: 'demo' };
+  /** A stored reading as the dashboard keeps it. Nothing is invented: missing values stay null. */
+  function fromServer(d, code) {
+    const qc = (d.qc_flags || '').split(',').filter(Boolean);
+    return {
+      id: d.id, device: d.device_code || code,
+      asMgL: (d.arsenic_ppb || 0) / 1000, ph: d.ph ?? null, ec: d.conductivity_us_cm ?? null, turb: d.turbidity_ntu ?? null,
+      temp: d.temperature_c ?? null, battery: d.battery_pct ?? null, lat: d.latitude ?? null, lon: d.longitude ?? null,
+      time: d.recorded_at ? new Date(d.recorded_at.endsWith('Z') || d.recorded_at.includes('+') ? d.recorded_at : d.recorded_at + 'Z') : new Date(),
+      source: SOURCE_KEY[d.source_type] || (d.is_simulated === false ? 'device' : 'demo'), savedOnServer: true,
+      qc, species: d.arsenic_species || null, serverLabel: d.classification, failed: d.classification === 'Test Failed',
+      timeUnknown: d.time_source === 'unknown',
+    };
+  }
+  /** v5.7: with no device code, show the newest REAL device reading; fall back to the newest of any kind. */
   async function loadLatestFromServer(code) {
-    code = code || DEVICE;
     try {
-      const d = await api(`/api/readings/latest?device_code=${encodeURIComponent(code)}`);
-      setReading({
-        device: code,
-        asMgL: (d.arsenic_ppb || 0) / 1000, ph: d.ph ?? null, ec: d.conductivity_us_cm ?? null, turb: d.turbidity_ntu ?? null,
-        temp: d.temperature_c ?? null, battery: d.battery_pct, lat: d.latitude, lon: d.longitude,
-        time: d.recorded_at ? new Date(d.recorded_at.endsWith('Z') || d.recorded_at.includes('+') ? d.recorded_at : d.recorded_at + 'Z') : new Date(),
-        source: d.is_simulated === false || d.source_type === 'hardware' ? 'device' : 'demo', savedOnServer: true,
-        qc: (d.qc_flags || '').split(',').filter(Boolean),
-      });
+      let d;
+      if (code) d = await api(`/api/readings/latest?device_code=${encodeURIComponent(code)}`);
+      else {
+        try { d = await api('/api/readings/latest?source_type=hardware'); } catch (e) { d = await api('/api/readings/latest'); }
+      }
+      setReading(fromServer(d, code));
       return true;
     } catch (e) { return false; }
   }
@@ -257,7 +316,8 @@
     if (online()) {
       try { await api('/api/demo/load', { method: 'POST' }, 6000); if (await loadLatestFromServer('DEMO-BOT-01')) return; } catch (e) { /* fall through */ }
     }
-    setReading({ asMgL: 0.045, ph: 7.35, ec: 412, turb: 2.1, temp: 24.2, battery: 71, lat: 25.61, lon: 85.14, time: new Date(), source: 'demo' });
+    // offline demo: clearly "demo", and no invented battery level or location (v5.7)
+    setReading({ asMgL: 0.045, ph: 7.35, ec: 412, turb: 2.1, temp: 24.2, battery: null, lat: null, lon: null, time: new Date(), source: 'demo' });
   }
 
   // ---------------- voltammetry (same maths as app/signal_processing.py) ----------------
@@ -285,8 +345,16 @@
     s[n - 1] = (3 * y[n - 5] - 5 * y[n - 4] - 3 * y[n - 3] + 9 * y[n - 2] + 31 * y[n - 1]) / 35;
     return s;
   }
+  /** A dead / disconnected electrode: a flat line with only ADC noise on it (for the "Electrode fault" button). */
+  function faultTrace() {
+    const rand = rng(99), P = [], C = [];
+    for (let i = 0; i < 121; i++) { P.push(-1100 + i * 5); C.push(Math.round((rand() - 0.5) * 2) * 0.000625); }
+    return { P, C };
+  }
   function processTrace(P, C) {
     const S = savgol(C);
+    const flags = [];
+    if (Math.max.apply(null, C) - Math.min.apply(null, C) < QC.flatUa) flags.push('FLAT_SIGNAL');
     const bx = [], by = [];
     P.forEach((p, i) => { if (Math.abs(p - CAL.peakMv) > CAL.excludeMv) { bx.push(p); by.push(S[i]); } });
     const mx = bx.reduce((a, b) => a + b, 0) / bx.length, my = by.reduce((a, b) => a + b, 0) / by.length;
@@ -294,25 +362,36 @@
     const m = sxx ? sxy / sxx : 0, c = my - m * mx;
     const base = P.map((p) => m * p + c);
     let vr = 0; bx.forEach((x, i) => { vr += (by[i] - (m * x + c)) ** 2; }); vr /= Math.max(1, bx.length - 2);
+    const noise = Math.sqrt(Math.max(1e-9, vr));
+    if (noise > QC.maxNoiseUa) flags.push('BASELINE_UNSTABLE');
+    else if (QC.snr * noise / CAL.slope * 1000 > CAL.lodUg) flags.push('NOISE_ABOVE_LOD');
     let bi = -1, best = -Infinity;
-    P.forEach((p, i) => { if (Math.abs(p - CAL.peakMv) <= CAL.windowMv && S[i] - base[i] > best) { best = S[i] - base[i]; bi = i; } });
+    const win = [];
+    P.forEach((p, i) => { if (Math.abs(p - CAL.peakMv) <= CAL.searchMv) { win.push(i); if (S[i] - base[i] > best) { best = S[i] - base[i]; bi = i; } } });
     const net = Math.max(0, best);
     const as = net <= CAL.intercept ? 0 : (net - CAL.intercept) / CAL.slope;
-    return { S, base, peakIdx: bi, peakMv: P[bi], net, snr: net / Math.sqrt(Math.max(1e-9, vr)), asMgL: as };
+    if (net > CAL.intercept && (bi === win[0] || bi === win[win.length - 1])) {
+      const nb = bi === win[0] ? bi - 1 : bi + 1;
+      if (nb >= 0 && nb < P.length && S[nb] - base[nb] >= best) flags.push('PEAK_AT_WINDOW_EDGE');
+    }
+    return { S, base, peakIdx: bi, peakMv: P[bi], net, snr: net / noise, asMgL: as, flags, failed: flags.length > 0 };
   }
 
+  const FAULT_KEY = { FLAT_SIGNAL: 'qc.FLAT_SIGNAL', NOISE_ABOVE_LOD: 'qc.NOISE', BASELINE_UNSTABLE: 'qc.NOISE', PEAK_AT_WINDOW_EDGE: 'qc.PEAK_EDGE' };
   async function runTest(asMgL, opts) {
     const quiet = opts && opts.quiet;
     const btn = $('runTestBtn');
     btn.disabled = true; btn.textContent = t('test.running');
-    const { P, C } = synthTrace(asMgL);
+    const { P, C } = opts && opts.fault ? faultTrace() : synthTrace(asMgL);
     let out = processTrace(P, C);
     let saved = false;
     if (online()) {
       try {
         const d = await api('/api/voltammetry/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ potentials_mv: P, currents_ua: C, filter_mode: 'savitzky_golay' }) });
         if (d && d.peak) {
-          out = { S: d.smoothed_currents_ua, base: d.baseline_currents_ua, peakIdx: P.indexOf(d.peak.peak_potential_mv), peakMv: d.peak.peak_potential_mv, net: d.peak.net_peak_height_ua, snr: d.peak.snr, asMgL: d.estimated_arsenic_mg_l };
+          const flags = (d.peak.qc_flags || []).filter((f) => FAULT_KEY[f] || /SATURATION|NO_POINTS/.test(f));
+          out = { S: d.smoothed_currents_ua, base: d.baseline_currents_ua, peakIdx: P.indexOf(d.peak.peak_potential_mv), peakMv: d.peak.peak_potential_mv, net: d.peak.net_peak_height_ua, snr: d.peak.snr, asMgL: d.estimated_arsenic_mg_l,
+            flags, failed: d.qc_status === 'REJECTED' };
         }
       } catch (e) { /* keep local result */ }
     }
@@ -323,20 +402,25 @@
     $('trSnr').textContent = out.snr.toFixed(0);
     $('trAs').textContent = fmtUg(out.asMgL) + ' µg/L';
 
-    const prev = state.reading || { ph: 7.3, ec: 420, turb: 2.5, temp: 25, battery: 71, lat: 25.61, lon: 85.14 };
-    const reading = { asMgL: out.asMgL, ph: prev.ph, ec: prev.ec, turb: prev.turb, temp: prev.temp, battery: prev.battery, lat: prev.lat, lon: prev.lon, time: new Date(), source: 'sim' };
-    if (online()) {
+    // v5.7: a practice test only measures arsenic. pH / conductivity / turbidity / temperature are "not measured"
+    // (before, the previous reading's values or invented ones were copied in), and there is no battery or location.
+    const failNotes = (out.flags || []).map((f) => FAULT_KEY[f]).filter(Boolean);
+    const reading = { asMgL: out.asMgL, ph: null, ec: null, turb: null, temp: null, battery: null, lat: null, lon: null,
+      time: new Date(), source: 'sim', device: SIM_DEVICE, failed: !!out.failed, failNotes, qc: [] };
+    let refused = null;
+    if (online() && !out.failed) {   // a failed scan is not a result, so it is not stored as one
       try {
-        await api('/api/readings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-          device_code: DEVICE, arsenic_ppb: Math.round(ugl(out.asMgL) * 100) / 100, ph: reading.ph, conductivity_us_cm: reading.ec,
-          turbidity_ntu: reading.turb, temperature_c: reading.temp, source_type: 'simulated', source_label: 'Dashboard test',
+        const d = await api('/api/readings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+          device_code: SIM_DEVICE, arsenic_ppb: Math.round(ugl(out.asMgL) * 100) / 100, source_type: 'simulated', source_label: 'Dashboard practice test',
         }) });
         saved = true; reading.savedOnServer = true;
-      } catch (e) { /* offline save failed: keep local */ }
+        if (d && d.reading) { reading.id = d.reading.id; reading.serverLabel = d.label; reading.qc = (d.reading.qc_flags || '').split(',').filter(Boolean); }
+      } catch (e) { refused = e && e.message ? e.message : 'offline'; }
     }
     setReading(reading);
     btn.disabled = false; btn.textContent = t('test.run');
-    if (!quiet) $('testMsg').textContent = t(saved ? 'test.savedServer' : 'test.saved');
+    if (out.failed) $('testMsg').textContent = t('test.failed', { why: failNotes.map((k) => t(k)).join(' ') || t('class.Failed') });
+    else if (!quiet) $('testMsg').textContent = refused && online() ? t('test.refused', { why: refused }) : t(saved ? 'test.savedServer' : 'test.saved');
   }
 
   function drawChart() {
@@ -448,20 +532,31 @@
     const r = state.reading;
     if (!r) return null;
     const res = evaluate(r);
+    const vk = verdictKey(res, r);
+    const srcKey = { device: 'auth.src.device', import: 'auth.src.import', sim: 'auth.src.sim', demo: 'auth.src.demo' }[r.source] || 'auth.src.demo';
     return [
+      ['auth.f.source', t(srcKey)],
       ['auth.f.station', `${r.device || DEVICE} (${t('auth.f.stationType')})`],
-      ['auth.f.contaminant', t('auth.f.arsenicTotal')],
-      ['auth.f.reading', `${r.asMgL.toFixed(4)} mg/L (${fmtUg(r.asMgL)} µg/L)`],
+      // v5.7: the device measures As(III) unless total-arsenic pre-treatment is fitted (was "total dissolved")
+      ['auth.f.contaminant', t(r.species === 'total' ? 'auth.f.arsenicTotal' : 'auth.f.arsenicAs3')],
+      ['auth.f.reading', vk === 'Failed' ? t('auth.f.notValid') : belowLod(r) ? t('auth.f.notDetected') : `${r.asMgL.toFixed(4)} mg/L (${fmtUg(r.asMgL)} µg/L)`],
       ['auth.f.limits', 'WHO 10 µg/L · IS 10500: 10 µg/L (no relaxation since 2015)'],
-      ['auth.f.tier', `${t('class.' + verdictKey(res))} — ${t('verdict.' + verdictKey(res) + '.title')}`],
+      ['auth.f.tier', `${t('class.' + vk)} — ${t('verdict.' + vk + '.title')}`],
       ['auth.f.other', [
         r.ph == null ? null : `pH ${r.ph.toFixed(2)}`, r.ec == null ? null : `${Math.round(r.ec)} µS/cm`,
         r.turb == null ? null : `${r.turb.toFixed(1)} NTU`, r.temp == null ? null : `${r.temp.toFixed(1)} °C`,
       ].filter(Boolean).join(' · ') || t('auth.f.notMeasured')],
       ['auth.f.method', t('auth.f.methodVal')],
       ['auth.f.geotag', r.lat != null ? `${r.lat.toFixed(4)}°N, ${r.lon.toFixed(4)}°E` : t('auth.f.noGps')],
-      ['auth.f.time', fmtDateTime(r.time)],
+      ['auth.f.time', r.timeUnknown ? t('auth.f.timeUnknown', { d: fmtDateTime(r.time) }) : fmtDateTime(r.time)],
     ];
+  }
+  /** v5.7: only real readings with a valid result can be sent to authorities (was: anything, incl. practice tests). */
+  function reportBlocked(r) {
+    if (!r) return null;
+    if (r.source !== 'device' && r.source !== 'import') return 'auth.blockedSim';
+    if (verdictKey(evaluate(r), r) === 'Failed') return 'auth.blockedFailed';
+    return null;
   }
   function reportText() {
     const rows = reportRows();
@@ -478,14 +573,23 @@
       st.className = 'tag'; st.textContent = t('auth.status.none');
       ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).setAttribute('aria-disabled', 'true'));
     } else {
-      $('dispatchBody').innerHTML = rows.map(([k, v]) => `<dt>${t(k)}</dt><dd>${v.replace(/</g, '&lt;')}</dd>`).join('');
+      const blocked = reportBlocked(state.reading);
+      $('dispatchBody').innerHTML = (blocked ? `<dt>!</dt><dd class="dispatch-blocked">${esc(t(blocked))}</dd>` : '') +
+        rows.map(([k, v]) => `<dt>${t(k)}</dt><dd>${v.replace(/</g, '&lt;')}</dd>`).join('');
       const res = evaluate(state.reading);
-      const urgent = res.final === 'Unsafe' || res.final === 'Hazardous';
-      st.className = 'tag ' + (urgent ? 'tone-haz' : res.final === 'Caution' ? 'tone-caution' : 'active');
-      st.textContent = t(urgent ? 'auth.status.urgent' : res.final === 'Caution' ? 'auth.status.watch' : 'auth.status.ok');
-      ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).removeAttribute('aria-disabled'));
-      const subject = encodeURIComponent(t('auth.mail.subject', { code: (state.reading && state.reading.device) || DEVICE }) + ' — ' + t('class.' + res.final));
-      $('dEmail').href = `mailto:${encodeURIComponent(c.email || '')}?subject=${subject}&body=${encodeURIComponent(reportText())}`;
+      const vk = verdictKey(res, state.reading);
+      const urgent = vk === 'Unsafe' || vk === 'Hazardous';
+      if (blocked) {
+        st.className = 'tag'; st.textContent = t(blocked === 'auth.blockedSim' ? 'auth.status.practice' : 'auth.status.failed');
+        ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).setAttribute('aria-disabled', 'true'));
+        $('dEmail').removeAttribute('href');
+      } else {
+        st.className = 'tag ' + (urgent ? 'tone-haz' : vk === 'Caution' ? 'tone-caution' : 'active');
+        st.textContent = t(urgent ? 'auth.status.urgent' : vk === 'Caution' ? 'auth.status.watch' : 'auth.status.ok');
+        ['dEmail', 'dCopy', 'dShare', 'dPrint'].forEach((id) => $(id).removeAttribute('aria-disabled'));
+        const subject = encodeURIComponent(t('auth.mail.subject', { code: (state.reading && state.reading.device) || DEVICE }) + ' — ' + t('class.' + vk));
+        $('dEmail').href = `mailto:${encodeURIComponent(c.email || '')}?subject=${subject}&body=${encodeURIComponent(reportText())}`;
+      }
     }
     // directory buttons that use saved contacts
     const call = $('dirCallLocal'), mail = $('dirEmailLocal');
@@ -495,6 +599,7 @@
   }
   function flash(msg) { const m = $('dispatchMsg'); m.textContent = msg; clearTimeout(m._t); m._t = setTimeout(() => { m.textContent = ''; }, 4000); }
   async function copyReport() {
+    if (reportBlocked(state.reading)) { flash(t(reportBlocked(state.reading))); return; }
     const text = reportText(); if (!text) return;
     try { await navigator.clipboard.writeText(text); flash(t('auth.copied')); }
     catch (e) {
@@ -504,6 +609,7 @@
     }
   }
   function printReport() {
+    if (reportBlocked(state.reading)) { flash(t(reportBlocked(state.reading))); return; }
     const rows = reportRows(); if (!rows) return;
     const w = window.open('', '_blank', 'width=760,height=900');
     if (!w) { window.print(); return; }
@@ -529,11 +635,13 @@
     const canPdf = online() && state.reading && state.reading.savedOnServer;
     pdf.setAttribute('aria-disabled', canPdf ? 'false' : 'true');
     pdf.textContent = t(canPdf ? 'rep.pdf' : 'rep.pdfOff');
-    if (canPdf) pdf.href = UI().API + '/api/reports/certificate/pdf'; else pdf.removeAttribute('href');
+    // v5.7: the report is for the reading on screen (was: the newest reading of any device)
+    if (canPdf) pdf.href = UI().API + '/api/reports/certificate/pdf' + (state.reading.id ? '?reading_id=' + state.reading.id : '?device_code=' + encodeURIComponent(state.reading.device || DEVICE));
+    else pdf.removeAttribute('href');
   }
   // verdict as paint + words (never colour alone)
   function vchip(cls, asMgL) {
-    const key = cls === 'Below Sensor LOD' || (cls === 'Safe' && asMgL != null && ugl(asMgL) < 20) ? 'Clear' : cls;
+    const key = cls === 'Test Failed' ? 'Failed' : cls === 'Below Sensor LOD' || (cls === 'Safe' && asMgL != null && ugl(asMgL) < 20) ? 'Clear' : cls;
     return `<span class="vchip c-${esc(String(cls).replace(/\s+/g, ''))}">${esc(t('class.' + key))}</span>`;
   }
   function downloadCsv() {
@@ -551,12 +659,21 @@
   // ---------------- device 3D + sparklines ----------------
   function deviceLabels() { return { lid: t('dev.p.lid'), base: t('dev.p.base'), well: t('dev.p.well'), strainer: t('dev.p.strainer') }; }
   /** Measurement-quality caveats from the node (As(III) only, copper, factory calibration). */
-  function renderQc(flags) {
+  // v5.7: device QC codes shown in plain words (scan faults, unverified sensor)
+  const QC_NOTE = { FLAT_SIGNAL: 'qc.FLAT_SIGNAL', NOISE_ABOVE_LOD: 'qc.NOISE', BASELINE_UNSTABLE: 'qc.NOISE', PEAK_AT_WINDOW_EDGE: 'qc.PEAK_EDGE',
+    QC_NOT_REPORTED: 'qc.NO_QC', CHECK_STANDARD_MISSING: 'qc.UNVERIFIED', CHECK_STANDARD_FAILED: 'qc.UNVERIFIED',
+    CHECK_STANDARD_OVERDUE: 'qc.UNVERIFIED', CALIBRATION_MISSING: 'qc.UNVERIFIED', CALIBRATION_EXPIRED: 'qc.UNVERIFIED' };
+  function renderQc(flags, extraKeys) {
     const ul = $('qcNotes');
     if (!ul) return;
-    const show = (flags || []).filter((f) => ['as3_only', 'copper_interference', 'uncalibrated'].includes(f));
-    ul.hidden = !show.length;
-    ul.innerHTML = show.map((f) => `<li class="qc-${f}">${esc(t('qc.' + f))}</li>`).join('');
+    const keys = [];
+    (extraKeys || []).forEach((k) => { if (!keys.includes(k)) keys.push(k); });
+    (flags || []).forEach((f) => {
+      const k = ['as3_only', 'copper_interference', 'uncalibrated'].includes(f) ? 'qc.' + f : QC_NOTE[f];
+      if (k && !keys.includes(k)) keys.push(k);
+    });
+    ul.hidden = !keys.length;
+    ul.innerHTML = keys.map((k) => `<li class="qc-${k.replace(/\W/g, '_')}">${esc(t(k))}</li>`).join('');
   }
   function loadScript(src) {
     return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
@@ -791,8 +908,10 @@
       clearTimeout(fleetTimer);
       fleetTimer = setTimeout(loadFleet, 700);
       if (d.source_type === 'hardware') {
-        toast(t('live.reading', { code: d.device_code, v: fmtUgNum(d.arsenic_ppb), cls: t('class.' + (d.classification === 'Below Sensor LOD' ? 'Clear' : d.classification)) }), false);
+        toast(t('live.reading', { code: d.device_code, v: fmtUgNum(d.arsenic_ppb), cls: t('class.' + (SERVER_KEY[d.classification] || d.classification)) }), false);
+        // follow the device on screen; a real device reading also replaces "no reading" or an older device reading
         if (state.reading && state.reading.device === d.device_code) loadLatestFromServer(d.device_code);
+        else if (d.source_type === 'hardware' && (!state.reading || state.reading.source === 'device')) loadLatestFromServer(d.device_code);
       }
     });
     live.addEventListener('alert', (e) => {
@@ -819,7 +938,8 @@
   // ---------------- init ----------------
   document.addEventListener('DOMContentLoaded', () => {
     $('demoBtn').addEventListener('click', loadDemo);
-    document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => runTest(parseFloat(b.dataset.quick), { quiet: true })));
+    document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => (
+      b.dataset.quick === 'fault' ? runTest(0, { fault: true }) : runTest(parseFloat(b.dataset.quick), { quiet: true }))));
     $('testAs').addEventListener('input', () => { $('testAsOut').textContent = $('testAs').value + ' µg/L'; });
     $('runTestBtn').addEventListener('click', () => runTest(parseFloat($('testAs').value) / 1000));
     NN_IDS.forEach(([id]) => $(id).addEventListener('input', updateNetwork));
@@ -856,6 +976,7 @@
       loadFleet();
     }));
     setInterval(() => { if (online() && !document.hidden) loadFleet(); }, 60000);
+    setInterval(() => { if (!document.hidden) renderMeta(); }, 60000);   // v5.7: the "reading is old" warning keeps up
 
     const canvas = $('heroFx');
     if (canvas && UI().WaterFX) { state.fx = new (UI().WaterFX)(canvas); if (!state.fx.ok) state.fx = null; }

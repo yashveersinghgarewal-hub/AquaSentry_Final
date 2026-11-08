@@ -107,6 +107,8 @@ class Reading(Base):
     arsenic_species = Column(String(16), nullable=True)   # total | as3_only | unknown (what the method can see)
     cu_peak_ua = Column(Float, nullable=True)             # copper stripping peak, if the node scanned for it
     qc_flags = Column(String(128), nullable=True)         # comma list, e.g. "copper_interference"
+    qc_status = Column(String(16), nullable=True)         # v5.7: pass | warning | fail (hardware readings)
+    time_source = Column(String(24), nullable=True)       # v5.7: device_clock | device_age | unknown | server_receipt
     calibration_ref = Column(String(64), nullable=True)   # calibration_id the node used
 
     # --- Bookkeeping & Raw Evidence ---
@@ -257,3 +259,20 @@ class AlertSubscription(Base):
     last_sent_at = Column(DateTime, nullable=True)
     last_error = Column(String(255), nullable=True)
     failures = Column(Integer, default=0)
+
+
+class QcRun(Base):
+    """v5.7: a blank or check-standard run. Proves the sensor still reads correctly (catches drift and dead
+    electrodes, which read LOW and would otherwise look like clean water)."""
+    __tablename__ = "qc_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_code = Column(String(64), index=True, nullable=False)
+    run_type = Column(String(24), nullable=False)          # blank | check_standard
+    expected_ug_l = Column(Float, nullable=True)           # true value of the check standard (0 for a blank)
+    measured_ug_l = Column(Float, nullable=True)
+    peak_current_ua = Column(Float, nullable=True)
+    recovery_pct = Column(Float, nullable=True)
+    passed = Column(Boolean, nullable=False)
+    detail = Column(Text, nullable=True)
+    recorded_at = Column(DateTime, default=utc_now, index=True)

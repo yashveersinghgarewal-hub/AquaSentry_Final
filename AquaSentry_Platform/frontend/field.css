@@ -432,3 +432,12 @@ button, [role="button"], summary, .chip, .btn, .nav-link, .dv-row { cursor: poin
 .fleet > * { min-width: 0; }
 .dev-tools .btn { white-space: normal; }
 .viewer-hint { background: var(--surface); color: var(--ink-2); padding: 3px 8px; border-radius: 4px; }
+
+/* v5.7: failed tests, old data, sensors that are not fitted, practice data kept out of reports */
+.verdict[data-tone="Failed"] { --paint: var(--paint-haz); }
+.vchip.c-TestFailed { background: var(--paint-haz); }
+.meta-warn { color: var(--paint-unsafe); font-weight: 600; }
+.reading-nm { font-size: 1rem; font-weight: 600; opacity: .75; }
+.dispatch-blocked { color: var(--paint-unsafe); font-weight: 600; }
+.chip-fault { border-style: dashed; }
+.pub-card.v-Failed { border-left-color: var(--paint-haz); }

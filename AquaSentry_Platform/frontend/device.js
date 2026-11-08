@@ -10,7 +10,7 @@
   const params = new URLSearchParams(location.search);
   const code = params.get('code') || '';
   const API = window.AQUASENTRY_API_URL || (location.port === '8001' ? 'http://127.0.0.1:8000' : location.origin);
-  const VCLS = { Safe: 'Safe', 'Below Sensor LOD': 'Clear', Caution: 'Caution', Unsafe: 'Unsafe', Hazardous: 'Hazardous' };
+  const VCLS = { Safe: 'Safe', 'Below Sensor LOD': 'Clear', Caution: 'Caution', Unsafe: 'Unsafe', Hazardous: 'Hazardous', 'Test Failed': 'Failed' };
   let data = null;
 
   try { const th = localStorage.getItem('aquasentry.theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) { /* default */ }
@@ -37,7 +37,11 @@
     const v = VCLS[r.classification] || 'Caution';
     card.className = 'pub-card v-' + v;
     $('pubVerdict').textContent = t('verdict.' + v + '.title');
-    $('pubValue').textContent = t('pub.value', { v: r.arsenic_ug_l < 10 ? r.arsenic_ug_l.toFixed(1) : Math.round(r.arsenic_ug_l) });
+    // v5.7: below the 20 µg/L detection limit the number is noise, so it is not shown as "x µg/L (limit 10)";
+    // a failed test has no valid number at all
+    $('pubValue').textContent = v === 'Failed' ? t('pub.failed')
+      : r.arsenic_ug_l < 20 ? t('pub.valueLow')
+        : t('pub.value', { v: Math.round(r.arsenic_ug_l) });
     const old = ageDays(r.recorded_at);
     $('pubWhen').textContent = t('pub.when', { d: when(r.recorded_at) }) + (old > 3 ? ' ' + t('pub.old', { n: Math.round(old) }) : '');
     $('pubWhen').classList.toggle('stale', old > 3);
@@ -46,10 +50,17 @@
     $('pubDemo').hidden = !r.is_demo;
     const qc = $('pubQc');
     // translated on the page from the flags (the server's caveat sentences are English only)
-    const flags = (r.qc_flags || []).filter((f) => ['as3_only', 'copper_interference', 'uncalibrated'].includes(f));
-    qc.hidden = !flags.length;
+    const QCK = { FLAT_SIGNAL: 'qc.FLAT_SIGNAL', NOISE_ABOVE_LOD: 'qc.NOISE', BASELINE_UNSTABLE: 'qc.NOISE', PEAK_AT_WINDOW_EDGE: 'qc.PEAK_EDGE',
+      QC_NOT_REPORTED: 'qc.NO_QC', CHECK_STANDARD_MISSING: 'qc.UNVERIFIED', CHECK_STANDARD_FAILED: 'qc.UNVERIFIED',
+      CHECK_STANDARD_OVERDUE: 'qc.UNVERIFIED', CALIBRATION_MISSING: 'qc.UNVERIFIED', CALIBRATION_EXPIRED: 'qc.UNVERIFIED' };
+    const keys = [];
+    (r.qc_flags || []).forEach((f) => {
+      const k = ['as3_only', 'copper_interference', 'uncalibrated'].includes(f) ? 'qc.' + f : QCK[f];
+      if (k && !keys.includes(k)) keys.push(k);
+    });
+    qc.hidden = !keys.length;
     qc.innerHTML = '';
-    flags.forEach((f) => { const li = document.createElement('li'); li.textContent = t('qc.' + f); qc.appendChild(li); });
+    keys.forEach((k) => { const li = document.createElement('li'); li.textContent = t(k); qc.appendChild(li); });
     const lab = $('pubLab');
     lab.hidden = !data.lab;
     if (data.lab) {
