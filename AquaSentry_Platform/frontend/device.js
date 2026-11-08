@@ -45,7 +45,7 @@
     // a failed test has no valid number at all
     $('pubValue').textContent = v === 'Failed' ? t('pub.failed')
       : r.arsenic_ug_l < 20 ? t('pub.valueLow')
-        : t('pub.value', { v: Math.round(r.arsenic_ug_l) }) + (r.uncertainty_ug_l != null ? ' ' + t('ov.unc', { u: Math.round(r.uncertainty_ug_l) }) : '');
+        : t('pub.value', { v: Math.round(r.arsenic_ug_l) + (r.uncertainty_ug_l != null ? ' ± ' + Math.round(r.uncertainty_ug_l) : '') });
     const old = ageDays(r.recorded_at);
     $('pubWhen').textContent = t('pub.when', { d: when(r.recorded_at) }) + (old > 3 ? ' ' + t('pub.old', { n: Math.round(old) }) : '');
     $('pubWhen').classList.toggle('stale', old > 3);

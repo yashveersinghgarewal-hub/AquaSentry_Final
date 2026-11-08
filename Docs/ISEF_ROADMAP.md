@@ -1,4 +1,4 @@
-# AquaSentry → Regeneron ISEF: 230 changes that move the needle
+# AquaSentry → Regeneron ISEF: 267 changes that move the needle
 
 Written 8 November 2026. Regeneron ISEF 2027 is **8–14 May 2027 in Los Angeles**; Team India is picked through the **IRIS National Fair**. This is a to-do list for the student team, not text to submit. Read the first section before anything else.
 

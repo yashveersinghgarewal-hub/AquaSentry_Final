@@ -54,7 +54,7 @@
       state.map = L.map('nodeMap', { scrollWheelZoom: false, attributionControl: true }).setView([23.5, 85.5], 5);
       state.map.attributionControl.setPrefix('Leaflet');
       L.tileLayer((window.AQUASENTRY_TILES || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'), {
-        maxZoom: 18, attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(state.map);
       state.layer = L.layerGroup().addTo(state.map);
     });
@@ -133,7 +133,11 @@
         const one = (key, n) => (n === 1 && ['en', 'hi'].includes(window.I18N.lang) ? key + '.one' : key);
         const parts = [t(one('lab.pairs', v.n_pairs), { n: v.n_pairs })];
         if (v.lab_above_limit) parts.push(v.missed_unsafe ? t('lab.missed', { m: v.missed_unsafe, n: v.lab_above_limit }) : t(one('lab.caught', v.lab_above_limit), { n: v.lab_above_limit }));
-        if (v.mean_bias_ug_l != null) parts.push(t('lab.bias', { b: (v.mean_bias_ug_l > 0 ? '+' : '') + v.mean_bias_ug_l }));
+        // v5.10: say which way the sensor is off, in words, to one decimal ("reads 21.7 µg/L lower than the lab")
+        if (v.mean_bias_ug_l != null) {
+          const b = Math.abs(v.mean_bias_ug_l);
+          parts.push(b < 0.5 ? t('lab.bias.none') : t(v.mean_bias_ug_l < 0 ? 'lab.bias.low' : 'lab.bias.high', { b: b.toFixed(1) }));
+        }
         if (v.lab_as3_fraction != null) parts.push(t('lab.as3', { p: Math.round(v.lab_as3_fraction * 100) }));
         sum.textContent = parts.join(' ');
       }

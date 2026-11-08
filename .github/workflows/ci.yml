@@ -23,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -36,7 +36,7 @@ jobs:
           sudo apt-get install -y clang gcc g++
 
       - name: Set up Node (dashboard JS checks + browser-engine parity test)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -79,11 +79,11 @@ jobs:
     # lazy loading, a WCAG 2.2 AA audit (axe-core) and Lighthouse scores.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Install
@@ -134,7 +134,7 @@ jobs:
           - fqbn: esp32:esp32:esp32s3
             flags: "-DPULL_OTA=1 -DPIN_REAGENT_PUMP=15 -DPIN_TEMP_NTC=10 -DPIN_PH_ADC=1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Free disk space (the ESP32 toolchains are large)
         run: |

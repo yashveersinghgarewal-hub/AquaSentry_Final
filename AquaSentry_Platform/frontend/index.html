@@ -46,7 +46,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><span class="judge-badge" id="judgeBadge" data-i18n="judge.badge" hidden>Judging mode</span><b>AquaSentry v5.9</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><span class="judge-badge" id="judgeBadge" data-i18n="judge.badge" hidden>Judging mode</span><b>AquaSentry v5.10</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -121,13 +121,18 @@
             <div class="fig-sub" id="asMgl"></div>
             <p class="unc-line" id="uncLine" hidden></p>
             <button class="btn btn-quiet btn-wide" type="button" id="viewScanBtn" hidden data-i18n="test.viewScan">View the recorded scan</button>
-            <button class="btn btn-primary btn-wide" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
-            <div class="quick">
-              <span data-i18n="ov.quick">Try a sample:</span>
-              <button class="chip" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
-              <button class="chip" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
-              <button class="chip" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
-              <button class="chip chip-fault" type="button" data-quick="fault" data-i18n="test.fault">Electrode fault</button>
+            <!-- v5.10: practice controls are grouped and labelled apart from the real result above them -->
+            <div class="practice" role="group" aria-labelledby="practiceLabel">
+              <p class="practice-label" id="practiceLabel" data-i18n="ov.practice">Practise without a sensor</p>
+              <p class="practice-note" data-i18n="ov.practice.note">Practice results are labelled as practice and never reach authorities or alerts.</p>
+              <button class="btn btn-quiet btn-wide" type="button" id="demoBtn" data-i18n="ov.loadDemo">Load demo data</button>
+              <div class="quick">
+                <span data-i18n="ov.quick">Try a sample:</span>
+                <button class="chip" type="button" data-quick="0.006" data-i18n="ov.quick.clean">Clean</button>
+                <button class="chip" type="button" data-quick="0.035" data-i18n="ov.quick.border">Borderline</button>
+                <button class="chip" type="button" data-quick="0.120" data-i18n="ov.quick.bad">Contaminated</button>
+                <button class="chip chip-fault" type="button" data-quick="fault" data-i18n="test.fault">Electrode fault</button>
+              </div>
             </div>
           </aside>
         </div>
@@ -602,7 +607,7 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5.9, AquaNet-V3</span>
+      <span>AquaSentry v5.10, AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>

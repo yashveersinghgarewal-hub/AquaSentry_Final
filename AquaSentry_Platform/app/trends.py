@@ -25,6 +25,7 @@ from statistics import median
 from typing import Dict, List, Optional, Sequence, Tuple
 
 ALPHA = 0.10
+PROJECTION_HORIZON_DAYS = 730          # v5.10: straight-line projections beyond two years are not shown as a date
 MIN_POINTS = 6
 MAX_POINTS = 400        # beyond this even daily medians are thinned to weekly medians
 
@@ -131,8 +132,16 @@ def analyse(points: List[Tuple[datetime, float]], lod: float, limits: Sequence[f
         days_to = (nxt - recent) / slope
         out["projection"] = {"limit_ug_l": nxt, "days": round(days_to, 1),
                              "note": "Straight-line estimate from Sen's slope; real aquifers can change faster or slower."}
-        out["message"] = (f"Arsenic is rising by about {slope * 7:.1f} µg/L per week. "
-                          f"At this rate it would reach {nxt:g} µg/L in about {days_to:.0f} days.")
+        # v5.10: a straight line is not a forecast years ahead; beyond two years say so instead of "in about 4539 days"
+        if days_to > PROJECTION_HORIZON_DAYS:
+            out["message"] = (f"Arsenic is rising slowly, by about {slope * 7:.1f} µg/L per week. At this rate it would not "
+                              f"reach {nxt:g} µg/L within two years.")
+        elif days_to > 60:
+            out["message"] = (f"Arsenic is rising by about {slope * 7:.1f} µg/L per week. "
+                              f"At this rate it would reach {nxt:g} µg/L in about {days_to / 30.4:.0f} months.")
+        else:
+            out["message"] = (f"Arsenic is rising by about {slope * 7:.1f} µg/L per week. "
+                              f"At this rate it would reach {nxt:g} µg/L in about {days_to:.0f} days.")
     elif direction == "rising":
         out["message"] = f"Arsenic is rising by about {slope * 7:.1f} µg/L per week."
     elif direction == "falling":

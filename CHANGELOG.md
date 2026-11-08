@@ -2,6 +2,34 @@
 
 Full story of every change since v5.1, with reasons and sources: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
+## v5.10 — what is left, honest status, clearer screens, current dependencies
+**What is left before ISEF**
+- New `Docs/REMAINING_WORK.md`: every one of the 213 open roadmap items as a checklist, the 53 must-do (P0) items first, then lab, field, "run the ready-made tools on real data", "finish what the software started" and team work, plus the open tasks outside the roadmap. Generated from the status CSV by `Analysis/roadmap_status.py`; a test keeps it in sync and checks every open item appears exactly once.
+- Status register made honest: 29 items marked **Done** only because their software existed (blanks, check standards, spike recovery, blind and randomised runs, sample collection, the statistics, the AquaNet evaluation, board demonstrations, poster figures) are now **Tooling ready** ("software ready, not yet run on real samples or hardware"), and item 122 (share results back) is team work. Now 54 done, 50 tooling ready, 38 partial, 2 open, 104 team, 19 lab/field. Two rows whose next step had unquoted commas (158, 205) were being cut short; fixed, with a test.
+- Roadmap title says 267 items (it said 230); `Docs/ROADMAP_COVERAGE.md` too. The README counts are checked against the register by a test. The missing v5.9 changelog entry is added below.
+
+**Screens**
+- Practice controls (Load demo data, Try a sample) are grouped under "Practise without a sensor" with a note that practice results never reach authorities or alerts, and the demo button is no longer styled as the main action next to a real result.
+- Lab summary in words: "On average the sensor reads 21.7 µg/L lower than the lab" instead of "reads -21.73 µg/L compared with the lab".
+- Device list: where and when on one line, the numbers on the next. "Last reading" is now the age of the newest measurement, not of the last upload, so a node that has only re-sent old readings no longer says "0 min ago".
+- Public QR page: "Arsenic: 195 ± 15 µg/L (limit 10)" instead of "195 µg/L (limit 10) ± 15 µg/L". The ± on the dashboard is stated once, in the uncertainty line.
+- Trend warnings no longer project years ahead ("would reach 150 µg/L in about 4539 days"): beyond two years they say so, beyond two months they speak in months.
+- Phones: the floating assistant button no longer covers the end of a section (WCAG 2.2 SC 2.4.11), the lab and history tables scroll sideways instead of breaking dates over three lines, and its pulse stops under reduced motion. Map attribution links to the OpenStreetMap copyright page, as the tile policy asks.
+- One version label everywhere (market, sales and simulator pages said v5.4 / v5.8); a test ties it to this changelog.
+
+**Demo and dependencies**
+- Demo programme: every reading names the calibration that produced it (the Bhojpur well uses its own standard addition), so no demo node claims "factory calibration"; demo nodes report firmware 5.9.0.
+- Dependabot updates folded in: FastAPI ≥ 0.162, Uvicorn ≥ 0.54, httpx ≥ 0.28.1, pypdf ≥ 6.21.4, langchain-community ≥ 0.4.2; GitHub Actions checkout, setup-python and setup-node v7. All tests pass on the newest versions (FastAPI 0.162.2, Starlette 1.10, SQLAlchemy 2.1.8, pydantic 2.14.3, pypdf 7.0).
+
+## v5.9 — the ISEF roadmap, item by item
+- Status register for all 267 items (`Docs/planning/isef_roadmap_status.csv` → `Docs/ISEF_ROADMAP_STATUS.md`).
+- Sample metadata with every reading and scan (source kind, depth, purge, bottle, preservation, collector initials, collection time, custody note, split for the lab); migration 0005.
+- QC run types: field blank, spike recovery (80–120 %), pH buffer, conductivity, turbidity and temperature checks; `/api/qc/status` reports which sensors are verified.
+- Judging mode (`?mode=judging` or the podium button) hides market, sales, impact and the assistant.
+- Analysis scripts: AquaNet field evaluation, interference, blinded run order, control chart, peak check, project figures (Gantt, design history, cost, landscape, QR), one-command poster figures; paired validation adds the 50 µg/L cutoff, per-lot and per-site tables, replicate CV and sample sizes.
+- Documents: AI-use statement template, credits, decision log, FMEA, requirements traceability, measurement SOP, pinout, hardware changelog, privacy and performance, demo script.
+- Firmware 5.9.0 reports time to first result; certificates name firmware, model, analysis and calibration versions; export coordinates rounded to about 100 m unless asked.
+
 ## v5.8 — one outcome per test, scans kept as evidence, validation tooling
 
 Use: `AquaSentry_v5.8.zip` / branch `main`. Built from the Research and Engineering Review of 8 Nov 2026 (60 items) and the ISEF list; `Docs/ROADMAP_COVERAGE.md` maps every item to code, tests or "needs the lab". Nothing here claims the sensor works: it makes every result traceable and every claim checkable.

@@ -4,6 +4,7 @@
 | --- | --- |
 | [HOW_TO_RUN.md](HOW_TO_RUN.md) | Every way to run it: desktop app, browser, Docker, ESP32, demo data, tests, troubleshooting |
 | [ISEF_ROADMAP.md](ISEF_ROADMAP.md) | 267 prioritised changes for Regeneron ISEF / IRIS level judging, with the rules that can disqualify a project |
+| [REMAINING_WORK.md](REMAINING_WORK.md) | Everything still to do before ISEF, as a checklist: must-do items first, then lab, field, data, writing and practice (generated from the status register) |
 | [ISEF_ROADMAP_STATUS.md](ISEF_ROADMAP_STATUS.md) | Status of all 267 roadmap items: done in software / tooling ready / partial / team / lab / field, with where the code or next step is (from `planning/isef_roadmap_status.csv`) |
 | [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md) | Each design criterion → the test that proves it → result or target; constraints and the software's response |
 | [FMEA.md](FMEA.md) | Failure modes, how each is detected and reported, which test proves it; safety by design |

@@ -1,7 +1,7 @@
 # Roadmap coverage: what the software has done, what needs the bench and the field
 
 Two documents guide the project: the **Research and Engineering Review** (8 Nov 2026, 60 targeted improvements) and
-the **ISEF list** (`Docs/ISEF_ROADMAP.md`, 230 items). This page maps every software-closable item to the code and
+the **ISEF list** (`Docs/ISEF_ROADMAP.md`, 267 items). This page maps every software-closable item to the code and
 tests that close it, and says plainly which items can only be closed with chemicals, a laboratory and real hardware.
 A ✅ here means "the code and its test exist", never "the sensor has been shown to work".
 
@@ -82,9 +82,9 @@ A ✅ here means "the code and its test exist", never "the sensor has been shown
 | 55 | Claim and evidence register | ✅ v5.8 | `Docs/CLAIMS_REGISTER.md`. |
 | 56–60 | Workflow timing, replication, submissions | ⏳ team | Not software. |
 
-## ISEF list (230 items): the software's share
+## ISEF list (267 items): the software's share
 
-Most of the 230 items are research, chemistry, documentation and presentation work that no code can do. The items
+Most of the 267 items are research, chemistry, documentation and presentation work that no code can do. The items
 the software contributes to:
 
 - **B 24–26, 30, 34**: measurable criteria and honest limits; the dashboard, PDF and chatbot state IS 10500 Amendment 1 (2015) and WHO 10 µg/L, and never call the device "AI-powered" as the problem statement.
@@ -92,6 +92,6 @@ the software contributes to:
 - **E 75–76**: raw voltammograms are stored and viewable per reading; the peak-finding algorithm has fixtures (synthetic bumps, spikes, shifted peaks) — the ≥ 50 hand-measured scans remain to be collected.
 - **F 88–92**: blanks and check standards (`/api/qc/runs`), calibration records printed on each result, factory calibration marked synthetic.
 - **G–H (data analysis and statistics)**: `Analysis/paired_validation.py` (Deming, Bland–Altman, Wilson CIs, ROC, rule of three) and `Analysis/aquanet_v2_pipeline.py` (grouped CV, conformal intervals, referral curve).
-- **K (software quality)**: 289 server tests, browser + accessibility tests, firmware host build for three chips, CI.
+- **K (software quality)**: the server tests, browser + accessibility tests, firmware host build for three chips, CI.
 
-Everything else in the list is for the team's logbook, not this repository.
+Everything else in the list is for the team's logbook, not this repository. The item-by-item status is `Docs/ISEF_ROADMAP_STATUS.md`; what is left is `Docs/REMAINING_WORK.md`.
