@@ -24,4 +24,12 @@ Only the latest release on `main` gets fixes.
   give the nodes the CA certificate (`ROOT_CA_PEM` in the firmware).
 - Set `ALERT_WEBHOOK_SECRET` so alert receivers can verify signatures.
 - Set `METRICS_PUBLIC=0` if device names and reading counts should not be public.
-- OTA updates stay off on the nodes unless `OTA_PASS` is set (8+ characters).
+- OTA updates stay off on the nodes unless `OTA_PASS` is set (8+ characters). Server-pulled updates
+  (`PULL_OTA`) are checked against the MD5 the server sends; serve them over HTTPS with `ROOT_CA_PEM`.
+- Set `AQUASENTRY_READ_KEY` if readings and locations should not be readable by everyone on the network
+  (QR sticker pages stay public unless `PUBLIC_DEVICE_PAGES=0`).
+- **Nodes left in public places:** a stolen ESP32's flash can be read out, including its Wi-Fi password
+  and device key. For field nodes, enable flash encryption and NVS encryption (ESP-IDF / Arduino:
+  `espefuse` + an encrypted NVS partition; see Espressif's "Flash Encryption" and "NVS Encryption" guides).
+  This burns eFuses and cannot be undone, so practise on a spare board first. Revoke a lost node's key
+  with `DELETE /api/admin/devices/{code}/key`.

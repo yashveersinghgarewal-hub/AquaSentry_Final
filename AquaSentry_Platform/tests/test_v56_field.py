@@ -182,3 +182,23 @@ def test_firmware_upload_latest_and_download(client):
     assert client.get("/api/firmware/latest?board=esp32c3&current=5.6.0").status_code == 204
     dl = client.get(lat["url"])
     assert dl.content == fake and dl.headers["x-md5"] == up["md5"]
+
+
+@pytest.mark.parametrize("single", ["0", "1"])
+def test_old_database_upgrades_in_both_connection_modes(single, tmp_path):
+    """Docker runs single-connection (Debian's SQLite lacks the WAL-reset fix). Upgrading a v5.5
+    database there once deadlocked at start-up; run the real start-up in a fresh process."""
+    import os
+    import shutil
+    import subprocess
+    import sys
+    platform = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db = tmp_path / "old.db"
+    shutil.copy(os.path.join(platform, "aquasentry.db"), db)
+    code = ("from app.database import init_db, schema_revision; print(init_db(), schema_revision()); "
+            "print(init_db(), schema_revision())")
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{db}", "SQLITE_SINGLE_CONNECTION": single}
+    out = subprocess.run([sys.executable, "-c", code], cwd=platform, env=env, capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr[-2000:]
+    lines = out.stdout.strip().splitlines()
+    assert lines[0].startswith("migrated 0002") and lines[1].startswith("upgraded 0002"), lines

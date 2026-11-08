@@ -75,10 +75,10 @@ START_TIME = _time.time()
 app = FastAPI(
     title="AquaSentry Water Safety & Surveillance API",
     description="Scientific backend and edge neural classifier for autonomous water quality monitoring.",
-    version="1.6.0",
+    version="1.7.0",
 )
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 log = get_logger("api")
 app.include_router(science_router.router)
 app.include_router(reports_router.router)

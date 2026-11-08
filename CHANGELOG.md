@@ -2,6 +2,33 @@
 
 Full story of every change since v5.1, with reasons and sources: **`IMPROVEMENT_LOG.md`**.
 
+## v5.6 — measurement honesty, lab confirmation, field programme tools, alerts to people
+**Measurement quality**
+- Readings carry `arsenic_species` (`as3_only` / `total`), `peak_current_ua`, `cu_peak_ua` and `calibration_ref`; the server adds `qc_flags` (`as3_only`, `copper_interference`, `uncalibrated`) and plain-language caveats to the dashboard, the public page and the JJM export. Verdict engines are unchanged (four-copy parity kept).
+- Firmware 5.6.0: optional reagent pump for **total arsenic** (dosed after the other sensors), **copper peak** scan past the arsenic window (kept out of the arsenic background fit), analog **NTC temperature, pH, conductivity (25 °C compensated) and turbidity** drivers, **calibration fetched from the server** daily and kept in flash, **server-pulled firmware updates** (`PULL_OTA`) with MD5 check and `esp_ota_mark_app_valid_cancel_rollback`, 60-byte offline records with automatic conversion of 5.5 buffers. Corrected suggested pins (the earlier suggestions collided with the bubble sensor and stepper).
+
+**Field programme**
+- Lab results (`POST/GET /api/lab-results`, auto-paired with the nearest node reading within 48 h) and `GET /api/validation`: missed unsafe samples, sensitivity with a Wilson 95% interval, false alarms, bias / MAE / RMSE, node-vs-lab slope, As(III) share and node recovery.
+- Calibration: external standards and **standard addition** (`POST /api/admin/calibrations/...`), per device or global, R² warning, `GET /api/devices/{code}/calibration` for nodes.
+- Device sites (`PUT /api/admin/devices/{code}/site`: coordinates, state / district / block / panchayat / village, source kind), **Jal Jeevan Mission style CSV** (`/api/data/export/jjm`, mg/L, limit, status, lab rows), public QR pages (`/api/public/devices/{code}`, `device.html`).
+- Firmware distribution: `POST /api/admin/firmware`, `GET /api/firmware/latest`, downloads with `x-MD5`.
+
+**Alerts**
+- Web Push (VAPID keys generated and kept next to the database), WhatsApp Cloud API utility templates and SMS (MSG91 flow with DLT, or Twilio). Only hardware readings notify people; one message per subscriber per node per `ALERT_REPEAT_MIN` unless it gets worse; rising trends reach WARNING subscribers; dead push subscriptions are switched off. `/api/alerts/channels`, subscribe / unsubscribe, admin phone subscriptions, test send.
+
+**Platform**
+- Alembic migrations (baseline + v5.6), applied at start-up for new, old and current databases; schema revision in `/api/health`.
+- `main.py` split: `app/deps.py`, `app/routers/{science,reports,field,auth,alerts,firmware}.py`; structured logging (`LOG_FORMAT=json`) with the request ID on every line.
+- Optional read protection (`AQUASENTRY_READ_KEY`): header key, device key or a signed 30-day cookie from `POST /api/auth/login`.
+- **Fixed:** in single-connection mode (SQLite without the WAL-reset fix, e.g. GitHub's runners) `/api/health` waited 30 s for a second connection and reported no schema; CI now also runs the suite in that mode. Also fixed: upgrading an existing database in that mode deadlocked at start-up, so the Docker container did not start.
+
+**Dashboard**
+- Map of nodes (Leaflet, bundled; loads when scrolled to), device tools (public page, QR sticker, JJM CSV), lab checks panel with an entry form, quality caveats under the verdict, "Get alerts on this phone", sign-in dialog, history chart without the tangle (daily-highest line when there are many sources).
+- **Bengali, Assamese and Punjabi** (language menu; files load on demand; safety-critical text translated, the rest falls back to English). Dates in the chosen locale.
+- **Strict style CSP** (`style-src 'self'`) on the dashboard and public page: all inline `style` attributes replaced; OpenStreetMap tiles allowed in `img-src` (`MAP_TILE_URL`). 3D model lazy-loaded; service worker v5.6 with push notifications.
+- Browser tests (`tests_e2e/`, Playwright): no console errors or CSP violations, no sideways scroll at 390 px, map markers, languages, QR page, lazy 3D, axe WCAG 2.2 AA; Lighthouse CI (local run: dashboard 96 / 100 / 100 / 100, public page 100 / 100 / 100 / 100).
+- Tests: 236 (22 toolkit + 214 platform) + 9 browser tests.
+
 ## v5.5 — signed alerts, metrics, low-power ESP32, Docker and GitHub readiness
 **Server (API 1.6.0)**
 - **Signed, retried alert webhooks** (`app/webhooks.py`): Standard Webhooks headers (`webhook-id`, `webhook-timestamp`, `webhook-signature: v1,<HMAC-SHA256>`) with `ALERT_WEBHOOK_SECRET` (`whsec_` base64 or plain text); network errors, 408/425/429 and 5xx retried after 1 s, 4 s, 16 s with the same id; other 4xx not retried; only http(s) URLs accepted (urllib would open `file://`). A `verify()` helper for receivers.

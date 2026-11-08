@@ -1,4 +1,4 @@
-# AquaSentry improvement log (v5.1 → v5.5)
+# AquaSentry improvement log (v5.1 → v5.6)
 
 Every change made to this repository since the v5.1 baseline (commit `667a469`, "black & blue UI with a motion layer"), with the reason for it, where it lives, and how it is tested. Newest release last, so it reads as a story; `CHANGELOG.md` has the short version.
 
@@ -8,9 +8,10 @@ Every change made to this repository since the v5.1 baseline (commit `667a469`, 
 | v5.2 | `1ec3697` | Correct arsenic limit, honest verdicts, bug fixes, write protection, retrained AquaNet-V3 |
 | v5.3 | `8fba1a6` | ESP32 hardening, device fleet API, "field kit" dashboard |
 | v5.4 | `52eae72` | Backend hardening (keys, rate limits, CSP, backups), live updates, trend early warning, UI accessibility and offline mode |
-| v5.5 | this release | Signed + retried alerts, Prometheus metrics, faster and more honest trends, offline chat, optional HTTPS / battery / deep sleep on the ESP32, Docker and GitHub readiness, lint and accessibility audit |
+| v5.5 | `d8c0c6e` | Signed + retried alerts, Prometheus metrics, faster and more honest trends, offline chat, optional HTTPS / battery / deep sleep on the ESP32, Docker and GitHub readiness, lint and accessibility audit |
+| v5.6 | this release | Measurement honesty (As(III)-only, copper, calibration), lab confirmation, field tools (map, QR pages, JJM export), alerts to phones / WhatsApp / SMS, three more languages, migrations, browser tests |
 
-Tests: **110 → 139 → 167 → 185 → 206** (22 neural toolkit + 184 platform). Run them with `python main.py --test`.
+Tests: **110 → 139 → 167 → 185 → 206 → 236** (22 neural toolkit + 214 platform), plus 9 browser tests. Run them with `python main.py --test`.
 
 ---
 
@@ -20,6 +21,7 @@ Tests: **110 → 139 → 167 → 185 → 206** (22 neural toolkit + 184 platform
 3. [v5.3: ESP32 hardening, fleet API, field-kit UI](#3-v53-esp32-hardening-fleet-api-field-kit-ui)
 4. [v5.4: backend hardening, live data, trends, UX](#4-v54-backend-hardening-live-data-trends-ux)
 4b. [v5.5: alerts, metrics, low-power ESP32, Docker, GitHub](#4b-v55-alerts-metrics-low-power-esp32-docker-github)
+4c. [v5.6: can the reading be trusted, and who hears about it](#4c-v56-can-the-reading-be-trusted-and-who-hears-about-it)
 5. [API reference: everything added or changed](#5-api-reference-everything-added-or-changed)
 6. [Settings added](#6-settings-added)
 7. [Upgrade notes (behaviour that changed)](#7-upgrade-notes-behaviour-that-changed)
@@ -191,6 +193,62 @@ The 21st.dev component service and the UI UX Pro Max skill were not installed in
 
 ---
 
+## 4c. v5.6: can the reading be trusted, and who hears about it
+
+This round started from a research pass (web + code) that produced 19 findings; all 19 were acted on. The ones that need the physical world (a bench test with As(V) standards, WhatsApp / SMS accounts) are built and tested against stand-ins, and marked as such.
+
+### 1. The sensor may miss half the arsenic (As(III) vs As(V))
+- **Why:** groundwater carries arsenic as As(III) and As(V). On a gold electrode As(V) is electrochemically inactive; Metrohm's gold-electrode method reduces it in an acidic sulfamic / citric acid / KCl electrolyte before measuring total arsenic. The node pumped raw water and deposited at −1100 mV with no electrolyte, so it most likely saw As(III) only and could report "No arsenic detected" for unsafe water.
+- **What:** the firmware reports what it can see (`arsenic_species`: `as3_only` without a reagent pump, `total` with one). An optional MOSFET-switched dosing pump (`PIN_REAGENT_PUMP`) adds the electrolyte **after** pH / conductivity / turbidity are read (it changes them), waits `REAGENT_MIX_MS`, then measures. The server turns `as3_only` into a quality flag and a plain-language caveat ("the real level can be higher; confirm with a lab test") on the dashboard, the QR page and the JJM export. The four verdict engines are untouched, so Python / JS / C parity holds.
+- **Still to do in the real world:** bench-test dose, mixing time and deposition potential with As(V) standards; the lab-confirmation feature below is how the field answer gets measured.
+
+### 2. Copper interference
+- Copper strips near arsenic on gold and forms Cu-As intermetallics that suppress the arsenic peak. With `COPPER_CHECK` (default on) the sweep continues `COPPER_OFFSET_MV` past the arsenic window and measures the copper peak over a straight local baseline; the extension is kept out of the arsenic background fit (a host test checks both loops stop at the arsenic sweep). The server flags `copper_interference` when the copper peak is ≥ `COPPER_FLAG_RATIO` (3) × the arsenic peak (noise floor 0.05 µA).
+
+### 3. The other sensors were stubs
+- `read_ph()`, `read_conductivity()`, `read_turbidity()` and `read_temperature()` returned NAN. Now: 10 kΩ NTC thermistor (Beta equation, open / short detection), two-buffer pH calibration (the serial monitor prints the board's mV for it), DFRobot-style EC curve compensated to 25 °C with the measured temperature, SEN0189-style turbidity curve, all through the factory-calibrated `analogReadMilliVolts` on ADC1 pins. All optional (`-1` = not fitted). The suggested pins were checked against each board profile; the first suggestion (34 / 25 on ESP32) collided with the bubble sensor and the stepper and was corrected before release.
+
+### 4. Calibration that matches the electrode and the water
+- `POST /api/admin/calibrations/external` (≥ 3 standards: least squares, LOD = 3.3·s/slope, R² warning below 0.98) and `POST /api/admin/calibrations/standard-addition` (sample + ≥ 2 spikes in the real water: the x-intercept gives the sample concentration with its standard error, and the slope includes matrix effects). Per device or global; a new active calibration retires the old one. Nodes fetch `GET /api/devices/{code}/calibration` at start-up and daily (RTC-timed, so low-power nodes do not ask on every wake), sanity-check it (slope 0.05–50 µA per mg/L), keep it in flash and stamp each reading with a CRC of the calibration id, so a reading made before a calibration change is never credited to the new one. A test fits a synthetic 30 µg/L sample with a 0.6 slope and recovers both exactly.
+
+### 5. Lab confirmation: the sensor's real record
+- `models.LabResult` + `POST /api/lab-results` (ICP-MS, HG-AAS, GF-AAS, ICP-OES, field test kit; As(III) if speciated; NABL flag). Results without a reading id pair with the node's reading nearest in time (± 48 h).
+- `GET /api/validation` leads with safety: of the samples the lab found above 10 µg/L, how many the node flagged (detected at ≥ 20 µg/L), the **missed** count, sensitivity with a Wilson 95% interval, false alarms; then bias, MAE, RMSE, node-vs-lab slope and R²; with speciation, the As(III) share and the node's recovery (which answers finding 1 with field data). The dashboard's Lab checks panel shows this in plain words and has an entry form; device cards and the QR page show the latest lab result.
+
+### 6. Alerts that reach people
+- `app/notify.py`: **Web Push** (VAPID keys generated once and stored next to the database; works on Android / desktop, and on iPhone 16.4+ from the Home Screen; 404 / 410 subscriptions switched off), **WhatsApp Cloud API** (approved utility template with 4 parameters: place, µg/L, verdict, what to do; about ₹0.145 per message in 2026, in-window utility messages no longer free from 1 October 2026), **SMS** (MSG91 flow, the template must be DLT-registered as TRAI requires; or Twilio). Messages in English or Hindi.
+- Rules: only **hardware** readings notify people (demo loads never do); one message per subscriber per node per `ALERT_REPEAT_MIN` (6 h) unless the level rises; statistically rising trends reach subscribers who chose WARNING. The service worker shows the notification and opens the node's public page on tap. Tests run every rule with fake senders and check the exact WhatsApp / MSG91 request bodies.
+
+### 7–10. Platform
+- **Migrations:** Alembic with a v5.5 baseline and a v5.6 revision (idempotent, batch mode for SQLite). `init_db()` creates new databases at head, stamps and upgrades pre-migration databases (after the old column patches), and upgrades current ones; tested on the shipped database, a fresh one and a repeat start.
+- **Structure:** `main.py` 2,000 → about 1,350 lines; shared helpers in `app/deps.py`; routers for science, reports, field, auth, alerts and firmware. Names tests used from `app.main` are re-exported.
+- **Logging:** `app/logs.py`, text or JSON (`LOG_FORMAT=json`), every line tagged with the request's `X-Request-ID` (a context variable set by the middleware); alerts, webhook deliveries and notification failures are logged with device and event fields.
+- **Read protection:** `AQUASENTRY_READ_KEY` guards GET / WebSocket / SSE for network clients. Allowed: this computer, the read or write key, a device key (so nodes can fetch calibration), or a signed 30-day HttpOnly SameSite=Strict cookie from `POST /api/auth/login`. Health, sign-in, QR pages and firmware downloads stay open. The dashboard asks for the key in a dialog.
+
+### 11. Firmware updates from the server
+- `POST /api/admin/firmware?board=&version=` stores a build (checks the 0xE9 ESP32 image magic, 4 MB cap) with MD5 / SHA-256 in a manifest; `GET /api/firmware/latest` answers 204 when the node is current; downloads carry `x-MD5`, which the ESP32's HTTPUpdate verifies before installing. With `PULL_OTA` the node checks daily, never during a test, over HTTPS if configured, and confirms the new build after its first successful upload (`esp_ota_mark_app_valid_cancel_rollback`). Flash and NVS encryption for nodes in public places is documented in `SECURITY.md` (it burns eFuses, so it stays a deliberate step).
+
+### 12. Fitting into the government process
+- `GET /api/data/export/jjm`: one row per sensor reading and per lab result with the location hierarchy, source type, test type (sensor / laboratory / field test kit), result in mg/L, 0.01 mg/L acceptable and permissible limit, status ("Not detected (below sensor detection limit; lab test needed)" for sensor non-detects) and QC remarks; UTF-8 with BOM for Excel and Indic place names. No public WQMIS upload API or template could be found, so the layout follows the public field list and asks users to confirm with their district laboratory.
+
+### 13–18. Dashboard
+- **Map** (Leaflet 1.9.4 bundled, BSD-2; OpenStreetMap tiles, `MAP_TILE_URL` to change), loaded only when the section is near the screen; circle markers in the test-kit colours; popups link to the QR page.
+- **QR stickers:** `device.html?code=` is a public page in plain words (verdict, value, age, what to do, caveats, lab result, demo marker); `&sticker=1` prints a QR sticker (qrcode-generator 1.4.4, MIT, error correction M).
+- **Bengali, Assamese and Punjabi** for the arsenic-belt states (West Bengal, Assam, Bihar, Punjab, …): a language menu replaces the two buttons; each file loads on demand; the safety-critical text (verdicts, what to do, warnings, reasons, readings, QR page, alerts, lab and map) is translated (206 strings each) and the rest falls back to English. A test checks coverage and that every `{placeholder}` matches English. Machine-assisted: a native-speaker review is still needed.
+- **Chart:** with more than four sources the per-source lines made a tangle; it now shows the points plus one dashed "highest reading each day" line.
+- **Strict style CSP:** the 28 `style=""` attributes became classes, template-built geometry is applied through the CSSOM (allowed by CSP), and the chart helper sets `style` through `cssText`. The dashboard and the QR page now get `style-src 'self'`; the older project pages keep their inline styles.
+- **Lighter first load:** the 176 KB 3D model loads when its section approaches; extra languages and the map load on use; the service worker precaches the new pages and handles push.
+- Fixed while testing: the devices grid was 429 px wide on a 390 px phone (grid items' min-content width), "1 lab results" wording, a missing disclosure arrow, English caveats on translated QR pages, and a low-contrast 3D hint.
+
+### 19. Tests that open the pages
+- `tests_e2e/` (Playwright): no console errors or CSP violations at 1440 px and 390 px, no sideways scrolling, one map marker per placed node (tiles answered locally, so tests never hit OpenStreetMap), device tools, the lab summary, all five languages and the remembered choice, the QR page and sticker, lazy 3D loading, and an axe-core WCAG 2.2 AA audit in both themes (0 violations). CI runs them plus Lighthouse CI (local run: dashboard 96 / 100 / 100 / 100, QR page 100 across the board).
+
+### A bug CI found
+- GitHub's runners have SQLite 3.45, so the server ran in its single-connection mode (the WAL-reset guard from v5.5). `/api/health` then asked for a second connection while the request held the only one, waited 30 s and reported no schema revision. Health now reuses the request's session, the full suite was re-run in that mode (205 tests, 8 s), and CI now runs it on every push.
+- The Docker smoke test then found a worse one in the same mode: upgrading an existing database at start-up held the only connection while the old column patches asked for another, so **the container never started**. The patches now run before the migration takes its connection; a test starts a fresh process on a copy of the shipped v5.5 database in both connection modes (it fails on the old code), and the image was rebuilt and checked: migrated to 0002, push key in `/data`, 30 parallel uploads, integrity check ok.
+
+---
+
 ## 5. API reference: everything added or changed
 
 | Method | Path | Since | Notes |
@@ -212,6 +270,22 @@ The 21st.dev component service and the UI UX Pro Max skill were not installed in
 | GET | `/api/metrics` | v5.5 | Prometheus text format |
 | GET | `/api/readings` | changed v5.5 | `X-Total-Count` header |
 | POST | `/api/chat` | changed v5.5 | Grounded offline answers when Gemini is missing or fails |
+| PUT | `/api/admin/devices/{code}/site` | v5.6 | Coordinates, state / district / block / panchayat / village, source kind |
+| POST, GET | `/api/lab-results` | v5.6 | Lab confirmations, auto-paired with the nearest reading |
+| DELETE | `/api/admin/lab-results/{id}` | v5.6 | Admin only |
+| GET | `/api/validation` | v5.6 | Sensor vs lab: missed unsafe, sensitivity (95% CI), bias, As(III) share |
+| POST | `/api/admin/calibrations/external`, `/standard-addition` | v5.6 | Admin only |
+| GET | `/api/calibrations`, `/api/devices/{code}/calibration` | v5.6 | The second is what nodes fetch |
+| GET | `/api/data/export/jjm` | v5.6 | Jal Jeevan Mission style CSV |
+| GET | `/api/public/devices/{code}` | v5.6 | QR page data; always open (`PUBLIC_DEVICE_PAGES=0` to close) |
+| GET | `/api/alerts/channels` | v5.6 | Which channels work, VAPID public key |
+| POST | `/api/alerts/subscribe/webpush`, `/unsubscribe/webpush` | v5.6 | Browser push |
+| POST, GET, DELETE | `/api/admin/alerts/subscriptions` | v5.6 | WhatsApp / SMS numbers (masked in lists) |
+| POST | `/api/admin/alerts/test` | v5.6 | Test message to every subscriber |
+| GET, POST | `/api/auth/status`, `/api/auth/login`, `/api/auth/logout` | v5.6 | Read protection sign-in |
+| POST | `/api/admin/firmware` | v5.6 | Upload a build (raw body) |
+| GET | `/api/firmware`, `/latest`, `/download/{board}/{version}` | v5.6 | Node updates, `x-MD5` header |
+| POST | `/api/readings` | changed v5.6 | Accepts `arsenic_species`, `peak_current_ua`, `cu_peak_ua`, `calibration_ref`; stores `qc_flags` |
 
 ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, `battery_mv`, `low_power_mode`, `wake_count`), `/setup`, `/update`.
 
@@ -235,6 +309,20 @@ ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, 
 | `ROOT_CA_PEM`, `ALLOW_INSECURE_TLS` | firmware | empty, 0 | HTTPS uploads |
 | `PIN_BATTERY_ADC`, `BATTERY_DIVIDER` | firmware | -1, 2.0 | Battery monitor |
 | `LOW_POWER_MODE`, `LOW_POWER_AWAKE_MS` | firmware | 0, 90000 | Deep sleep between tests |
+| `AQUASENTRY_READ_KEY` | `.env` | empty | Read protection for network clients |
+| `PUBLIC_DEVICE_PAGES` | `.env` | 1 | QR sticker pages |
+| `LOG_FORMAT`, `LOG_LEVEL` | `.env` | text, INFO | JSON logs with request ids |
+| `COPPER_FLAG_RATIO` | `.env` | 3 | Copper interference flag |
+| `ALERT_REPEAT_MIN` | `.env` | 360 | Minimum gap between messages per subscriber and node |
+| `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `.env` | generated | Web push keys |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE`, `WHATSAPP_GRAPH_VERSION` | `.env` | empty, v21.0 | WhatsApp alerts |
+| `SMS_PROVIDER`, `MSG91_*`, `TWILIO_*` | `.env` | empty | SMS alerts |
+| `MAP_TILE_URL` | `.env` | OpenStreetMap | Dashboard map tiles (also added to the CSP) |
+| `AQUASENTRY_DATA_DIR` | `.env` | next to the database | VAPID key and firmware builds |
+| `PIN_REAGENT_PUMP`, `REAGENT_PUMP_MS`, `REAGENT_MIX_MS` | firmware | -1, 1500, 30000 | Total arsenic |
+| `COPPER_CHECK`, `COPPER_OFFSET_MV` | firmware | 1, 250 | Copper scan |
+| `PIN_TEMP_NTC`, `PIN_PH_ADC`, `PIN_EC_ADC`, `PIN_TURBIDITY_ADC` (+ calibration constants) | firmware | -1 | Water-quality sensors |
+| `PULL_OTA`, `UPDATE_CHECK_HOURS`, `CALIBRATION_CHECK_HOURS` | firmware | 0, 24, 24 | Server updates and calibration |
 
 ## 7. Upgrade notes (behaviour that changed)
 
@@ -245,6 +333,9 @@ ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, 
 - Old firmware's NVS buffer is not migrated to LittleFS; upload pending readings before flashing 5.3.0.
 - v5.5: trends for nodes that report more than once a day are computed on daily medians, so `n` in the trend output counts days; `readings` has the raw count.
 - v5.5: with an `https://` server address and no `ROOT_CA_PEM`, firmware 5.5.0 keeps readings in its buffer instead of sending them unchecked.
+- v5.6: the database is migrated automatically on first start (Alembic); back it up first (`POST /api/admin/backup`).
+- v5.6: firmware 5.6.0 converts buffered 5.2–5.5 readings to the new record format on first start.
+- v5.6: nodes without a reagent pump now say their readings are As(III) only, and the dashboard shows a caveat. That is the honest state of the hardware, not a regression.
 
 ## 8. How each change is verified
 
@@ -256,6 +347,10 @@ ESP32 node pages (v5.3): `/`, `/status.json` (v5.5 adds `https`, `battery_pct`, 
 | `tests/test_v53_ui.py` | Every dashboard string in English and Hindi, chart geometry, scripts parse, field layer on all pages, service worker never caches the API |
 | `tests/test_v54_backend.py` | Headers + CSP hash, request IDs, rate limit 429, device keys, Mann-Kendall maths, trend endpoint + alert, CSV export + injection guard, SSE delivery, backups, validation, health |
 | `tests/test_v55_backend.py` | Webhook signature round trip, tampering, replay window, key rotation; retries only on transient errors; signed end-to-end delivery to a local receiver; metrics format and route templates; restricted metrics; `X-Total-Count`; request-ID sanitising; daily-median aggregation; trend cache hit and invalidation; offline and fallback chat; low-battery notice; single-connection guard |
+| `tests/test_v56_field.py` | Quality flags, sites, lab pairing and validation (missed unsafe, CI), standard addition recovers a known sample, calibration activation and node fetch, JJM CSV, public page, read protection (cookie, tampering, expiry, middleware), schema revision, firmware upload / latest / download |
+| `tests/test_v56_alerts.py` | Subscriptions, demo readings never notify, Hindi WhatsApp text, repeat suppression, per-device filters, gone push subscriptions switched off, WhatsApp / MSG91 request bodies, phone normalisation |
+| `tests/test_v56_ui.py` | Bengali / Assamese / Punjabi coverage and placeholders, language menu, strict style CSP on the dashboard and QR page, service-worker cache list and push handler, vendored libraries |
+| `tests_e2e/test_browser.py` | Real Chromium: errors, CSP, phone layout, map, languages, QR page, lazy 3D, WCAG 2.2 AA |
 | `tests/test_firmware_host_build.py` (v5.5 additions) | Sketch compiled after Arduino-style prototype insertion, as C++20 with `-Wvolatile`; sketch with HTTPS, battery and deep sleep switched on for 3 chips; offline record size unchanged; battery curve monotonic; TLS never unchecked by default; deep sleep keeps the stepper off |
 | `Neural_Network/v3_training/results/c_vs_python_parity_100k.txt` | C engine vs Python, 100,000 inputs |
 | GitHub Actions `firmware` job | Real ESP32 compile for esp32, esp32s3, esp32c3, plus the optional features on esp32 and esp32c3 |
@@ -272,6 +367,10 @@ Manual checks done for each release: server started, every page loaded in headle
 - 21st.dev components could be used if the dashboard moves to React, or if you connect the 21st MCP with your key.
 - Deep sleep, battery and HTTPS are compiled and type-checked but not yet bench-tested on a board; measure the real sleep current (development boards with USB chips and LEDs draw milliamps, not microamps).
 - The Docker image uses Debian's SQLite 3.46 with the single-connection guard; a base image with SQLite 3.51.3+ would allow a normal connection pool.
+- v5.6 needs the physical world next: a bench test of total-arsenic dosing with As(V) standards, a copper-standard scan to confirm the copper window, sensor calibration on real boards, and paired lab samples from the field (the validation endpoint is ready for them).
+- WhatsApp and SMS sending are tested against stand-ins; real sending needs a Meta-approved template and an MSG91 DLT template (or Twilio).
+- The Bengali, Assamese and Punjabi text is machine-assisted and should be reviewed by native speakers before field use.
+- OpenStreetMap's tile servers are for light use; a large deployment should set `MAP_TILE_URL` to its own or a paid tile service.
 
 ## 10. Sources
 
@@ -289,4 +388,9 @@ Manual checks done for each release: server started, every page loaded in headle
 - ESP-IDF GPIO hold in deep sleep (`gpio_hold_en`, `gpio_deep_sleep_hold_en`); Arduino-ESP32 `WiFiClientSecure` and `analogReadMilliVolts`.
 - Arduino forum: A4988 carrier boards pull ENABLE low (driver on by default).
 - axe-core rules for heading order and colour contrast (Deque).
+- Metrohm technical poster: arsenic determination at the gold electrode (As(III) vs total, sulfamic / citric acid / KCl electrolyte, copper removal).
+- Analytical Chemistry 1999 (Tufts): ASV arsenic sensor, Cu / Hg / Pb interference studies, standard addition.
+- CGWB arsenic report and India Water Portal overview (affected states); Vikaspedia on WQMIS and LIMS (Jal Jeevan Mission).
+- PWA Web Push on iOS in 2026 (webscraft.org) and MagicBell's iOS PWA guide; WhatsApp pricing changes (AiSensy, Oct 2026; Meta pricing docs); MSG91 v5 flow API.
+- OneUptime, production-ready FastAPI (2026); Alembic documentation (batch mode for SQLite).
 - UI UX Pro Max guideline database (github.com/nextlevelbuilder/ui-ux-pro-max-skill) and the 21st MCP README (github.com/21st-dev/magic-mcp).

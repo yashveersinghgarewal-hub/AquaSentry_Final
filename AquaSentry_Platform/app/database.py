@@ -227,13 +227,17 @@ def init_db() -> str:
     from . import models  # noqa: F401  (registers the tables)
 
     tables = set(inspect(engine).get_table_names())
+    legacy = "alembic_version" not in tables and ("readings" in tables or "devices" in tables)
+    if legacy:
+        # The old column patches open their own connections, so run them BEFORE holding one below:
+        # in single-connection mode a second connection would wait 30 s and the server would not start.
+        ensure_sqlite_columns()
     with engine.begin() as conn:
         cfg = _alembic_config(conn)
         if "alembic_version" in tables:
             command.upgrade(cfg, "head")
             how = "upgraded"
-        elif "readings" in tables or "devices" in tables:
-            ensure_sqlite_columns()
+        elif legacy:
             command.stamp(cfg, HEAD_BASELINE)
             command.upgrade(cfg, "head")
             how = "migrated"

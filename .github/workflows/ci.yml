@@ -74,6 +74,32 @@ jobs:
           SQLITE_SINGLE_CONNECTION: "1"
         run: python -m pytest -q tests
 
+  browser:
+    # The pages themselves: console errors, CSP violations, phone-width layout, map, languages, QR page,
+    # lazy loading, a WCAG 2.2 AA audit (axe-core) and Lighthouse scores.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt playwright
+          python -m playwright install --with-deps chromium
+          npm install --no-save axe-core@4.10.3
+      - name: Browser tests
+        working-directory: AquaSentry_Platform
+        env:
+          AXE_PATH: ${{ github.workspace }}/node_modules/axe-core/axe.min.js
+        run: python -m pytest -q tests_e2e
+      - name: Lighthouse
+        run: npx --yes @lhci/cli@0.14.0 autorun
+
   firmware:
     # Real compile of the ESP32 sketch with Espressif's Arduino core, for every supported chip.
     runs-on: ubuntu-24.04   # arduino/compile-sketches pins Python 3.12.4, which has no build for Ubuntu 26.04
