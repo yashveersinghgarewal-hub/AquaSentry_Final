@@ -20,6 +20,9 @@ def test_every_page_shows_the_same_release_as_the_changelog():
         if name.endswith(".html"):
             labels |= set(re.findall(r"AquaSentry (v5\.\d+)", _read(name)))
     assert len(labels) == 1, labels
+    # the service-worker cache is renamed with each release, or phones keep serving the old pages
+    sw = re.search(r"const VERSION = 'aquasentry-(v5\.\d+)'", _read("sw.js")).group(1)
+    assert {sw} == labels, (sw, labels)
     changelog = os.path.join(ROOT, "CHANGELOG.md")
     if os.path.exists(changelog):          # not in the Docker image
         latest = re.search(r"^## (v5\.\d+)\b", open(changelog, encoding="utf-8").read(), re.M).group(1)

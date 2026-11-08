@@ -3,7 +3,7 @@
    - pages: network first, cached copy when offline (so a new version shows up as soon as you are online)
    - scripts, styles, fonts, images: cache first (they change only with a new version below)
    - /api/ and live events are never cached: readings must always be fresh. */
-const VERSION = 'aquasentry-v5.8';   // new name = phones and laptops drop the older cached copies
+const VERSION = 'aquasentry-v5.10';   // new name = phones and laptops drop the older cached copies
 // The 3D model, the map library and the extra languages are cached the first time they are used.
 const PRECACHE = ['index.html', 'device.html', 'app.css', 'field.css', 'device.css', 'i18n.js', 'i18n-v5.js', 'shell.js', 'charts.js',
   'neural.js', 'asv.js', 'app.js', 'field-ui.js', 'device.js', 'vendor/qrcode.js', 'logo.svg', 'manifest.json', 'fonts/anek-latin-wdth-wght.woff2', 'fonts/mukta-latin-400-normal.woff2', 'fonts/mukta-latin-600-normal.woff2'];
