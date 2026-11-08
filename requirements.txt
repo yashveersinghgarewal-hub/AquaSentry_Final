@@ -10,6 +10,6 @@ google-genai
 python-dotenv>=1.0.0
 pytest>=8.0.0
 httpx>=0.27.0
-pypdf>=4.0  # tests read the text of generated PDF reports
+pypdf>=6.21.4  # tests read the text of generated PDF reports
 numpy>=1.23.0
 reportlab>=3.6.13
