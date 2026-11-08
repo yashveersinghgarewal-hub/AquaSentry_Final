@@ -52,6 +52,12 @@ class ReadingCreate(BaseModel):
         None, description="Original raw payload string received over Bluetooth/serial for audit lineage."
     )
     firmware_version: Optional[str] = Field(None, max_length=32, description="Firmware version reported by the device")
+    # v5.6 measurement quality
+    arsenic_species: Optional[Literal["total", "as3_only", "unknown"]] = Field(
+        None, description="What the method can see: total arsenic (acid + reductant step) or As(III) only")
+    peak_current_ua: Optional[float] = Field(None, ge=-1000, le=1000, description="Net arsenic stripping peak (µA)")
+    cu_peak_ua: Optional[float] = Field(None, ge=0, le=1000, description="Copper stripping peak (µA), if scanned")
+    calibration_ref: Optional[str] = Field(None, max_length=64, description="calibration_id the node used")
 
     @field_validator("recorded_at", mode="after")
     @classmethod
@@ -95,6 +101,10 @@ class ReadingOut(BaseModel):
     longitude: Optional[float] = None
     battery_pct: Optional[float] = None
     source_label: Optional[str] = None
+    arsenic_species: Optional[str] = None
+    cu_peak_ua: Optional[float] = None
+    qc_flags: Optional[str] = None
+    calibration_ref: Optional[str] = None
     recorded_at: datetime
     received_at: datetime
 
@@ -152,6 +162,10 @@ class DashboardReading(BaseModel):
     uncertainty_ppb: Optional[float] = None
     synapses_count: int = 112
     method_lod_ug_l: float = 20.0
+    # v5.6: quality flags and the plain-language caveats that go with them; latest lab confirmation
+    qcFlags: List[str] = []
+    caveats: List[str] = []
+    labConfirmation: Optional[dict] = None
 
 
 class DeviceOut(BaseModel):
@@ -197,6 +211,8 @@ class DeviceStatusOut(BaseModel):
     has_device_key: bool = False
     trend: Optional[TrendSummary] = None
     latest: Optional[DeviceLatestOut] = None
+    site: Optional[dict] = None              # v5.6: name, village, district, lat/lon, source kind
+    lab: Optional[dict] = None               # v5.6: latest lab confirmation
 
 
 class HistoryPoint(BaseModel):

@@ -8,6 +8,10 @@ Includes non-destructive schema migrations for SQLite.
 
 import os
 import shutil
+
+from .logs import get_logger
+
+log = get_logger("database")
 from typing import Dict, Any
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -24,7 +28,7 @@ if os.environ.get("VERCEL") or os.environ.get("VERCEL_URL"):
         try:
             shutil.copy2(_DEFAULT_DB, tmp_db_path)
         except Exception as e:
-            print(f"Warning: Could not copy initial DB to /tmp: {e}")
+            log.warning("Could not copy initial DB to /tmp: %s", e)
     DATABASE_URL = f"sqlite:///{tmp_db_path}"
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -82,7 +86,7 @@ def ensure_sqlite_columns():
         with engine.begin() as conn:
             conn.execute(text("PRAGMA journal_mode=WAL;"))
     except Exception as e:
-        print(f"Warning: Could not enable SQLite WAL mode: {e}")
+        log.warning("Could not enable SQLite WAL mode: %s", e)
 
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
@@ -139,7 +143,7 @@ def ensure_indexes():
         with engine.begin() as conn:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_readings_device_recorded ON readings (device_id, recorded_at)"))
     except Exception as e:
-        print(f"Warning: could not create index: {e}")
+        log.warning("Could not create index: %s", e)
 
 
 def sqlite_info() -> Dict[str, Any]:
@@ -198,3 +202,54 @@ def compact_database() -> Dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ---------------------------------------------------------------------------- migrations
+HEAD_BASELINE = "0001_v5_5_baseline"
+
+
+def _alembic_config(connection):
+    from alembic.config import Config
+    cfg = Config()
+    cfg.set_main_option("script_location", os.path.join(_PLATFORM_DIR, "app", "migrations"))
+    cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+    cfg.attributes["connection"] = connection
+    return cfg
+
+
+def init_db() -> str:
+    """Bring the database to the current schema and say how:
+    - new database: create every table, then mark it as up to date ("created")
+    - database from before migrations (v5.5 and older): old column patches, mark as the v5.5 baseline,
+      then run the migrations since ("migrated")
+    - database already under migrations: run any new ones ("upgraded")."""
+    from alembic import command
+    from . import models  # noqa: F401  (registers the tables)
+
+    tables = set(inspect(engine).get_table_names())
+    with engine.begin() as conn:
+        cfg = _alembic_config(conn)
+        if "alembic_version" in tables:
+            command.upgrade(cfg, "head")
+            how = "upgraded"
+        elif "readings" in tables or "devices" in tables:
+            ensure_sqlite_columns()
+            command.stamp(cfg, HEAD_BASELINE)
+            command.upgrade(cfg, "head")
+            how = "migrated"
+        else:
+            Base.metadata.create_all(bind=conn)
+            command.stamp(cfg, "head")
+            how = "created"
+    ensure_indexes()
+    if how != "upgraded":
+        log.info("Database %s (schema at the latest migration).", how)
+    return how
+
+
+def schema_revision() -> str:
+    try:
+        with engine.connect() as conn:
+            return conn.execute(text("SELECT version_num FROM alembic_version")).scalar() or "none"
+    except Exception:
+        return "none"

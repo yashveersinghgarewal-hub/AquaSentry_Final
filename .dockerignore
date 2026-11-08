@@ -18,3 +18,5 @@ Docs
 models_3d
 build
 dist
+vapid_private.pem
+**/vapid_private.pem

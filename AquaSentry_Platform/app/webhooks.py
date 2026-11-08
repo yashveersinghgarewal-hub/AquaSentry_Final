@@ -27,6 +27,10 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Dict, Optional
 
+from .logs import get_logger
+
+log = get_logger("webhooks")
+
 RETRYABLE = {408, 425, 429, 500, 502, 503, 504}
 
 STATS = {"sent": 0, "failed": 0, "retried": 0}
@@ -105,6 +109,7 @@ def deliver(url: str, payload: Dict[str, Any], secret: Optional[str] = None, att
             resp.close()
             if 200 <= status < 300:
                 _bump("sent")
+                log.info("Alert webhook delivered (attempt %d)", n, extra={"event": "webhook_sent", "attempts": n})
                 return {"ok": True, "attempts": n, "status": status, "error": None}
             error = f"HTTP {status}"
         except urllib.error.HTTPError as e:
@@ -117,7 +122,7 @@ def deliver(url: str, payload: Dict[str, Any], secret: Optional[str] = None, att
             _bump("retried")
             sleep(backoff_s * (4 ** (n - 1)))      # 1 s, 4 s, 16 s ...
     _bump("failed")
-    print(f"Warning: alert webhook failed after {n} attempt(s): {error}")
+    log.warning("Alert webhook failed after %d attempt(s): %s", n, error, extra={"event": "webhook_failed", "attempts": n})
     return {"ok": False, "attempts": n, "status": status, "error": error}
 
 

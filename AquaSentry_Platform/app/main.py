@@ -15,11 +15,8 @@ Provides:
 import os
 import io
 import re
-import hmac
-import json
 import uuid
 import asyncio
-import ipaddress
 import threading
 from collections import OrderedDict
 from datetime import datetime, timezone, timedelta
@@ -30,7 +27,7 @@ load_dotenv()
 
 import csv
 import time as _time
-from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, Response, Request
+from fastapi import FastAPI, Depends, HTTPException, Query, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
@@ -38,32 +35,32 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .database import (engine, get_db, Base, ensure_sqlite_columns, compact_database, ensure_indexes,
+from .database import (init_db, schema_revision, engine, get_db, Base, ensure_sqlite_columns, compact_database, ensure_indexes,
                        sqlite_info, backup_database)
-from . import security, webhooks, metrics
+from . import security, webhooks, metrics, notify
 from .events import HUB
 from .trends import analyse as analyse_trend
 from .classification import classify_arsenic_neural
 from .standards import (
     WHO_GUIDELINE_UG_L,
     BIS_PERMISSIBLE_LIMIT_UG_L,
-    HAZARD_THRESHOLD_UG_L,
     LOD_UG_L,
     LOQ_UG_L,
     METHOD_NAME,
-    CALIBRATION_SLOPE,
-    CALIBRATION_INTERCEPT,
 )
-from .neural_classifier import forward_pass, NODES_COUNT, SYNAPSES_COUNT
+from .neural_classifier import NODES_COUNT, SYNAPSES_COUNT
 from .analytes import (
     ANALYTE_REGISTRY,
-    get_analyte_profile,
-    list_supported_analytes,
 )
-from .signal_processing import (
-    process_voltammetry_trace,
-    generate_synthetic_asv_trace,
+from .logs import get_logger, request_id_var
+from .quality import qc_flags, caveats as qc_caveats
+from .deps import (  # noqa: F401  (re-exported: tests and older imports use app.main.<name>)
+    _api_key, _check_device_key, _get_or_create_device, _is_loopback, _is_number, _key_ok, _utc, _val,
+    active_model_name, now_utc, require_admin, require_writer,
 )
+from .routers import science as science_router, reports as reports_router, field as field_router, auth as auth_router, alerts as alerts_router
+from .field import latest_lab as _latest_lab, site_dict
+from .routers.reports import generate_potability_certificate_pdf  # noqa: F401
 from .chat_policy import (
     classify_user_prompt,
     format_grounded_context,
@@ -72,9 +69,7 @@ from .chat_policy import (
 )
 
 # Create tables on startup and apply non-destructive column migrations
-Base.metadata.create_all(bind=engine)
-ensure_sqlite_columns()
-ensure_indexes()
+init_db()
 START_TIME = _time.time()
 
 app = FastAPI(
@@ -84,11 +79,14 @@ app = FastAPI(
 )
 
 APP_VERSION = "1.6.0"
+log = get_logger("api")
+app.include_router(science_router.router)
+app.include_router(reports_router.router)
+app.include_router(field_router.router)
+app.include_router(auth_router.router)
+app.include_router(alerts_router.router)
 
 
-def active_model_name() -> str:
-    """The model that classifies stored readings (AQUANET_MODEL=v1 switches back to the hand-built V1)."""
-    return "AquaNet-V1" if os.getenv("AQUANET_MODEL", "v3").lower() == "v1" else "AquaNet-V3"
 
 
 def _v3_topology():
@@ -105,17 +103,6 @@ def _v3_topology():
 V3_SIZES, V3_NODES, V3_WEIGHTS, V3_PARAMS = _v3_topology()
 
 
-def _is_number(v: str) -> bool:
-    try:
-        float(v)
-        return True
-    except ValueError:
-        return False
-
-
-def _val(x, default):
-    """`x or default` treats a real 0 (0 NTU, 0 °C, 0 µS/cm) as missing. This does not."""
-    return default if x is None else x
 
 
 # ---------------------------------------------------------------------------
@@ -126,58 +113,9 @@ def _val(x, default):
 # opened at http://localhost:8000) are always allowed, so the UI keeps working without the key.
 # Without a key, writes stay open as before (handy on a home network), and /api/health says so.
 
-def _api_key() -> Optional[str]:
-    key = (os.getenv("AQUASENTRY_API_KEY") or "").strip()
-    return key or None
-
-
-def _is_loopback(request: Request) -> bool:
-    host = request.client.host if request.client else ""
-    if host in ("testclient", "localhost"):
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
-
-
-def _key_ok(request: Request) -> bool:
-    key = _api_key()
-    given = request.headers.get("x-api-key") or ""
-    return bool(key) and hmac.compare_digest(given.encode(), key.encode())
-
-
-def _check_device_key(db: Session, device_code: str, request: Request):
-    dev = db.query(models.Device).filter_by(device_code=device_code).first()
-    if dev is not None and dev.api_key_hash:
-        given = request.headers.get("x-api-key")
-        if not (security.key_matches(given, dev.api_key_hash) or _key_ok(request)):
-            raise HTTPException(status_code=401, detail=f"Device '{device_code}' has its own API key; send it as X-API-Key.")
-
-
-def require_writer(request: Request):
-    """Writes are allowed from this computer, with the global key, or with any registered device key
-    (the device key is then checked against the device_code in the body by _check_device_key)."""
-    if _api_key() is None or _is_loopback(request) or _key_ok(request):
-        return
-    given = request.headers.get("x-api-key")
-    if given and given.startswith(security.KEY_PREFIX):
-        from .database import SessionLocal
-        with SessionLocal() as db:
-            if db.query(models.Device).filter(models.Device.api_key_hash == security.hash_key(given)).first():
-                return
-    raise HTTPException(status_code=401, detail="Missing or wrong X-API-Key header (see AQUASENTRY_API_KEY in .env).")
-
-
-def require_admin(request: Request):
-    """Admin actions never run for an anonymous network client, even with writes open."""
-    if _is_loopback(request) or _key_ok(request):
-        return
-    raise HTTPException(status_code=403, detail="Admin endpoints are only available from this computer or with X-API-Key.")
-
 
 if _api_key() is None:
-    print("[AquaSentry] Note: AQUASENTRY_API_KEY is not set, so any device on the network can add readings. "
+    log.warning("AQUASENTRY_API_KEY is not set, so any device on the network can add readings. "
           "Set it in .env (and DEVICE_API_KEY in the firmware) before deploying.")
 
 cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
@@ -185,11 +123,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins or ["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
     expose_headers=["X-Total-Count", "X-Request-ID"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(auth_router.ReadProtectionMiddleware)
 app.add_middleware(security.RateLimitMiddleware)
 _PAGES = ["index.html", "market-research.html", "sales-expansion.html", "device-simulator.html", "mas-g1-display.html"]
 _FRONTEND_FOR_CSP = __import__("pathlib").Path(os.getenv("AQUASENTRY_FRONTEND_DIR",
@@ -207,7 +146,11 @@ async def request_id_and_timing(request: Request, call_next):
     and is counted in /api/metrics under its route template."""
     rid = _SAFE_RID.sub("", request.headers.get("x-request-id") or "")[:64] or uuid.uuid4().hex[:16]
     t0 = _time.perf_counter()
-    response = await call_next(request)
+    token = request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+    finally:
+        request_id_var.reset(token)
     dur = _time.perf_counter() - t0
     response.headers["X-Request-ID"] = rid
     response.headers["Server-Timing"] = f"app;dur={dur * 1000:.1f}"
@@ -218,9 +161,6 @@ async def request_id_and_timing(request: Request, call_next):
     metrics.REQUESTS.observe(request.method, path, response.status_code, dur)
     return response
 
-
-def now_utc():
-    return datetime.now(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -247,12 +187,14 @@ def health_check(db: Session = Depends(get_db)):
         "neural_synapses": V3_WEIGHTS if active_model_name() == "AquaNet-V3" else SYNAPSES_COUNT,
         "standards_version": "WHO GDWQ 4th ed. / IS 10500:2012 + Amd. 1 (2015, As 10 µg/L no relaxation)",
         "write_auth": "api_key" if _api_key() else "open",
+        "read_auth": "key" if auth_router.read_key() else "open",
         "app_version": APP_VERSION,
         "uptime_s": round(_time.time() - START_TIME, 1),
         "live_subscribers": HUB.subscriber_count,
         "alert_webhook": ("signed" if os.getenv("ALERT_WEBHOOK_SECRET") else "unsigned") if os.getenv("ALERT_WEBHOOK_URL") else "off",
         "webhook_deliveries": dict(webhooks.STATS),
         **sqlite_info(),
+        "schema_revision": schema_revision(),
         "ai_chatbot_configured": client is not None,
         "analytes_cataloged": len(ANALYTE_REGISTRY),
         "voltammetry_pipeline": "Savitzky-Golay 5pt + Linear Baseline",
@@ -321,210 +263,16 @@ def dispatch_emergency_alert(data: Dict[str, Any]):
         RECENT_EMERGENCY_ALERTS.append(alert)
         del RECENT_EMERGENCY_ALERTS[:-50]
         ALERTS_RAISED[alert["level"]] = ALERTS_RAISED.get(alert["level"], 0) + 1
+    log.warning("%s alert: %s", alert["level"], alert.get("message", ""),
+                extra={"event": "alert", "device_code": alert.get("device_code"), "status": alert["level"]})
     webhook_url = os.getenv("ALERT_WEBHOOK_URL")
     if webhook_url:
         # Signed (ALERT_WEBHOOK_SECRET), retried, and on a background thread: never blocks the ESP32's upload.
         webhooks.deliver_in_background(webhook_url, alert)
+    if alert.get("source_type") == "hardware":    # demo and simulated data never reach people's phones
+        notify.deliver_in_background(alert)      # push / WhatsApp / SMS subscribers (v5.6)
     return alert
 
-
-# ---------------------------------------------------------------------------
-# Imp 20: Water Screening Report PDF (screening result, NOT a laboratory certificate)
-# ---------------------------------------------------------------------------
-
-def _fmt_or_missing(value: Optional[float], fmt: str, unit: str = "") -> str:
-    if value is None:
-        return "Not measured"
-    return f"{value:{fmt}}{(' ' + unit) if unit else ''}"
-
-
-def reading_fingerprint(reading_dict: Dict[str, Any]) -> str:
-    """SHA-256 of the measured values printed on the report, so any later edit can be detected."""
-    import hashlib
-    import json as _json
-    keys = ["reading_id", "recorded_at", "source_type", "arsenic_mg_l", "ph", "conductivity_us_cm",
-            "turbidity_ntu", "temperature_c", "predicted_class"]
-    canonical = _json.dumps({k: reading_dict.get(k) for k in keys}, sort_keys=True, default=str)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
-    """Build a one-page screening report from a stored reading. Every number comes from the reading itself."""
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-
-    # Vera ships inside ReportLab and has the µ sign (the built-in Helvetica does not print it).
-    font, font_bold = "Helvetica", "Helvetica-Bold"
-    try:
-        import reportlab
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        fdir = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
-        if "AS-Vera" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("AS-Vera", os.path.join(fdir, "Vera.ttf")))
-            pdfmetrics.registerFont(TTFont("AS-VeraBd", os.path.join(fdir, "VeraBd.ttf")))
-            pdfmetrics.registerFont(TTFont("AS-VeraIt", os.path.join(fdir, "VeraIt.ttf")))
-            pdfmetrics.registerFont(TTFont("AS-VeraBI", os.path.join(fdir, "VeraBI.ttf")))
-            pdfmetrics.registerFontFamily("AS-Vera", normal="AS-Vera", bold="AS-VeraBd", italic="AS-VeraIt", boldItalic="AS-VeraBI")
-        font, font_bold = "AS-Vera", "AS-VeraBd"
-    except Exception:
-        pass
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontName=font_bold, fontSize=18, leading=22,
-                                 textColor=colors.HexColor('#13211E'), alignment=1)
-    subtitle_style = ParagraphStyle('DocSubtitle', parent=styles['Normal'], fontName=font, fontSize=9, leading=13,
-                                    textColor=colors.HexColor('#4B5D58'), alignment=1)
-    header_style = ParagraphStyle('SectionHeader', parent=styles['Heading2'], fontName=font_bold, fontSize=11, leading=15,
-                                  textColor=colors.HexColor('#1F5F8B'), spaceAfter=6)
-    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontName=font, fontSize=8.5, leading=12,
-                                textColor=colors.HexColor('#13211E'))
-    cell_style = ParagraphStyle('Cell', parent=body_style, fontSize=8, leading=10)
-    head_style = ParagraphStyle('HeadCell', parent=cell_style, fontName=font_bold, textColor=colors.white)
-    badge_style = ParagraphStyle('Badge', parent=styles['Normal'], fontName=font_bold, fontSize=12, leading=16, alignment=1)
-
-    story = []
-    story.append(Paragraph("AQUASENTRY WATER SCREENING REPORT", title_style))
-    story.append(Paragraph("Field screening result from the AquaSentry prototype. Not an accredited laboratory certificate.", subtitle_style))
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#1F5F8B'), spaceAfter=12))
-
-    report_id = f"RPT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{reading_dict.get('reading_id', 'NA')}"
-    meta_data = [
-        [Paragraph(f"<b>Report ID:</b> {report_id}", body_style),
-         Paragraph(f"<b>Sample recorded:</b> {reading_dict.get('recorded_at', 'Unknown')}", body_style)],
-        [Paragraph(f"<b>Data source:</b> {reading_dict.get('source_type', 'Unknown')}", body_style),
-         Paragraph(f"<b>Method:</b> Anodic stripping voltammetry (MAS-G1) + {reading_dict.get('model_version') or active_model_name()} screening model", body_style)],
-        [Paragraph(f"<b>Device:</b> {reading_dict.get('device_code', 'Unknown')}", body_style),
-         Paragraph("<b>Reference limits:</b> WHO GDWQ 4th ed. / IS 10500:2012 with Amendment 1 (2015)", body_style)],
-    ]
-    meta_table = Table(meta_data, colWidths=[270, 270])
-    meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F4F7F6')), ('PADDING', (0, 0), (-1, -1), 5),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#D5DFDB')), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    story.append(meta_table)
-    story.append(Spacer(1, 12))
-
-    verdict = reading_dict.get("predicted_class") or "Unknown"
-    as_mg_l = float(reading_dict.get("arsenic_mg_l") or 0.0)
-    as_ug_l = as_mg_l * 1000.0
-    tone = {"Safe": ('#E8F4EE', '#1E7F5C'), "Caution": ('#FBF3DC', '#8A6404'), "Unsafe": ('#FBEDE5', '#C2541B'),
-            "Hazardous": ('#F8E4E6', '#A3202B')}.get(verdict, ('#F4F7F6', '#4B5D58'))
-    badge_bg, badge_color = colors.HexColor(tone[0]), colors.HexColor(tone[1])
-    model_line = ""
-    if reading_dict.get("model_confidence_pct") is not None:
-        model_line = (f"<br/><font size=8 color='#4B5D58'>{reading_dict.get('model_version') or active_model_name()} model confidence: {reading_dict['model_confidence_pct']:.1f}% | "
-                      f"uncertainty (normalised entropy): {reading_dict.get('model_entropy', 0.0):.3f}</font>")
-    lod_line = ""
-    if as_ug_l < LOD_UG_L:
-        lod_line = (f"<br/><font size=8 color='#4B5D58'>Arsenic is below the sensor detection limit ({LOD_UG_L:.0f} µg/L). "
-                    f"The sensor cannot confirm the WHO limit of 10 µg/L; a laboratory test is required.</font>")
-    verdict_table = Table([[Paragraph(
-        f"<font color='{badge_color.hexval()}'><b>SCREENING RESULT: {verdict.upper()}</b></font>{model_line}{lod_line}",
-        badge_style)]], colWidths=[540])
-    verdict_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), badge_bg), ('PADDING', (0, 0), (-1, -1), 8),
-        ('BOX', (0, 0), (-1, -1), 1.5, badge_color), ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ]))
-    story.append(verdict_table)
-    story.append(Spacer(1, 12))
-
-    story.append(Paragraph("Measured values", header_style))
-    ph_val = reading_dict.get("ph")
-    ec_val = reading_dict.get("conductivity_us_cm")
-    turb_val = reading_dict.get("turbidity_ntu")
-    temp_val = reading_dict.get("temperature_c")
-
-    if as_ug_l < LOD_UG_L:
-        as_status = "Not detected (below sensor LOD): lab test needed to confirm < 10 µg/L"
-    elif as_ug_l <= HAZARD_THRESHOLD_UG_L:
-        as_status = "Detected: exceeds WHO and IS 10500 (10 µg/L). Unsafe"
-    else:
-        as_status = "Hazardous (above 150 µg/L)"
-
-    def limit_status(val, ok):
-        return "Not measured" if val is None else ("Within limit" if ok(val) else "Outside limit")
-
-    chem_data = [
-        ["Parameter", "Measured value", "Limit used", "Status"],
-        ["Total arsenic (As)", f"{as_ug_l:.1f} µg/L ({as_mg_l:.4f} mg/L)", "WHO 10 µg/L; IS 10500 10 µg/L (no relaxation)", as_status],
-        ["pH", _fmt_or_missing(ph_val, ".2f"), "6.5 - 8.5 (BIS)", limit_status(ph_val, lambda v: 6.5 <= v <= 8.5)],
-        ["Turbidity", _fmt_or_missing(turb_val, ".2f", "NTU"), "5 NTU (BIS permissible)", limit_status(turb_val, lambda v: v <= 5.0)],
-        ["Conductivity", _fmt_or_missing(ec_val, ".0f", "µS/cm"), "1500 µS/cm (AquaSentry screening)", limit_status(ec_val, lambda v: v <= 1500)],
-        ["Temperature", _fmt_or_missing(temp_val, ".1f", "°C"), "No health limit", "Recorded" if temp_val is not None else "Not measured"],
-    ]
-    chem_data = [[Paragraph(str(v), head_style if i == 0 else cell_style) for v in row] for i, row in enumerate(chem_data)]
-    chem_table = Table(chem_data, colWidths=[95, 130, 155, 160])
-    chem_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F5F8B')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('PADDING', (0, 0), (-1, -1), 4), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D5DFDB')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F4F7F6')]),
-    ]))
-    story.append(chem_table)
-    story.append(Spacer(1, 8))
-    story.append(Paragraph("Only arsenic is measured by the current hardware. Lead, cadmium and other metals are not tested by this device.", body_style))
-    story.append(Spacer(1, 12))
-
-    fingerprint = reading_fingerprint(reading_dict)
-    sign_data = [[
-        Paragraph("<b>How this result was produced:</b><br/>Stripping-voltammetry peak converted with the stored calibration "
-                  f"(slope {CALIBRATION_SLOPE} µA per mg/L, intercept {CALIBRATION_INTERCEPT} µA), then classified by {reading_dict.get('model_version') or active_model_name()} "
-                  "with fixed WHO / IS 10500 safety rules applied after the model.", body_style),
-        Paragraph(f"<b>Data fingerprint (SHA-256):</b><br/><font size=6.5>{fingerprint[:32]}<br/>{fingerprint[32:]}</font><br/>"
-                  "Recomputed from the values on this page; any change to them changes this code.", body_style),
-    ]]
-    sign_table = Table(sign_data, colWidths=[300, 240])
-    sign_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#74867F')), ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#EDF2F0')),
-        ('PADDING', (0, 0), (-1, -1), 6), ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-    ]))
-    story.append(sign_table)
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>Important:</b> AquaSentry is a screening prototype, not an ISO 17025 accredited laboratory instrument. "
-                           "Confirm results with an accredited laboratory (ICP-MS or HG-AAS) before declaring water fit for drinking.", body_style))
-
-    doc.build(story)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
-
-
-# ---------------------------------------------------------------------------
-# Device Helpers
-# ---------------------------------------------------------------------------
-
-def _get_or_create_device(db: Session, device_code: str, firmware_version: Optional[str] = None) -> models.Device:
-    device = db.query(models.Device).filter_by(device_code=device_code).first()
-    ts = now_utc()
-    if device is None:
-        device = models.Device(
-            device_code=device_code,
-            first_seen=ts,
-            last_seen=ts,
-            status="online",
-            firmware_version=firmware_version or None,
-        )
-        db.add(device)
-        db.commit()
-        db.refresh(device)
-    else:
-        device.last_seen = ts
-        if firmware_version:
-            device.firmware_version = firmware_version
-        db.commit()
-    return device
-
-
-def _utc(d: Optional[datetime]) -> Optional[datetime]:
-    if d is None:
-        return None
-    return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d.astimezone(timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -617,6 +365,11 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
         recorded_at=payload.recorded_at or ts,
         received_at=ts,
         raw_payload=payload.raw_payload,
+        arsenic_species=payload.arsenic_species,
+        cu_peak_ua=payload.cu_peak_ua,
+        calibration_ref=payload.calibration_ref,
+        qc_flags=",".join(qc_flags(payload.arsenic_species, payload.peak_current_ua, payload.cu_peak_ua,
+                                    payload.calibration_ref, payload.source_type)) or None,
     )
     db.add(reading)
     db.commit()
@@ -636,6 +389,13 @@ def create_reading(payload: schemas.ReadingCreate, request: Request, db: Session
     })
     if alert:
         HUB.publish("alert", alert)
+    elif reading.source_type == "hardware":
+        # early warning: a statistically rising trend reaches WARNING-level subscribers (deduplicated per node)
+        t = device_trend_cached(db, reading.device_id, 90)
+        if t.get("direction") == "rising" and t.get("significant"):
+            notify.deliver_in_background({"level": "WARNING", "type": "trend", "device_code": payload.device_code,
+                                          "message": t.get("message"), "source_type": "hardware",
+                                          "arsenic_ppb": reading.arsenic_ppb})
 
     return _reading_response(reading, eval_res)
 
@@ -774,6 +534,7 @@ def _device_out(db: Session, d: "models.Device", counts: dict, unsafe: dict, wit
         latest=schemas.DeviceLatestOut(arsenic_ppb=latest.arsenic_ppb, classification=latest.classification,
                                        recorded_at=_utc(latest.recorded_at),
                                        battery_pct=latest.battery_pct) if latest else None,
+        site=site_dict(d), lab=_latest_lab(db, d.id),
     )
 
 
@@ -1025,6 +786,9 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
         uncertaintyMgL=unc_mg_l,
         methodLOD=round(LOD_UG_L / 1000.0, 3),
         disclaimer=disclaimer,
+        qcFlags=[f for f in (reading.qc_flags or "").split(",") if f],
+        caveats=qc_caveats(reading.qc_flags),
+        labConfirmation=_latest_lab(db, reading.device_id),
         analytical_status=reading.analytical_status or "within_calibrated_range",
         regulatory_tier=reading.regulatory_tier or "Caution",
         is_safe_to_drink=reading.is_safe_to_drink,
@@ -1033,159 +797,6 @@ def dashboard_latest(device_code: Optional[str] = Query(None), db: Session = Dep
         uncertainty_ppb=reading.uncertainty_ppb or 5.0,
         synapses_count=V3_WEIGHTS if active_model_name() == "AquaNet-V3" else SYNAPSES_COUNT,
         method_lod_ug_l=LOD_UG_L,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Multi-Contaminant & Analyte Registry Endpoints
-# ---------------------------------------------------------------------------
-
-@app.get("/api/analytes", response_model=List[schemas.AnalyteCapabilityOut], tags=["Contaminants"])
-def get_analytes_catalog():
-    """Retrieve full catalog of registered water contaminants, sensor capabilities, and standards."""
-    analytes = list_supported_analytes()
-    out = []
-    for a in analytes:
-        stds_dict = {}
-        for k, s in a.standards.items():
-            stds_dict[k] = schemas.RegulatoryLimitOut(
-                standard_name=s.standard_name,
-                jurisdiction=s.jurisdiction,
-                acceptable_limit=s.acceptable_limit,
-                permissible_limit=s.permissible_limit,
-                unit=s.unit,
-                citation=s.citation,
-                effective_edition=s.effective_edition,
-            )
-        out.append(
-            schemas.AnalyteCapabilityOut(
-                identifier=a.identifier,
-                name=a.name,
-                chemical_formula=a.chemical_formula,
-                support_status=a.support_status.value,
-                modality=a.modality.value,
-                method_name=a.method_name,
-                sensor_model=a.sensor_model,
-                canonical_unit=a.canonical_unit,
-                lod_ug_l=a.lod_ug_l,
-                loq_ug_l=a.loq_ug_l,
-                cal_range_min_ug_l=a.cal_range_min_ug_l,
-                cal_range_max_ug_l=a.cal_range_max_ug_l,
-                sample_prep_required=a.sample_prep_required,
-                known_interferences=a.known_interferences,
-                standards=stds_dict,
-                health_significance=a.health_significance,
-                operational_notes=a.operational_notes,
-                is_actively_monitored_by_hardware=a.is_actively_monitored_by_hardware,
-            )
-        )
-    return out
-
-
-@app.get("/api/analytes/{analyte_id}", response_model=schemas.AnalyteCapabilityOut, tags=["Contaminants"])
-def get_analyte_detail(analyte_id: str):
-    """Retrieve detailed capability profile for a single analyte."""
-    a = get_analyte_profile(analyte_id)
-    if not a:
-        raise HTTPException(status_code=404, detail=f"Analyte '{analyte_id}' not found in registry.")
-
-    stds_dict = {}
-    for k, s in a.standards.items():
-        stds_dict[k] = schemas.RegulatoryLimitOut(
-            standard_name=s.standard_name,
-            jurisdiction=s.jurisdiction,
-            acceptable_limit=s.acceptable_limit,
-            permissible_limit=s.permissible_limit,
-            unit=s.unit,
-            citation=s.citation,
-            effective_edition=s.effective_edition,
-        )
-    return schemas.AnalyteCapabilityOut(
-        identifier=a.identifier,
-        name=a.name,
-        chemical_formula=a.chemical_formula,
-        support_status=a.support_status.value,
-        modality=a.modality.value,
-        method_name=a.method_name,
-        sensor_model=a.sensor_model,
-        canonical_unit=a.canonical_unit,
-        lod_ug_l=a.lod_ug_l,
-        loq_ug_l=a.loq_ug_l,
-        cal_range_min_ug_l=a.cal_range_min_ug_l,
-        cal_range_max_ug_l=a.cal_range_max_ug_l,
-        sample_prep_required=a.sample_prep_required,
-        known_interferences=a.known_interferences,
-        standards=stds_dict,
-        health_significance=a.health_significance,
-        operational_notes=a.operational_notes,
-        is_actively_monitored_by_hardware=a.is_actively_monitored_by_hardware,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Electrochemical Voltammetry Signal Processing Endpoints
-# ---------------------------------------------------------------------------
-
-@app.post("/api/voltammetry/process", response_model=schemas.VoltammetryProcessResponse, tags=["Electrochemistry"])
-def process_voltammetry(payload: schemas.VoltammetryProcessRequest):
-    """
-    Process raw potentiostat scan arrays through 5-point Savitzky-Golay smoothing,
-    linear baseline fitting, SNR estimation, and peak stripping current quantification.
-    """
-    try:
-        res = process_voltammetry_trace(
-            potentials_mv=payload.potentials_mv,
-            currents_ua=payload.currents_ua,
-            target_peak_mv=payload.target_peak_mv or -800.0,
-            search_window_mv=payload.search_window_mv or 60.0,
-            filter_mode=payload.filter_mode or "savitzky_golay",
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
-
-    peak_out = None
-    if res.peak:
-        peak_out = schemas.PeakCharacteristicsOut(
-            peak_potential_mv=res.peak.peak_potential_mv,
-            peak_current_raw_ua=res.peak.peak_current_raw_ua,
-            baseline_current_ua=res.peak.baseline_current_ua,
-            net_peak_height_ua=res.peak.net_peak_height_ua,
-            peak_area_ua_mv=res.peak.peak_area_ua_mv,
-            half_height_width_mv=res.peak.half_height_width_mv,
-            snr=res.peak.snr,
-            baseline_residual_variance=res.peak.baseline_residual_variance,
-            is_valid_peak=res.peak.is_valid_peak,
-            qc_flags=res.peak.qc_flags,
-        )
-
-    return schemas.VoltammetryProcessResponse(
-        estimated_arsenic_ug_l=res.estimated_arsenic_ug_l,
-        estimated_arsenic_mg_l=res.estimated_arsenic_mg_l,
-        filter_type=res.filter_type,
-        qc_status=res.qc_status,
-        qc_messages=res.qc_messages,
-        peak=peak_out,
-        raw_potentials_mv=res.raw_potentials_mv,
-        raw_currents_ua=res.raw_currents_ua,
-        smoothed_currents_ua=res.smoothed_currents_ua,
-        baseline_currents_ua=res.baseline_currents_ua,
-        subtracted_currents_ua=res.subtracted_currents_ua,
-    )
-
-
-@app.get("/api/voltammetry/sample-trace", response_model=schemas.SyntheticTraceResponse, tags=["Electrochemistry"])
-def get_sample_voltammetry_trace(
-    arsenic_ppb: float = Query(45.0, ge=0.0, le=1000.0, description="Concentration to synthesize trace for"),
-    snr_db: float = Query(24.0, ge=6.0, le=50.0, description="Signal-to-noise ratio in decibels"),
-):
-    """Generate a physically parameterized synthetic ASV trace for software testing and calibration."""
-    pots, currents = generate_synthetic_asv_trace(arsenic_ppb=arsenic_ppb, snr_db=snr_db)
-    return schemas.SyntheticTraceResponse(
-        arsenic_ppb=arsenic_ppb,
-        potentials_mv=pots,
-        currents_ua=currents,
-        method="ASV-MAS-G1 Synthetic Model",
-        is_synthetic=True,
     )
 
 
@@ -1565,72 +1176,6 @@ def load_demo_data(db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# AquaNet-V1 Neural Network Inference Endpoints (GET & POST)
-# ---------------------------------------------------------------------------
-
-class NeuralInferencePayload(schemas.BaseModel):
-    arsenic_concentration_mg_l: Optional[float] = None
-    arsenic_mg_l: Optional[float] = None
-    arsenic_ppb: Optional[float] = None
-    ph: Optional[float] = 7.35
-    conductivity_us_cm: Optional[float] = 412.0
-    turbidity_ntu: Optional[float] = 2.1
-    temperature_c: Optional[float] = 24.2
-
-
-@app.post("/api/neural/inference", response_model=schemas.NeuralInferenceResponse, tags=["Neural Network"])
-def run_neural_inference_post(payload: NeuralInferencePayload):
-    """Run forward-pass inference on the AquaNet-V1 multimodal deep neural network via POST."""
-    as_mg = payload.arsenic_mg_l if payload.arsenic_mg_l is not None else payload.arsenic_concentration_mg_l
-    if as_mg is None and payload.arsenic_ppb is not None:
-        as_mg = payload.arsenic_ppb / 1000.0
-    if as_mg is None:
-        as_mg = 0.018
-
-    res = forward_pass(
-        arsenic_mg_l=as_mg,
-        ph=payload.ph if payload.ph is not None else 7.35,
-        conductivity_us_cm=payload.conductivity_us_cm if payload.conductivity_us_cm is not None else 412.0,
-        turbidity_ntu=payload.turbidity_ntu if payload.turbidity_ntu is not None else 2.1,
-        temperature_c=payload.temperature_c if payload.temperature_c is not None else 24.2,
-    )
-    return schemas.NeuralInferenceResponse(**res)
-
-
-@app.get("/api/neural/v3", tags=["Neural Network"])
-def run_neural_v3(
-    arsenic_mg_l: float = Query(0.018, ge=0.0, le=2.0, description="Arsenic concentration in mg/L"),
-    ph: float = Query(7.35, ge=4.0, le=11.0),
-    conductivity_us_cm: float = Query(412.0, ge=0.0, le=10000.0),
-    turbidity_ntu: float = Query(2.1, ge=0.0, le=100.0),
-    temperature_c: float = Query(24.2, ge=0.0, le=50.0),
-):
-    """AquaNet-V3 (the trained model used for stored readings): network vote, final verdict after the safety rules,
-    probabilities, entropy and the reasons any rule applied."""
-    from .aquanet_v3 import predict
-    return predict(arsenic_mg_l, ph, conductivity_us_cm, turbidity_ntu, temperature_c)
-
-
-@app.get("/api/neural/inference", response_model=schemas.NeuralInferenceResponse, tags=["Neural Network"])
-def run_neural_inference_get(
-    arsenic_mg_l: float = Query(0.018, ge=0.0, le=2.0, description="Arsenic concentration in mg/L"),
-    ph: float = Query(7.35, ge=4.0, le=11.0, description="Water pH"),
-    conductivity_us_cm: float = Query(412.0, ge=0.0, le=10000.0, description="Conductivity in µS/cm"),
-    turbidity_ntu: float = Query(2.1, ge=0.0, le=100.0, description="Turbidity in NTU"),
-    temperature_c: float = Query(24.2, ge=0.0, le=50.0, description="Water temperature in °C"),
-):
-    """Run forward-pass inference on the AquaNet-V1 multimodal deep neural network via GET query params."""
-    res = forward_pass(
-        arsenic_mg_l=arsenic_mg_l,
-        ph=ph,
-        conductivity_us_cm=conductivity_us_cm,
-        turbidity_ntu=turbidity_ntu,
-        temperature_c=temperature_c,
-    )
-    return schemas.NeuralInferenceResponse(**res)
-
-
-# ---------------------------------------------------------------------------
 # AI Chatbot Agent Integration (Google Gemini 3.6 Flash) with Domain Intent Gate
 # ---------------------------------------------------------------------------
 
@@ -1643,7 +1188,7 @@ if gemini_api_key and gemini_api_key != "your_gemini_api_key_here":
     try:
         client = genai.Client(api_key=gemini_api_key)
     except Exception as e:
-        print(f"Notice: Gemini client init error: {e}")
+        log.warning("Gemini client init error: %s", e)
         client = None
 
 BASE_SYSTEM_PROMPT = """You are the official AquaSentry Scientific AI Assistant. Use the following project knowledge to answer questions accurately and honestly.
@@ -1736,7 +1281,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         # No internet, quota, or a retired model: still answer from the data instead of only apologising.
         error_str = str(e)
-        print(f"[chat] Gemini error: {error_str}")
+        log.warning("Gemini error, answering offline: %s", error_str)
         if "503" in error_str or "high demand" in error_str:
             why = "Google's AI servers are busy right now, so this is the offline answer."
         elif any(k in error_str for k in ("401", "403", "404", "API key", "not found")):
@@ -1745,121 +1290,6 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
             why = "The AI assistant could not be reached, so this is the offline answer."
         return schemas.ChatResponse(reply=f"⚠️ *{why}*\n\n" + offline_answer(request.message, latest_dict, fleet),
                                     intent="in_scope", grounded=True)
-
-
-# ===========================================================================
-# Imp 19: WebSocket Real-Time Voltammetry Streaming Endpoint
-# ===========================================================================
-
-@app.websocket("/ws/voltammetry")
-async def websocket_voltammetry_stream(websocket: WebSocket):
-    """
-    Real-time bidirectional WebSocket streaming endpoint for ASV voltammogram curves.
-    Streams incremental potential and current data packets directly to connected dashboards.
-    """
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_json()
-            if not isinstance(data, dict):
-                await websocket.send_json({"type": "error", "message": "Send a JSON object."})
-                continue
-            cmd = data.get("command", "start_sweep")
-            try:
-                as_conc = float(data.get("arsenic_mg_l", 0.035))
-            except (TypeError, ValueError):
-                await websocket.send_json({"type": "error", "message": "arsenic_mg_l must be a number."})
-                continue
-            if not (0.0 <= as_conc <= 1.0) or as_conc != as_conc:
-                await websocket.send_json({"type": "error", "message": "arsenic_mg_l must be between 0 and 1."})
-                continue
-
-            if cmd in ("start_sweep", "simulate"):
-                potentials, currents = generate_synthetic_asv_trace(as_conc * 1000.0)  # function expects µg/L
-                total = len(potentials)
-
-                for idx in range(total):
-                    pct = round(((idx + 1) / total) * 100, 1)
-                    await websocket.send_json({
-                        "type": "sweep_point",
-                        "index": idx,
-                        "total": total,
-                        "potential_mv": potentials[idx],
-                        "current_ua": currents[idx],
-                        "progress_pct": pct,
-                    })
-                    await asyncio.sleep(0.01)
-
-                processed = process_voltammetry_trace(potentials, currents)
-                await websocket.send_json({
-                    "type": "sweep_complete",
-                    "estimated_arsenic_mg_l": processed.estimated_arsenic_mg_l,
-                    "net_peak_current_ua": processed.peak.net_peak_height_ua if processed.peak else 0.0,
-                    "peak_potential_mv": processed.peak.peak_potential_mv if processed.peak else -800.0,
-                    "qc_status": processed.qc_status.value if hasattr(processed.qc_status, "value") else str(processed.qc_status),
-                })
-            else:
-                await websocket.send_json({"type": "pong", "message": "AquaSentry Voltammetry Stream Active"})
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        await websocket.close()
-
-
-# ===========================================================================
-# Imp 20: Screening Report PDF Endpoint
-# ===========================================================================
-
-@app.get("/api/reports/certificate/pdf", tags=["Reports"])
-def download_potability_certificate(
-    reading_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Download a one-page PDF screening report for a stored reading (the latest one if no id is given).
-    Returns 404 if there is no such reading: the report never invents values.
-    """
-    if reading_id is not None:
-        rec = db.query(models.Reading).filter_by(id=reading_id).first()
-    else:
-        rec = db.query(models.Reading).order_by(models.Reading.recorded_at.desc()).first()
-    if rec is None:
-        raise HTTPException(status_code=404, detail="No reading found. Record or load a reading before downloading a report.")
-
-    data = {
-        "reading_id": rec.id,
-        "device_code": rec.device.device_code if getattr(rec, "device", None) is not None else None,
-        "recorded_at": rec.recorded_at.strftime("%Y-%m-%d %H:%M:%S UTC") if rec.recorded_at else "Unknown",
-        "source_type": rec.source_type or "unknown",
-        "arsenic_mg_l": rec.arsenic_ppb / 1000.0,
-        "ph": rec.ph,
-        "turbidity_ntu": rec.turbidity_ntu,
-        "conductivity_us_cm": rec.conductivity_us_cm,
-        "temperature_c": rec.temperature_c,
-        "predicted_class": rec.classification,
-        "model_version": rec.model_version or active_model_name(),
-    }
-    # Model confidence is recomputed from the stored values with the model that classified the reading.
-    try:
-        args = dict(arsenic_mg_l=data["arsenic_mg_l"], ph=_val(rec.ph, 7.2),
-                    conductivity_us_cm=_val(rec.conductivity_us_cm, 400.0),
-                    turbidity_ntu=_val(rec.turbidity_ntu, 2.0), temperature_c=_val(rec.temperature_c, 24.0))
-        if (rec.model_version or "").upper().endswith("V1"):
-            nn = forward_pass(**args)
-        else:
-            from .aquanet_v3 import predict as _v3_predict
-            nn = _v3_predict(args["arsenic_mg_l"], args["ph"], args["conductivity_us_cm"], args["turbidity_ntu"], args["temperature_c"])
-        data["model_confidence_pct"] = nn["confidence_pct"]
-        data["model_entropy"] = nn["entropy"]
-    except Exception:
-        pass
-
-    pdf_bytes = generate_potability_certificate_pdf(data)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=AquaSentry_Screening_Report_{rec.id}.pdf"},
-    )
 
 
 # ===========================================================================

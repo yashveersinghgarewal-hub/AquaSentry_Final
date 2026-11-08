@@ -7,7 +7,9 @@ Tables:
 - Sample                 : canonical multi-analyte water sample session container
 - AnalyteResult          : individual contaminant concentration measurement
 - RawVoltammetryTrace    : raw electrochemical potential & current array evidence
-- CalibrationRecord      : versioned analytical calibration curve registry
+- CalibrationRecord      : versioned analytical calibration curve registry (per device / electrode lot)
+- LabResult              : accredited-lab confirmation of a node's sample (ICP-MS, HG-AAS, field kit)
+- AlertSubscription      : who gets alerts, by web push, WhatsApp or SMS
 """
 
 import uuid
@@ -45,6 +47,16 @@ class Device(Base):
     api_key_hint = Column(String(16), nullable=True)     # first characters, to tell keys apart
     first_seen = Column(DateTime, default=utc_now)
     last_seen = Column(DateTime, default=utc_now)
+
+    # --- Site (v5.6): where the node draws water from, for the map and Jal Jeevan Mission style reports ---
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    state = Column(String(64), nullable=True)
+    district = Column(String(64), nullable=True)
+    block = Column(String(64), nullable=True)
+    panchayat = Column(String(64), nullable=True)
+    village = Column(String(64), nullable=True)
+    source_kind = Column(String(32), nullable=True)      # handpump | tubewell | borewell | piped | open_well | surface | other
 
     readings = relationship(
         "Reading", back_populates="device", cascade="all, delete-orphan"
@@ -90,6 +102,12 @@ class Reading(Base):
     # --- Device & telemetry status ---
     battery_pct = Column(Float, nullable=True)
     source_label = Column(String(64), nullable=True)
+
+    # --- Measurement quality (v5.6) ---
+    arsenic_species = Column(String(16), nullable=True)   # total | as3_only | unknown (what the method can see)
+    cu_peak_ua = Column(Float, nullable=True)             # copper stripping peak, if the node scanned for it
+    qc_flags = Column(String(128), nullable=True)         # comma list, e.g. "copper_interference"
+    calibration_ref = Column(String(64), nullable=True)   # calibration_id the node used
 
     # --- Bookkeeping & Raw Evidence ---
     recorded_at = Column(DateTime, default=utc_now, index=True)
@@ -192,3 +210,50 @@ class CalibrationRecord(Base):
     calibration_date = Column(DateTime, default=utc_now)
     is_active = Column(Boolean, default=True)
     approved_by = Column(String(64), default="Scientific QA Lead")
+    # v5.6: calibrations can belong to one node or one electrode batch, and record how they were made
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=True, index=True)
+    electrode_lot = Column(String(64), nullable=True)
+    method = Column(String(32), default="external_standards")   # external_standards | standard_addition
+    points_json = Column(Text, nullable=True)                    # the (added µg/L, peak µA) points used
+    notes = Column(Text, nullable=True)
+
+
+class LabResult(Base):
+    """A laboratory (or official field-test-kit) result for water a node also measured. Pairs of node
+    reading + lab result are how the sensor's real accuracy is established."""
+    __tablename__ = "lab_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False, index=True)
+    reading_id = Column(Integer, ForeignKey("readings.id"), nullable=True)   # the node reading it confirms
+    sample_code = Column(String(64), nullable=True)                          # lab's sample number
+    sampled_at = Column(DateTime, nullable=False, default=utc_now)
+    lab_name = Column(String(128), nullable=True)
+    lab_method = Column(String(32), nullable=False, default="ICP-MS")        # ICP-MS | HG-AAS | GF-AAS | FTK | other
+    arsenic_ug_l = Column(Float, nullable=False)
+    as3_ug_l = Column(Float, nullable=True)                                  # As(III) only, if the lab speciated
+    nabl_accredited = Column(Boolean, nullable=True)
+    notes = Column(Text, nullable=True)
+    entered_at = Column(DateTime, default=utc_now)
+
+    device = relationship("Device")
+    reading = relationship("Reading")
+
+
+class AlertSubscription(Base):
+    """Someone who wants Unsafe / Hazardous alerts: a browser (web push), a WhatsApp number or an SMS number."""
+    __tablename__ = "alert_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    channel = Column(String(16), nullable=False)           # webpush | whatsapp | sms
+    target = Column(Text, nullable=False)                  # push subscription JSON, or E.164 phone number
+    target_hash = Column(String(64), unique=True, index=True, nullable=False)
+    device_code = Column(String(64), nullable=True)        # None = every node
+    min_level = Column(String(16), default="CRITICAL")     # CRITICAL (Unsafe/Hazardous) | WARNING (also trends)
+    language = Column(String(8), default="en")
+    label = Column(String(64), nullable=True)              # e.g. "Gram panchayat office"
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utc_now)
+    last_sent_at = Column(DateTime, nullable=True)
+    last_error = Column(String(255), nullable=True)
+    failures = Column(Integer, default=0)
