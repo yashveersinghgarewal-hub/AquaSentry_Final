@@ -10,6 +10,22 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator, field_valida
 
 # ---------- Incoming: what the Arduino / bridge sends ----------
 
+class SampleMeta(BaseModel):
+    """v5.9 (ISEF items 111, 112): how the water sample was taken. Stored with the reading / scan and flattened into
+    the paired export so every number on a poster can be traced to a bottle. All fields optional; nothing is invented."""
+    source_kind: Optional[Literal["handpump", "tubewell", "dugwell", "borewell", "piped", "tank", "pond", "river", "spring", "other"]] = None
+    depth_m: Optional[float] = Field(None, ge=0, le=2000)
+    purge_minutes: Optional[float] = Field(None, ge=0, le=600, description="How long the source was pumped before sampling")
+    bottle_id: Optional[str] = Field(None, max_length=64, pattern=r"^[A-Za-z0-9._/-]+$")
+    preservation: Optional[str] = Field(None, max_length=120, description="e.g. 'none', 'HNO3 to pH<2', 'EDTA for speciation'")
+    collector: Optional[str] = Field(None, max_length=80, description="Initials or role; never a household name")
+    collected_at: Optional[datetime] = None
+    custody_note: Optional[str] = Field(None, max_length=240, description="Chain-of-custody: handed to whom, when")
+    split_for_lab: Optional[bool] = Field(None, description="True when half the sample went to the laboratory")
+    field_blank: Optional[bool] = Field(None, description="True when this bottle is a field blank")
+    collection_to_analysis_min: Optional[float] = Field(None, ge=0, le=100000)
+
+
 class ReadingCreate(BaseModel):
     device_code: str = Field(..., description="Unique ID of the robot, e.g. 'AQUA-001'", min_length=2, max_length=64,
                              pattern=r"^[A-Za-z0-9_.:-]{2,64}$")
@@ -71,6 +87,7 @@ class ReadingCreate(BaseModel):
                                          description="For a device without a set clock: how long ago the sample was taken")
     # v5.8 traceability (review item 21): the parent sample the lab split came from, and the electrode batch
     sample_code: Optional[str] = Field(None, max_length=64, pattern=r"^[A-Za-z0-9._/-]+$")
+    sample: Optional[SampleMeta] = None                      # v5.9: how the bottle was taken
     electrode_lot: Optional[str] = Field(None, max_length=64)
 
     @field_validator("recorded_at", mode="after")
@@ -125,6 +142,7 @@ class ReadingOut(BaseModel):
     trace_id: Optional[int] = None
     analysis_version: Optional[str] = None
     sample_code: Optional[str] = None
+    sample: Optional[dict] = None
     electrode_lot: Optional[str] = None
     calibration_ref: Optional[str] = None
     recorded_at: datetime
@@ -366,6 +384,7 @@ class ScanCreate(BaseModel):
     recorded_at: Optional[datetime] = None
     age_seconds: Optional[float] = Field(None, ge=0, le=60 * 60 * 24 * 400)
     sample_code: Optional[str] = Field(None, max_length=64, pattern=r"^[A-Za-z0-9._/-]+$")
+    sample: Optional[SampleMeta] = None                      # v5.9: how the bottle was taken
     electrode_lot: Optional[str] = Field(None, max_length=64)
     firmware_version: Optional[str] = Field(None, max_length=32)
     raw_file_name: Optional[str] = Field(None, max_length=128)
@@ -440,9 +459,12 @@ class ChatResponse(BaseModel):
 class QcRunCreate(BaseModel):
     """v5.7: a blank (arsenic-free water) or check-standard (known arsenic) run on a device."""
     device_code: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")
-    run_type: Literal["blank", "check_standard"]
-    expected_ug_l: Optional[float] = Field(None, ge=0, le=5000, description="True value of the check standard")
-    measured_ug_l: Optional[float] = Field(None, ge=0, le=50000)
+    run_type: Literal["blank", "check_standard", "field_blank", "spike_recovery", "ph_buffer", "conductivity_standard",
+                      "turbidity_standard", "temperature_reference"]
+    expected_ug_l: Optional[float] = Field(None, ge=-50, le=1_000_000,
+                                           description="True value of the check standard (or of the buffer / standard, in that sensor's unit)")
+    measured_ug_l: Optional[float] = Field(None, ge=-50, le=1_000_000)
+    baseline_ug_l: Optional[float] = Field(None, ge=0, le=50000, description="spike_recovery: the unspiked sample's reading")
     peak_current_ua: Optional[float] = Field(None, ge=-1000, le=1000,
                                              description="If given, arsenic is computed from it with the device's calibration")
     qc_scan_flags: Optional[List[str]] = Field(None, max_length=20)

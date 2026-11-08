@@ -1,0 +1,23 @@
+part,category,qty_per_device,unit_cost_inr,supplier,part_number,consumable_per_test,qty_per_test,note
+ESP32-WROOM-32 dev board,electronics,1,,,,no,,fill unit_cost_inr from the receipt
+ADS1115 16-bit ADC breakout,electronics,1,,,,no,,
+MCP4725 12-bit DAC breakout,electronics,1,,,,no,,
+Potentiostat front end (op-amps and passives or custom PCB),electronics,1,,,,no,,item 173
+Gold working electrode / screen-printed strip,sensor,1,,,,yes,1,strip replaced per test if screen-printed (item 80)
+Reference electrode (Ag/AgCl),sensor,1,,,,no,,
+Counter electrode,sensor,1,,,,no,,
+Peristaltic pump,fluidics,1,,,,no,,
+Tubing and fittings,fluidics,1,,,,no,,
+Sample cell (3D printed),enclosure,1,,,,no,,print time and filament cost (item 59)
+Enclosure (3D printed or bought),enclosure,1,,,,no,,
+Li-ion cell + charger board,power,1,,,,no,,
+Solar panel 5 V,power,1,,,,no,,item 171
+pH probe,sensors,1,,,,no,,optional
+Conductivity probe,sensors,1,,,,no,,optional
+Turbidity sensor,sensors,1,,,,no,,optional
+Temperature sensor,sensors,1,,,,no,,
+Supporting electrolyte / acid per test,reagent,,,,,yes,1,mL per test and cost per mL
+Pre-reduction reagent per test,reagent,,,,,yes,1,only if total arsenic is measured (item 66)
+Arsenic standard (calibration),reagent,,,,,yes,0.05,share of a calibration per test
+Deionised water per test,reagent,,,,,yes,1,
+Assembly labour,labour,1,,,,no,,hours x rate; time the assembly (item 59)

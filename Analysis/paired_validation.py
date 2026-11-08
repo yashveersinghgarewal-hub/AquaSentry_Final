@@ -41,7 +41,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import svg_plots as sp  # noqa: E402
 
-CUTOFFS = (10.0, 20.0)
+CUTOFFS = (10.0, 20.0, 50.0)     # legal limit, node LOD, the ISEF list's second reporting cutoff (item 110)
 NEAR_BAND = 5.0
 BOOT = 2000
 
@@ -74,6 +74,7 @@ def read_pairs(path: str) -> List[Dict]:
             "outcome": r.get("screening_outcome") or "",
             "site": r.get("site_name") or r.get("village") or r.get("device_code") or "",
             "sample": r.get("sample_code") or "",
+            "lot": r.get("electrode_lot") or "",
         })
     return out
 
@@ -93,10 +94,11 @@ def _f(v) -> Optional[float]:
 
 
 def demo_pairs(n: int = 120, seed: int = 7) -> List[Dict]:
-    """SYNTHETIC pairs: a log-uniform 'truth' from 1 to 300 µg/L, a lab with 5 % error and a 2 µg/L reporting
-    limit, and a node with a 0.92 slope, +1.5 µg/L offset, 12 % proportional noise and 4 µg/L floor noise."""
+    """SYNTHETIC pairs: a log-uniform 'truth' from 1 to 300 µg/L (each sample read twice by the node), a lab with 5 %
+    error and a 2 µg/L reporting limit, a node with a 0.92 slope, +1.5 µg/L offset, 12 % proportional noise and
+    4 µg/L floor noise, two electrode lots."""
     rng = np.random.default_rng(seed)
-    truth = np.exp(rng.uniform(np.log(1.0), np.log(300.0), n))
+    truth = np.repeat(np.exp(rng.uniform(np.log(1.0), np.log(300.0), n // 2)), 2)   # each sample read twice
     lab = truth * (1 + rng.normal(0, 0.05, n))
     node = 1.5 + 0.92 * truth + rng.normal(0, 4.0, n) + truth * rng.normal(0, 0.12, n)
     node = np.clip(node, 0, None)
@@ -105,7 +107,7 @@ def demo_pairs(n: int = 120, seed: int = 7) -> List[Dict]:
         cens = lab[i] < 2.0
         out.append({"node": float(round(node[i], 2)), "lab": 2.0 if cens else float(round(lab[i], 2)),
                     "censored": bool(cens), "rl": 2.0, "unc": float(round(max(4.0, 0.1 * node[i]) * 2, 1)),
-                    "outcome": "", "site": f"Site-{i % 6 + 1}", "sample": f"DEMO-{i + 1:03d}"})
+                    "outcome": "", "site": f"Site-{i % 6 + 1}", "sample": f"DEMO-{(i // 2) + 1:03d}", "lot": f"LOT-{i % 2 + 1}"})
     return out
 
 
@@ -255,7 +257,7 @@ def analyse(pairs: List[Dict], out_dir: str, label: str, censored_mode: str = "e
     roc_ax = sp.Axes((0, 1), (0, 1), "ROC: node value vs laboratory decision" + tag, "False-positive rate (1 − specificity)",
                      "Sensitivity")
     roc_ax.line([0, 1], [0, 1], sp.MUTED, 1.0, "5 4")
-    for c, col in zip(CUTOFFS, (sp.AMBER, sp.VIOLET)):
+    for c, col in zip(CUTOFFS, (sp.AMBER, sp.VIOLET, sp.RED)):
         lab_pos = (lab_all >= c) & ~cens
         d = confusion(node_all, lab_pos, c)
         d["auc"] = auc_rank(node_all, lab_pos)
@@ -284,8 +286,77 @@ def analyse(pairs: List[Dict], out_dir: str, label: str, censored_mode: str = "e
             inside = [abs(p["node"] - p["lab"]) <= p["unc"] for p in pairs if p["unc"] and not p["censored"]]
             res["uncertainty_coverage"] = {"n": len(inside), "fraction_of_lab_values_inside_node_interval": float(np.mean(inside)),
                                            "expected_for_k2": 0.95}
+    # v5.9 (ISEF 104, 71): the same numbers per electrode lot and per site, so a bad lot or a hard matrix shows
+    res["by_group"] = {"electrode_lot": _group_table(pairs, "lot"), "site": _group_table(pairs, "site")}
+    # v5.9 (ISEF 134, 72): repeatability as CV % from repeated node readings of the same sample code
+    res["replicate_cv"] = replicate_cv(pairs)
+    # v5.9 (ISEF 132, 141): what this sample size can claim, and what a larger study would
+    n_unsafe = int(((lab_all >= 10) & ~cens).sum())
+    res["sample_size"] = sample_size_table(n_unsafe)
     _write(out_dir, res, pairs)
     return res
+
+
+def _group_table(pairs: List[Dict], key: str) -> List[Dict]:
+    groups: Dict[str, List[Dict]] = {}
+    for p in pairs:
+        if p.get(key):
+            groups.setdefault(p[key], []).append(p)
+    out = []
+    for g, rows in sorted(groups.items()):
+        node = np.array([r["node"] for r in rows])
+        lab = np.array([r["lab"] for r in rows])
+        cq = np.array([r["censored"] for r in rows])
+        q = ~cq
+        row = {"group": g, "n": len(rows), "n_quantified": int(q.sum())}
+        if q.sum() >= 3:
+            diff = node[q] - lab[q]
+            row["bias_ug_l"] = float(diff.mean())
+            row["mae_ug_l"] = float(np.abs(diff).mean())
+            sl, ic = deming(lab[q], node[q])
+            row["deming_slope"], row["deming_intercept"] = sl, ic
+        pos = (lab >= 10) & ~cq
+        if pos.any():
+            p_, lo, hi = wilson(int(((node >= 10) & pos).sum()), int(pos.sum()))
+            row["sensitivity_10"] = {"value": p_, "ci95": [lo, hi], "k": int(((node >= 10) & pos).sum()), "n": int(pos.sum())}
+        out.append(row)
+    return out
+
+
+def replicate_cv(pairs: List[Dict]) -> Dict:
+    """CV % of repeated node readings of one sample code, reported in three concentration bands."""
+    by_sample: Dict[str, List[float]] = {}
+    for p in pairs:
+        if p.get("sample"):
+            by_sample.setdefault(p["sample"], []).append(p["node"])
+    bands = {"low (< 20 µg/L)": [], "medium (20-100 µg/L)": [], "high (> 100 µg/L)": []}
+    for vals in by_sample.values():
+        if len(vals) < 2:
+            continue
+        m = float(np.mean(vals))
+        if m <= 0:
+            continue
+        cv = float(np.std(vals, ddof=1) / m * 100.0)
+        key = "low (< 20 µg/L)" if m < 20 else "medium (20-100 µg/L)" if m <= 100 else "high (> 100 µg/L)"
+        bands[key].append(cv)
+    return {k: ({"n_samples": len(v), "median_cv_pct": float(np.median(v)), "max_cv_pct": float(np.max(v))} if v else
+                {"n_samples": 0}) for k, v in bands.items()}
+
+
+def sample_size_table(n_unsafe: int) -> Dict:
+    """Wilson 95 % interval width for sensitivity at a few true values, for this study and for planned sizes."""
+    def width(n, p):
+        if n == 0:
+            return None
+        k = int(round(p * n))
+        _, lo, hi = wilson(k, n)
+        return round(hi - lo, 3)
+    sizes = sorted({n_unsafe, 20, 30, 50, 100, 200} - {0})
+    return {"n_unsafe_in_this_study": n_unsafe,
+            "ci_width_at_sensitivity": {str(n): {"0.90": width(n, 0.9), "0.95": width(n, 0.95), "1.00": width(n, 1.0)} for n in sizes},
+            "rule_of_three_upper_miss_rate": {str(n): round(3.0 / n, 3) for n in sizes},
+            "note": "Width of the 95 % Wilson interval for sensitivity when k = p·n unsafe samples are flagged. "
+                    "To claim 'sensitivity ≥ 90 %' with a lower bound above 80 % needs about 100 unsafe samples."}
 
 
 def _pct(d: Dict) -> str:
@@ -341,6 +412,29 @@ def _write(out_dir: str, res: Dict, pairs: List[Dict]) -> None:
         u = res["uncertainty_coverage"]
         L += [f"- Uncertainty check: the laboratory value fell inside the node's ± U interval for **{100 * u['fraction_of_lab_values_inside_node_interval']:.0f} %** "
               f"of {u['n']} pairs (a k = 2 interval should cover about 95 %; much less means U is understated).", ""]
+    if res.get("by_group"):
+        for key, title in (("electrode_lot", "By electrode lot"), ("site", "By site")):
+            rows = res["by_group"].get(key) or []
+            if rows:
+                L += [f"## {title}", "", "| group | n | bias µg/L | MAE µg/L | Deming slope | sensitivity @10 |", "|---|---|---|---|---|---|"]
+                for g in rows:
+                    sens = g.get("sensitivity_10")
+                    L += [f"| {g['group']} | {g['n']} | {g.get('bias_ug_l', float('nan')):+.1f} | {g.get('mae_ug_l', float('nan')):.1f} | "
+                          f"{g.get('deming_slope', float('nan')):.2f} | {_pct(sens) if sens else 'n/a'} |"]
+                L += [""]
+    if res.get("replicate_cv"):
+        L += ["## Repeatability (repeated node readings of one sample)", "", "| band | samples | median CV % | max CV % |", "|---|---|---|---|"]
+        for band, d in res["replicate_cv"].items():
+            L += [f"| {band} | {d['n_samples']} | {d.get('median_cv_pct', float('nan')):.1f} | {d.get('max_cv_pct', float('nan')):.1f} |"
+                  if d["n_samples"] else f"| {band} | 0 | – | – |"]
+        L += [""]
+    if res.get("sample_size"):
+        ss = res["sample_size"]
+        L += ["## What this sample size can claim", "", f"Unsafe (lab ≥ 10 µg/L) samples in this study: **{ss['n_unsafe_in_this_study']}**.", "",
+              "| n unsafe | CI width if sensitivity = 90 % | = 95 % | = 100 % | rule-of-three upper miss rate |", "|---|---|---|---|---|"]
+        for n, w in ss["ci_width_at_sensitivity"].items():
+            L += [f"| {n} | {w['0.90']} | {w['0.95']} | {w['1.00']} | {ss['rule_of_three_upper_miss_rate'][n]} |"]
+        L += ["", ss["note"], ""]
     L += ["## How to read this", "",
           "- The node is a **screening** test with a 20 µg/L detection limit; it cannot confirm compliance with the 10 µg/L limit. "
           "Sensitivity at 10 µg/L therefore matters most, and the 10–20 µg/L band is expected to be weak.",

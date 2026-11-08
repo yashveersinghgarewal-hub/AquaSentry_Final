@@ -161,7 +161,7 @@ def create_scan(payload: schemas.ScanCreate, request: Request, db: Session = Dep
         cu_peak_ua=payload.cu_peak_ua, calibration_ref=cal.get("calibration_id"),
         qc_status="fail" if (faults or res.qc_status == "REJECTED") else "pass",
         qc_scan_flags=list(dict.fromkeys(flags + device_flags)) or None,
-        sample_code=payload.sample_code, electrode_lot=payload.electrode_lot,
+        sample_code=payload.sample_code, sample=payload.sample, electrode_lot=payload.electrode_lot,
     )
     resp = ingest_reading(reading_payload, db, trace=trace,
                           uncertainty_ppb=res.peak.uncertainty_ug_l if res.peak is not None else None,

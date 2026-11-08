@@ -115,6 +115,7 @@ class Reading(Base):
     trace_id = Column(Integer, ForeignKey("raw_voltammetry_traces.id"), nullable=True, index=True)
     analysis_version = Column(String(24), nullable=True)
     sample_code = Column(String(64), nullable=True, index=True)   # parent sample ID shared with the lab split
+    sample_json = Column(Text, nullable=True)                      # v5.9: how the bottle was taken (SampleMeta)
     electrode_lot = Column(String(64), nullable=True)
     reprocessed_from_id = Column(Integer, nullable=True)          # reading id this one was recomputed from
     calibration_ref = Column(String(64), nullable=True)   # calibration_id the node used
@@ -310,6 +311,7 @@ class QcRun(Base):
     measured_ug_l = Column(Float, nullable=True)
     peak_current_ua = Column(Float, nullable=True)
     recovery_pct = Column(Float, nullable=True)
+    baseline_ug_l = Column(Float, nullable=True)           # v5.9: spike_recovery - the unspiked reading
     passed = Column(Boolean, nullable=False)
     detail = Column(Text, nullable=True)
     recorded_at = Column(DateTime, default=utc_now, index=True)

@@ -37,16 +37,16 @@
       <a href="#device" class="nav-link" data-section="device"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span data-i18n="nav.device">Device &amp; robot</span></a>
       <a href="#contaminants" class="nav-link" data-section="contaminants"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="8" r="2"/><circle cx="14" cy="16" r="3.5"/></svg><span data-i18n="nav.contaminants">Contaminants</span></a>
       <a href="#standards" class="nav-link" data-section="standards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span data-i18n="nav.standards">Standards &amp; methods</span></a>
-      <a href="#impact" class="nav-link" data-section="impact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span data-i18n="nav.impact">Impact &amp; market</span></a>
+      <a href="#impact" class="nav-link" data-section="impact" data-judge-hide><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span data-i18n="nav.impact">Impact &amp; market</span></a>
       <a href="#report" class="nav-link" data-section="report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span data-i18n="nav.report">Report</span></a>
     </nav>
-    <nav class="nav-group" aria-labelledby="navProject">
+    <nav class="nav-group" aria-labelledby="navProject" data-judge-hide>
       <div class="nav-label" id="navProject" data-i18n="nav.more">Project pages</div>
       <a href="market-research.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span data-i18n="nav.market">Market research</span></a>
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5.4</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><span class="judge-badge" id="judgeBadge" data-i18n="judge.badge" hidden>Judging mode</span><b>AquaSentry v5.9</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
 
@@ -72,6 +72,9 @@
             <option value="pa" lang="pa">ਪੰਜਾਬੀ</option>
           </select>
         </label>
+        <button class="icon-btn" id="judgeBtn" type="button" data-i18n-aria="judge.toggle" aria-label="Judging mode: show only the science screens" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18M5 4v10h14V4M12 14v4M8 21l4-3 4 3"/></svg>
+        </button>
         <button class="icon-btn" id="themeBtn" type="button" data-i18n-aria="theme.toggle" aria-label="Switch light or dark theme">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
         </button>
@@ -599,7 +602,7 @@
     </main>
 
     <footer class="foot">
-      <span>AquaSentry v5.8, AquaNet-V3</span>
+      <span>AquaSentry v5.9, AquaNet-V3</span>
       <span data-i18n="footer.note">Screening prototype. Not a laboratory certificate.</span>
     </footer>
   </div>

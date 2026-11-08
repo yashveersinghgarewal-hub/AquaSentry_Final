@@ -167,7 +167,7 @@ def test_read_protection_middleware_blocks_network_reads(monkeypatch):
 
 
 def test_health_reports_schema_revision(client):
-    assert client.get("/api/health").json()["diagnostics"]["schema_revision"].startswith("0004")
+    assert client.get("/api/health").json()["diagnostics"]["schema_revision"].startswith("0005")
 
 
 def test_firmware_upload_latest_and_download(client):
@@ -201,4 +201,4 @@ def test_old_database_upgrades_in_both_connection_modes(single, tmp_path):
     out = subprocess.run([sys.executable, "-c", code], cwd=platform, env=env, capture_output=True, text=True, timeout=60)
     assert out.returncode == 0, out.stderr[-2000:]
     lines = out.stdout.strip().splitlines()
-    assert lines[0].startswith("migrated 0004") and lines[1].startswith("upgraded 0004"), lines
+    assert lines[0].startswith("migrated 0005") and lines[1].startswith("upgraded 0005"), lines

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from . import field as field_mod, models
 from .deps import _utc, now_utc
-from .standards import LOD_UG_L, QC_BLANK_MAX_UG_L, QC_CHECK_RECOVERY, QC_FAULT_FLAGS
+from .standards import LOD_UG_L, QC_BLANK_MAX_UG_L, QC_CHECK_RECOVERY, QC_FAULT_FLAGS, QC_SENSOR_TOLERANCE, QC_SPIKE_RECOVERY
 
 
 def check_max_age_hours() -> float:
@@ -72,15 +72,52 @@ def describe(flags: List[str]) -> List[str]:
 # Check standards and blanks
 # ---------------------------------------------------------------------------
 
-def judge_qc_run(run_type: str, expected: Optional[float], measured: float, flags: List[str]):
-    """Returns (passed, recovery_pct or None, plain-language detail)."""
+SENSOR_UNITS = {"ph_buffer": "pH", "conductivity_standard": "µS/cm", "turbidity_standard": "NTU", "temperature_reference": "°C"}
+
+
+def judge_qc_run(run_type: str, expected: Optional[float], measured: float, flags: List[str],
+                 baseline: Optional[float] = None):
+    """Returns (passed, recovery_pct or None, plain-language detail).
+
+    v5.9 adds field blanks (judged like reagent blanks), spike recovery on a real sample (the added arsenic must be
+    recovered at 80-120 %) and the auxiliary sensors' checks against their own standards (pH buffer, conductivity
+    standard, turbidity standard, reference thermometer) - without those, pH / EC / turbidity stay out of any claim."""
+    if run_type in QC_SENSOR_TOLERANCE:
+        if expected is None:
+            return False, None, f"A {run_type.replace('_', ' ')} check needs the standard's value (expected_ug_l, in {SENSOR_UNITS[run_type]})."
+        tol = QC_SENSOR_TOLERANCE[run_type]
+        unit = SENSOR_UNITS[run_type]
+        if run_type in ("conductivity_standard", "turbidity_standard"):
+            if expected <= 0:
+                return False, None, "The standard's value must be above zero."
+            err = abs(measured - expected) / expected
+            ok = err <= tol
+            return ok, round(measured / expected * 100.0, 1), (f"Sensor read {measured:g} {unit} against a {expected:g} {unit} standard "
+                                                               f"({err * 100:.1f} % off; allowed {tol * 100:.0f} %)." +
+                                                               ("" if ok else " Recalibrate the sensor before using its values."))
+        err = abs(measured - expected)
+        ok = err <= tol
+        return ok, None, (f"Sensor read {measured:g} {unit} against a {expected:g} {unit} reference ({err:.2f} {unit} off; "
+                          f"allowed {tol:g}).") + ("" if ok else " Recalibrate the sensor before using its values.")
     faults = [f for f in flags if f in QC_FAULT_FLAGS]
     if faults:
         return False, None, "Scan failed its own checks: " + "; ".join(describe(faults)) + "."
-    if run_type == "blank":
+    if run_type in ("blank", "field_blank"):
         ok = measured < QC_BLANK_MAX_UG_L
-        return ok, None, (f"Blank read {measured:.1f} µg/L" +
+        what = "Field blank" if run_type == "field_blank" else "Blank"
+        return ok, None, (f"{what} read {measured:.1f} µg/L" +
                           ("." if ok else f" (must be below {QC_BLANK_MAX_UG_L:g}); check for contamination or carry-over."))
+    if run_type == "spike_recovery":
+        if not expected or expected <= 0:
+            return False, None, "A spike-recovery run needs the amount of arsenic added (expected_ug_l)."
+        if baseline is None:
+            return False, None, "A spike-recovery run needs the unspiked sample's reading (baseline_ug_l)."
+        rec = (measured - baseline) / expected * 100.0
+        lo, hi = QC_SPIKE_RECOVERY
+        ok = lo <= rec <= hi
+        return ok, rec, (f"Spiked {expected:g} µg/L into a sample reading {baseline:.1f} µg/L; read {measured:.1f} µg/L "
+                         f"({rec:.0f} % recovery; allowed {lo:g}-{hi:g} %)." +
+                         ("" if ok else " A matrix effect or interference is likely: use standard addition for this source."))
     if not expected or expected <= 0:
         return False, None, "A check standard needs its true value (expected_ug_l)."
     rec = measured / expected * 100.0
@@ -131,6 +168,20 @@ def qc_status(db: Session, device_code: Optional[str]) -> Dict:
               .order_by(models.QcRun.recorded_at.desc()).limit(20).all())
     out["recent_blanks"] = [{"recorded_at": _utc(b.recorded_at).isoformat(), "measured_ug_l": b.measured_ug_l,
                              "passed": b.passed} for b in blanks]
+    # v5.9: the auxiliary sensors are "verified" only while their last check against a standard passed within the
+    # calibration window; the dashboard greys out pH / EC / turbidity / temperature otherwise (ISEF item 98).
+    sensors = {}
+    for rt in QC_SENSOR_TOLERANCE:
+        last = (db.query(models.QcRun).filter(models.QcRun.device_code == device_code, models.QcRun.run_type == rt)
+                .order_by(models.QcRun.recorded_at.desc()).first())
+        if last is None:
+            sensors[rt] = {"verified": False, "last": None}
+        else:
+            age_d = (now_utc() - _utc(last.recorded_at)).total_seconds() / 86400.0
+            sensors[rt] = {"verified": bool(last.passed) and age_d <= calibration_max_age_days(),
+                           "last": {"recorded_at": _utc(last.recorded_at).isoformat(), "passed": last.passed,
+                                    "expected": last.expected_ug_l, "measured": last.measured_ug_l, "age_days": round(age_d, 1)}}
+    out["sensor_checks"] = sensors
     out["trusted"] = bool(out.get("check_ok")) and bool(out.get("calibration_ok"))
     return out
 

@@ -42,6 +42,14 @@ QC_DETECT_SNR = 3.0             # net peak must be 3x the background noise to co
 QC_MIN_GOOD_SCANS = 2           # the device must average at least this many good scans
 QC_CHECK_RECOVERY = (80.0, 120.0)   # a check standard must read 80-120 % of its true value
 QC_BLANK_MAX_UG_L = 10.0        # a blank (arsenic-free water) must read below this
+# v5.9 (ISEF items 89, 91, 98): field blanks, spike recovery and the auxiliary sensors' own checks
+QC_SPIKE_RECOVERY = (80.0, 120.0)                  # spiked sample must recover 80-120 % of the added arsenic
+QC_SENSOR_TOLERANCE = {                            # |measured - standard| allowed for each auxiliary sensor
+    "ph_buffer": 0.2,                              # pH units against a buffer (4.01 / 7.00 / 10.01)
+    "conductivity_standard": 0.05,                 # relative (5 %) against a conductivity standard (e.g. 1413 µS/cm)
+    "turbidity_standard": 0.10,                    # relative (10 %) against a formazin / polymer standard
+    "temperature_reference": 0.5,                  # °C against a reference thermometer
+}
 # Fault codes: any of these means the measurement itself is not trustworthy.
 QC_FAULT_FLAGS = {
     "ADC_SATURATION_HIGH", "ADC_SATURATION_LOW", "FLAT_SIGNAL", "BASELINE_UNSTABLE", "NOISE_ABOVE_LOD",

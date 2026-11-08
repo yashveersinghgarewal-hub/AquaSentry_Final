@@ -11,7 +11,8 @@ from typing import Iterable, List, Optional, Sequence, Tuple
 W, H = 640, 460
 ML, MR, MT, MB = 70, 24, 44, 56
 INK, MUTED, GRID = "#1f2a37", "#5b6b7b", "#e4e9ef"
-BLUE, AMBER, RED, GREEN, VIOLET = "#1f5f8b", "#8a5a00", "#b3261e", "#2e7d32", "#5e35b1"
+# Okabe-Ito palette (colour-blind safe; ISEF item 146): blue, orange, vermilion, bluish green, reddish purple
+BLUE, AMBER, RED, GREEN, VIOLET = "#0072B2", "#E69F00", "#D55E00", "#009E73", "#CC79A7"
 FONT = "font-family='Lato, Segoe UI, Helvetica, Arial, sans-serif'"
 
 

@@ -178,6 +178,8 @@ At boot the node runs a **self-test** and prints it on the serial monitor:
 [SELFTEST] Scan evidence upload: on
 ```
 
+Firmware 5.9.0 also prints `[TIMING] First result N ms after power-on` and reports `first_result_ms` in `/status.json` (ISEF item 186). Pins and parts are in one table in [`PINOUT.md`](PINOUT.md).
+
 The same facts are in `/status.json` under `self_test` (`adc_ads1115`, `dac_mcp4725`, `storage`, `inference_us`,
 `calibration_age_days`; −1 = unknown) together with `trace_upload` and `trace_pending`. A missing ADC or DAC does not
 stop the node (every scan is QC-checked anyway); it tells the installer at once what is wrong. Write the measured

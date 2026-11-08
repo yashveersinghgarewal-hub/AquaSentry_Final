@@ -210,6 +210,13 @@ def generate_potability_certificate_pdf(reading_dict: Dict[str, Any]) -> bytes:
     if reading_dict.get("trace_id"):
         extra.append(f"Native scan #{reading_dict['trace_id']} stored (checksum {str(reading_dict.get('trace_checksum') or '')[:12]}…), "
                      f"analysis {reading_dict.get('analysis_version') or '?'}")
+    # v5.9 (ISEF items 161, 191): every certificate names the firmware, model, analysis and calibration that made it
+    extra.append("Versions: firmware " + str(reading_dict.get("firmware_version") or "n/a")
+                 + f", model {reading_dict.get('model_version') or active_model_name()}"
+                 + f", analysis {reading_dict.get('analysis_version') or 'n/a'}"
+                 + f", calibration {reading_dict.get('calibration_id') or 'factory'}"
+                 + (f", electrode lot {reading_dict['electrode_lot']}" if reading_dict.get("electrode_lot") else "")
+                 + (f", sample {reading_dict['sample_code']}" if reading_dict.get("sample_code") else ""))
     if extra:
         story.append(Spacer(1, 4))
         story.append(Paragraph(" | ".join(extra), body_style))
@@ -293,6 +300,9 @@ def download_potability_certificate(
         "trace_checksum": rec.trace.checksum_sha256 if getattr(rec, "trace", None) is not None else None,
         "analysis_version": rec.analysis_version,
         "calibration_id": rec.calibration_ref,
+        "firmware_version": getattr(getattr(rec, "device", None), "firmware_version", None) if rec.source_type == "hardware" else None,
+        "electrode_lot": rec.electrode_lot,
+        "sample_code": rec.sample_code,
     }
     # Model confidence is recomputed from the stored values with the model that classified the reading.
     try:

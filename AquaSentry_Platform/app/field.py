@@ -255,3 +255,19 @@ def jjm_rows(devices: List["models.Device"], readings: List["models.Reading"], l
                                  _status_mg_l(lab.arsenic_ug_l, "Laboratory", LOD_UG_L), lab.lab_name or "",
                                  ("NABL accredited" if lab.nabl_accredited else "")])
     return rows
+
+
+def public_coords(lat, lon, precise: bool = False):
+    """v5.9 (ISEF items 30, 199): coordinates that leave the server through a shareable export are rounded to
+    PUBLIC_COORD_DECIMALS places (default 3, about 100 m) unless the caller asks for precise values. A private
+    well's exact position is personal data; a ~100 m cell still places the result on a district map."""
+    import os
+    if lat is None or lon is None:
+        return lat, lon
+    if precise:
+        return lat, lon
+    try:
+        nd = int(os.getenv("PUBLIC_COORD_DECIMALS", "3"))
+    except ValueError:
+        nd = 3
+    return round(float(lat), nd), round(float(lon), nd)

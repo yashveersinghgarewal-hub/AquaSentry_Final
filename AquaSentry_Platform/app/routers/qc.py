@@ -27,10 +27,12 @@ def record_qc_run(payload: schemas.QcRunCreate, request: Request, db: Session = 
         measured = max(0.0, (payload.peak_current_ua - icpt) / slope * 1000.0) if payload.peak_current_ua > icpt else 0.0
     if measured is None:
         raise HTTPException(status_code=422, detail="Give measured_ug_l or peak_current_ua.")
-    expected = 0.0 if payload.run_type == "blank" else payload.expected_ug_l
-    passed, recovery, detail = qc.judge_qc_run(payload.run_type, expected, measured, payload.qc_scan_flags or [])
+    expected = 0.0 if payload.run_type in ("blank", "field_blank") else payload.expected_ug_l
+    passed, recovery, detail = qc.judge_qc_run(payload.run_type, expected, measured, payload.qc_scan_flags or [],
+                                               baseline=payload.baseline_ug_l)
     run = models.QcRun(device_code=payload.device_code, run_type=payload.run_type, expected_ug_l=expected,
                        measured_ug_l=round(measured, 3), peak_current_ua=payload.peak_current_ua,
+                       baseline_ug_l=payload.baseline_ug_l,
                        recovery_pct=round(recovery, 1) if recovery is not None else None, passed=passed, detail=detail,
                        recorded_at=payload.recorded_at or now_utc())
     db.add(run)
@@ -47,11 +49,15 @@ def get_qc_status(device_code: Optional[str] = None, db: Session = Depends(get_d
 
 
 @router.get("/api/qc/runs", tags=["Quality Control"])
-def list_qc_runs(device_code: Optional[str] = None, limit: int = 50, db: Session = Depends(get_db)):
+def list_qc_runs(device_code: Optional[str] = None, run_type: Optional[str] = None, limit: int = 50,
+                 db: Session = Depends(get_db)):
     q = db.query(models.QcRun)
     if device_code:
         q = q.filter(models.QcRun.device_code == device_code)
+    if run_type:
+        q = q.filter(models.QcRun.run_type == run_type)
     rows = q.order_by(models.QcRun.recorded_at.desc()).limit(max(1, min(limit, 500))).all()
     return [{"id": r.id, "device_code": r.device_code, "run_type": r.run_type, "expected_ug_l": r.expected_ug_l,
-             "measured_ug_l": r.measured_ug_l, "recovery_pct": r.recovery_pct, "passed": r.passed, "detail": r.detail,
+             "measured_ug_l": r.measured_ug_l, "recovery_pct": r.recovery_pct, "baseline_ug_l": r.baseline_ug_l,
+             "passed": r.passed, "detail": r.detail,
              "recorded_at": r.recorded_at.isoformat() if r.recorded_at else None} for r in rows]

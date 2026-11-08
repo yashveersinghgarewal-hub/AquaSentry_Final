@@ -1,0 +1,11 @@
+version,date,what_failed_or_was_missing,what_changed,what_was_measured
+v4.1,2026-11-07,No arsenic-specific chemistry in the dashboard; generic water index,ESP32 arsenic monitor with the AquaNet-V3 classifier and hard safety rules,Parity of the four verdict engines on 10/20/150 edges (tests)
+v5.0-v5.1,2026-11-07,Dashboard hard to read in the field; no motion or theme layer,New UI across every page; black and blue theme with a motion layer,Browser tests; WCAG contrast (axe)
+v5.2,2026-11-07,Verdicts used the withdrawn 50 ug/L BIS relaxation; values below LOD shown as numbers,Amended IS 10500 limit (10 ug/L no relaxation); honest 'below sensor LOD' verdicts; hardening,Regression tests on the 10/20/150 tiers
+v5.3,2026-11-07,Firmware could hang on Wi-Fi loss; no fleet view,ESP32 watchdog and offline buffer; fleet API; field-kit dashboard,Firmware host build; fleet endpoint tests
+v5.4,2026-11-07,No live updates; no trend warning,Server-sent events; arsenic trend warnings (Mann-Kendall + Sen slope censored at LOD),Trend tests on synthetic series
+v5.5,2026-11-08,Alerts unsigned; power budget ignored,Signed alerts; metrics endpoint; low-power ESP32 build; Docker,CI matrix (3 chips)
+v5.6,2026-11-08,No lab confirmation path; one factory calibration for every node; no QR public page,Lab results; external and standard-addition calibration per device; sites and map; JJM export; 5 languages; phone alerts,Lab-pairing tests; e2e tests
+v5.7,2026-11-08,Scans with faults were still reported as numbers; no check standards; 'confidence' invented values,Scan QC flags; check standards and calibration age gates; Test Failed verdict; write lock; practice data kept out of reports,Harm-review test suite (test_v57_safety.py)
+v5.8,2026-11-08,Browser and server disagreed on the same trace; four labels for one result; nothing tied a value to its scan,One screening outcome with a measured guard band; native scans stored with checksums; checked JS port of the pipeline; robust baseline; validation tooling,Parity on 17 traces; copper-bump recovery 30.5 -> 42.3 ug/L of 45; 289 server tests
+v5.9,2026-11-08,ISEF roadmap items with a software share were not tracked,Roadmap status register; sample metadata; sensor QC checks; judging mode; analysis scripts for interference / control charts / run order / peak check / AquaNet field evaluation,Test suite; CI

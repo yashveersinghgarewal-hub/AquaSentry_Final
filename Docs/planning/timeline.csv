@@ -1,0 +1,20 @@
+task,start,end,owner,group,note
+"Forms and supervisor (Checklist 1/1A, Research Plan, 1B, Form 2/3 for arsenic standards)",2026-11-10,2026-11-30,team,Rules,Items 1-7 and 220-222; SRC review before any arsenic work
+Research plan written and approved,2026-11-10,2026-11-30,team,Rules,Item 6; addendum for any later change
+Literature table (20+ papers) and novelty sentence,2026-11-10,2026-12-15,team,Prior art,Items 36-37
+Laboratory access and NABL lab quote for ICP-MS,2026-11-15,2026-12-10,team,Field study,Items 120-121
+LOD / LOQ with real blanks and standards,2026-12-01,2027-01-15,lab,Sensor,Items 64-65 and 88-89
+As(III)/As(V) pre-reduction and copper interference,2026-12-15,2027-01-31,lab,Sensor,Items 66-67 and 139
+Electrode variability and lifetime,2027-01-05,2027-02-15,lab,Sensor,Items 70-72
+Paired field sampling (>= 40 samples / 15 sources / 2 districts),2027-01-10,2027-03-05,field,Field study,Items 108-113; pre-register the analysis first (109)
+30-day unattended deployment,2027-01-20,2027-02-28,field,Field study,Items 114-115
+Field data finished (8 weeks before ISEF),2027-03-13,2027-03-13,team,Milestone,Item 16
+Scope freeze,2027-03-15,2027-03-15,team,Milestone,Item 17
+Statistics review with a mentor,2027-03-10,2027-03-20,team,Analysis,Items 19 and 144
+Poster draft (6 weeks before ISEF),2027-03-27,2027-03-27,team,Milestone,Item 16
+Paper (IMRaD) and abstract in own words,2027-03-01,2027-04-10,team,Writing,Items 227-230
+Mock judging x3,2027-04-10,2027-05-05,team,Interview,Items 16 and 244
+Travel documents (passport / US visa),2026-12-01,2027-03-31,team,Logistics,Item 18
+IRIS shortlist announced,2026-11-15,2026-11-30,external,Pathway,Confirm the date on iris.exstemplar.com (item 13)
+IRIS National Fair,2027-01-15,2027-02-15,external,Pathway,IRIS lists Nov 2026 or Jan-Feb 2027 - confirm (item 13)
+Regeneron ISEF 2027 (Los Angeles),2027-05-08,2027-05-14,external,Pathway,Item 13

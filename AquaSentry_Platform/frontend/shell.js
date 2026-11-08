@@ -256,6 +256,32 @@ void main(){
   UI.WaterFX = WaterFX;
   UI.cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
+  // ---------------- judging mode (v5.9) ----------------
+  // ISEF items 195, 258, 262: during judging only the science screens are shown. Persisted per browser; ?mode=judging
+  // switches it on from a link, ?mode=all switches it off.
+  const JUDGE_KEY = 'aq_judging';
+  function setJudging(on, announce) {
+    document.body.classList.toggle('judging', !!on);
+    const b = $('judgeBtn'); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const badge = $('judgeBadge'); if (badge) badge.hidden = !on;
+    try { localStorage.setItem(JUDGE_KEY, on ? '1' : '0'); } catch (e) { /* private window */ }
+    if (on && /^#impact/.test(location.hash)) location.hash = '#overview';
+    if (on) toggleChat(false);
+    if (announce && on) {
+      const el = $('toast');
+      if (el) { el.textContent = t('judge.on'); el.className = 'toast'; el.hidden = false; setTimeout(() => { el.hidden = true; }, 6000); }
+    }
+  }
+  function initJudging() {
+    let on = false;
+    try { on = localStorage.getItem(JUDGE_KEY) === '1'; } catch (e) { on = false; }
+    const mode = new URLSearchParams(location.search).get('mode');
+    if (mode === 'judging') on = true; else if (mode === 'all') on = false;
+    setJudging(on, false);
+    if ($('judgeBtn')) $('judgeBtn').addEventListener('click', () => setJudging(!document.body.classList.contains('judging'), true));
+  }
+  UI.setJudging = setJudging;
+
   // ---------------- init ----------------
   // Offline support: only on secure origins (localhost, the desktop app, HTTPS) - browsers do not allow it on plain LAN HTTP.
   if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
@@ -267,6 +293,7 @@ void main(){
     if ($('railBackdrop')) $('railBackdrop').addEventListener('click', () => setMenu(false));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setMenu(false); toggleChat(false); } });
     if ($('themeBtn')) $('themeBtn').addEventListener('click', toggleTheme);
+    initJudging();
     if ($('chatFab')) {
       $('chatFab').addEventListener('click', () => toggleChat());
       $('chatClose').addEventListener('click', () => toggleChat(false));

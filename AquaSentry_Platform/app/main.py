@@ -14,6 +14,7 @@ Provides:
 
 import os
 import io
+import json
 import math
 import re
 import uuid
@@ -309,9 +310,19 @@ def dispatch_emergency_alert(data: Dict[str, Any]):
 # Readings: Ingest (Called by Arduino / LoRa / Bluetooth Bridge)
 # ---------------------------------------------------------------------------
 
+def _reading_out(reading) -> "schemas.ReadingOut":
+    out = schemas.ReadingOut.model_validate(reading)
+    if getattr(reading, "sample_json", None):
+        try:
+            out.sample = json.loads(reading.sample_json)
+        except (TypeError, ValueError):
+            out.sample = None
+    return out
+
+
 def _reading_response(reading: "models.Reading", eval_res, prefix: str = "") -> schemas.ReadingResponse:
     return schemas.ReadingResponse(
-        reading=schemas.ReadingOut.model_validate(reading),
+        reading=_reading_out(reading),
         label=eval_res.label,
         severity=eval_res.severity,
         message=f"{prefix}{eval_res.message}",
@@ -441,6 +452,7 @@ def ingest_reading(payload: schemas.ReadingCreate, db: Session, *, trace: "model
         trace_id=trace.id if trace is not None else None,
         analysis_version=analysis_version,
         sample_code=payload.sample_code,
+        sample_json=json.dumps(payload.sample.model_dump(mode="json", exclude_none=True)) if payload.sample else None,
         electrode_lot=payload.electrode_lot,
         reprocessed_from_id=reprocessed_from_id,
     )
@@ -508,7 +520,7 @@ def list_readings(
 
     response.headers["X-Total-Count"] = str(q.order_by(None).count())
     q = q.order_by(models.Reading.recorded_at.desc()).offset(offset).limit(limit)
-    return q.all()
+    return [_reading_out(r) for r in q.all()]
 
 
 @app.get("/api/readings/latest", response_model=schemas.ReadingOut, tags=["Readings"])
@@ -523,7 +535,7 @@ def latest_reading(device_code: Optional[str] = Query(None),
     reading = q.order_by(models.Reading.recorded_at.desc()).first()
     if reading is None:
         raise HTTPException(status_code=404, detail="No readings found yet.")
-    return reading
+    return _reading_out(reading)
 
 
 @app.get("/api/readings/history", response_model=List[schemas.HistoryPoint], tags=["Readings"])

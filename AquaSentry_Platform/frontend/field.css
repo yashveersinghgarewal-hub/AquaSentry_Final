@@ -461,3 +461,9 @@ button, [role="button"], summary, .chip, .btn, .nav-link, .dv-row { cursor: poin
 .vchip.c-Retest, .dv-latest.c-Retest { background: var(--paint-caution); }
 .cal-note { font-size: .86rem; color: var(--ink-2); background: color-mix(in srgb, var(--paint-caution) 10%, transparent);
   border-left: 3px solid var(--paint-caution); padding: 10px 12px; border-radius: 4px; margin: 10px 0 0; line-height: 1.5; }
+
+/* v5.9 judging mode: the three science screens stay, market / sales / assistant go (ISEF items 195, 258, 262) */
+body.judging [data-judge-hide], body.judging #impact, body.judging .chat-fab, body.judging .chat-panel { display: none !important; }
+body.judging #judgeBtn { background: var(--ink); color: var(--bg); }
+.judge-badge { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--bg); margin-bottom: 6px; }

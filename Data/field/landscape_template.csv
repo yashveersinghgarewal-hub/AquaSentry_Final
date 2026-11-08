@@ -1,0 +1,7 @@
+method,lod_ug_l,cost_per_test_inr,time_to_result_min,field_capable,quantitative,source
+ICP-MS at a NABL laboratory,0.1,,,no,yes,"laboratory quote and method sheet (fill in)"
+HG-AAS at a laboratory,1,,,no,yes,"laboratory quote (fill in)"
+Gutzeit field test kit (mercuric bromide strip),10,,,yes,semi,"kit datasheet (fill in; semi-quantitative colour chart)"
+Commercial portable potentiostat + gold electrode,1,,,yes,yes,"instrument datasheet (fill in)"
+Open-source potentiostat (Bullen et al. 2022),,,,yes,yes,"PLoS ONE 2022 (fill LOD from the paper)"
+AquaSentry node (this project),20,,,yes,yes,"strip specification; LOD not yet measured with our blanks (CLAIMS_REGISTER M1)"

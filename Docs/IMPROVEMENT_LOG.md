@@ -327,10 +327,37 @@ recovery, the paired dataset itself, the energy budget, costs. Everything in `Do
 
 ---
 
+## 4g. v5.9: the ISEF roadmap, item by item
+
+**Why:** the 267-item roadmap was a plan with no record of which items the software had already closed. v5.9 adds
+the register (`Docs/ISEF_ROADMAP_STATUS.md`) and closes every remaining item that code can close:
+
+| Items | What v5.9 does | Verified by |
+| --- | --- | --- |
+| 111–112 | `SampleMeta` with every reading / scan; flattened in the paired export | `test_v59_roadmap.py::TestSampleMetadata` |
+| 89, 91, 98 | field blanks, spike recovery, auxiliary-sensor checks as QC runs; `sensor_checks` in QC status | `TestQcRunTypes` |
+| 30, 199 | export coordinates rounded unless asked; privacy page | `test_paired_export_rounds_coordinates_unless_asked` |
+| 161, 191 | versions line on the certificate | `test_certificate_names_every_version` |
+| 195, 258, 262 | judging mode | browser run (`11_judging.png`), e2e suite |
+| 186 | time to first result in firmware | host build |
+| 76, 95–96, 99, 139, 148–155 | peak check, run order, control chart, interference, AquaNet field evaluation | `test_v58_analysis.py` (v5.9 block) |
+| 21, 47, 50, 58, 210, 236, 264 | Gantt, landscape, design history, cost model, QR, poster builder | same |
+| 2, 11, 20, 53–54, 102, 176, 181, 200 | the documents listed in the changelog | `test_v59_roadmap_register.py::test_register_paths_exist` |
+
+**Deliberately not done:** a 1-D CNN on raw voltammograms (item 157) and a reference-electrode open-circuit self-test
+(item 174) wait for real scans and a measured analog path; a mixed model (item 142) waits for repeated visits. Item 257
+now applies: the software changes only to fix defects or to process real data.
+
+---
+
 ## 5. API reference: everything added or changed
 
 | Method | Path | Since | Notes |
 | --- | --- | --- | --- |
+| POST | `/api/qc/runs` | v5.9 | New `run_type` values `field_blank`, `spike_recovery` (+ `baseline_ug_l`), `ph_buffer`, `conductivity_standard`, `turbidity_standard`, `temperature_reference` |
+| GET | `/api/qc/status` | v5.9 | `sensor_checks` per auxiliary sensor |
+| POST | `/api/readings`, `/api/scans` | v5.9 | `sample` object (`SampleMeta`) stored and returned |
+| GET | `/api/data/export/paired` | v5.9 | `sample_*` columns; coordinates rounded unless `precise_coordinates=true` |
 | POST | `/api/scans` | v5.8 | Store a native scan (checksum, versions, calibration, QC, features) and create its reading; `reading_idempotency_key` attaches a trace to a reading the device already sent |
 | GET | `/api/scans`, `/api/scans/{id}` | v5.8 | List (by device / reading / sample code) and fetch a trace with processed arrays and a checksum check |
 | POST | `/api/scans/{id}/reprocess` | v5.8 | Recompute with `calibration_id`; `store=true` writes a new reading linked to the original |

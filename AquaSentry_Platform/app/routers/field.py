@@ -293,11 +293,29 @@ def public_device(device_code: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------- v5.8 paired dataset export
+SAMPLE_KEYS = ["source_kind", "depth_m", "purge_minutes", "bottle_id", "preservation", "collector", "collected_at",
+               "custody_note", "split_for_lab", "field_blank", "collection_to_analysis_min"]
+
+
+def _sample_meta(r) -> dict:
+    """v5.9: the SampleMeta stored with a reading, as a flat dict with every key present (None when not recorded)."""
+    meta = {}
+    if getattr(r, "sample_json", None):
+        try:
+            meta = json.loads(r.sample_json) or {}
+        except (TypeError, ValueError):
+            meta = {}
+    return {k: meta.get(k) for k in SAMPLE_KEYS}
+
 PAIRED_COLUMNS = [
     "sample_code", "reading_id", "device_code", "site_name", "village", "district", "state", "latitude", "longitude",
     "source_kind", "recorded_at", "time_source", "source_type", "device_ug_l", "device_uncertainty_ug_l",
     "screening_outcome", "classification", "arsenic_species", "qc_status", "qc_flags", "calibration_id",
-    "analysis_version", "firmware_version", "electrode_lot", "scan_id", "scan_checksum_sha256",
+    "analysis_version", "firmware_version", "electrode_lot",
+    "sample_source_kind", "sample_depth_m", "sample_purge_minutes", "sample_bottle_id", "sample_preservation",
+    "sample_collector", "sample_collected_at", "sample_custody_note", "sample_split_for_lab", "sample_field_blank",
+    "sample_collection_to_analysis_min",
+    "scan_id", "scan_checksum_sha256",
     "peak_height_ua", "peak_potential_mv", "snr", "ph", "conductivity_us_cm", "turbidity_ntu", "temperature_c",
     "lab_id", "lab_sampled_at", "lab_method", "lab_name", "lab_nabl", "lab_species", "lab_ug_l",
     "lab_reporting_limit_ug_l", "lab_qualifier", "lab_as3_ug_l", "pair_gap_hours",
@@ -305,7 +323,7 @@ PAIRED_COLUMNS = [
 
 
 @router.get("/api/data/export/paired", tags=["Data Management"])
-def export_paired(device_code: Optional[str] = None, include_demo: bool = False,
+def export_paired(device_code: Optional[str] = None, include_demo: bool = False, precise_coordinates: bool = False,
                   fmt: Literal["csv", "json"] = Query("csv", alias="format"), db: Session = Depends(get_db)):
     """The paired dataset (review items 21, 30, 263): one row per device reading, joined to its laboratory
     result when there is one, with the trace checksum, QC, calibration and firmware that produced the value.
@@ -338,14 +356,17 @@ def export_paired(device_code: Optional[str] = None, include_demo: bool = False,
             "sample_code": r.sample_code or (lab.sample_code if lab else None), "reading_id": r.id,
             "device_code": d.device_code if d else None, "site_name": getattr(d, "name", None),
             "village": getattr(d, "village", None), "district": getattr(d, "district", None),
-            "state": getattr(d, "state", None), "latitude": getattr(d, "latitude", None),
-            "longitude": getattr(d, "longitude", None), "source_kind": getattr(d, "source_kind", None),
+            "state": getattr(d, "state", None),
+            **dict(zip(("latitude", "longitude"),
+                       field.public_coords(getattr(d, "latitude", None), getattr(d, "longitude", None), precise_coordinates))),
+            "source_kind": getattr(d, "source_kind", None) or _sample_meta(r).get("source_kind"),
             "recorded_at": _utc(r.recorded_at).isoformat() if r.recorded_at else None, "time_source": r.time_source,
             "source_type": r.source_type, "device_ug_l": r.arsenic_ppb, "device_uncertainty_ug_l": r.uncertainty_ppb,
             "screening_outcome": r.screening_outcome, "classification": r.classification,
             "arsenic_species": r.arsenic_species, "qc_status": r.qc_status, "qc_flags": r.qc_flags,
             "calibration_id": r.calibration_ref, "analysis_version": r.analysis_version,
             "firmware_version": getattr(d, "firmware_version", None), "electrode_lot": r.electrode_lot,
+            **{f"sample_{k}": v for k, v in _sample_meta(r).items()},
             "scan_id": t.id if t else None, "scan_checksum_sha256": t.checksum_sha256 if t else None,
             "peak_height_ua": t.measured_peak_current_ua if t else None,
             "peak_potential_mv": t.peak_potential_mv if t else None, "snr": t.snr if t else None,

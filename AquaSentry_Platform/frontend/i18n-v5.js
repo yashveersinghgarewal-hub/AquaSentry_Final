@@ -773,3 +773,18 @@
     "cal.synthNote": "फ़ैक्टरी कैलिब्रेशन (ढलान 0.8563 µA प्रति mg/L, R² 0.9967) सिमुलेटेड स्कैन जनरेटर के चार कृत्रिम मानकों पर फ़िट की गई थी। इससे सॉफ़्टवेयर चलता है; यह सटीकता का प्रमाण नहीं है। किसी भी फ़ील्ड उपयोग से पहले लैब कैलिब्रेशन (बाहरी मानक या स्टैंडर्ड एडिशन) दर्ज करें।"
   });
 })();
+
+/* v5.9: judging mode (ISEF items 195, 258, 262) */
+(function () {
+  if (!window.I18N || !window.I18N.extend) return;
+  window.I18N.extend('en', {
+    "judge.toggle": "Judging mode: show only the science screens",
+    "judge.on": "Judging mode on: market, sales and the assistant are hidden. Click again to show everything.",
+    "judge.badge": "Judging mode"
+  });
+  window.I18N.extend('hi', {
+    "judge.toggle": "जजिंग मोड: केवल विज्ञान की स्क्रीनें दिखाएँ",
+    "judge.on": "जजिंग मोड चालू: बाज़ार, बिक्री और सहायक छिपे हैं। सब दिखाने के लिए फिर क्लिक करें।",
+    "judge.badge": "जजिंग मोड"
+  });
+})();

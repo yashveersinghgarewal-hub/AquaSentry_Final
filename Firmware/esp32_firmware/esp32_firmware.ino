@@ -45,7 +45,7 @@
 #include "aquasentry_types.h" /* structs live in a header: the Arduino IDE writes function prototypes
                                 above the first function, so types defined later in the sketch break them */
 
-#define FIRMWARE_VERSION     "5.8.0"
+#define FIRMWARE_VERSION     "5.9.0"
 
 /* =====================================================================
  * Pin Assignments (per chip). Change them here if your wiring differs.
@@ -507,6 +507,7 @@ static volatile bool trace_pending = false;
 static bool selftest_adc_ok = false, selftest_dac_ok = false, selftest_fs_ok = false;
 static uint32_t selftest_infer_us = 0;
 static int32_t selftest_cal_age_days = -1;      // -1 = unknown (clock not set or factory calibration)
+static uint32_t first_result_ms = 0;            // v5.9 (ISEF item 186): millis() when the first reading of this boot was ready
 static uint32_t cal_saved_utc = 0;
 
 /* 5-point Savitzky-Golay smoothing - same coefficients as app/signal_processing.py */
@@ -1158,7 +1159,8 @@ void handle_status_json() {
         "\"battery_pct\":%d,\"battery_mv\":%d,\"low_power_mode\":%s,\"wake_count\":%lu,"
         "\"arsenic_species\":\"%s\",\"calibration\":\"%s\",\"copper_check\":%s,\"pull_updates\":%s,"
         "\"trace_upload\":%s,\"trace_pending\":%s,"
-        "\"self_test\":{\"adc_ads1115\":%s,\"dac_mcp4725\":%s,\"storage\":%s,\"inference_us\":%lu,\"calibration_age_days\":%ld}}",
+        "\"self_test\":{\"adc_ads1115\":%s,\"dac_mcp4725\":%s,\"storage\":%s,\"inference_us\":%lu,\"calibration_age_days\":%ld},"
+        "\"first_result_ms\":%lu}",
         DEVICE_CODE, FIRMWARE_VERSION, BOARD_NAME, (unsigned long)(millis() / 1000),
         is_wifi_connected ? "true" : "false", WiFi.localIP().toString().c_str(),
         is_wifi_connected ? (int)WiFi.RSSI() : 0, setup_ap_active ? "true" : "false",
@@ -1171,7 +1173,7 @@ void handle_status_json() {
         PIN_REAGENT_PUMP >= 0 ? "total" : "as3_only", cal_id, COPPER_CHECK ? "true" : "false", PULL_OTA ? "true" : "false",
         TRACE_UPLOAD ? "true" : "false", trace_pending ? "true" : "false",
         selftest_adc_ok ? "true" : "false", selftest_dac_ok ? "true" : "false", selftest_fs_ok ? "true" : "false",
-        (unsigned long)selftest_infer_us, (long)selftest_cal_age_days);
+        (unsigned long)selftest_infer_us, (long)selftest_cal_age_days, (unsigned long)first_result_ms);
     server.sendHeader("Access-Control-Allow-Origin", "*");   // read-only, no secrets in it
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", buf);
@@ -1696,6 +1698,10 @@ void TaskSensors(void *pvParameters) {
         reading.qc_result = qc_failed ? 2 : 1;
         reading.good_scans = (uint8_t)good_scans;
         reading.qc_bits = reading_qc;
+        if (first_result_ms == 0) {
+            first_result_ms = millis();
+            Serial.printf("[TIMING] First result %lu ms after power-on (%d scan attempt(s)).\n", (unsigned long)first_result_ms, attempts);
+        }
 
         // v5.8: keep the arsenic part of the last scan (raw currents, before smoothing) as evidence for this reading
         if (TRACE_UPLOAD && last_scan_points >= 10) {

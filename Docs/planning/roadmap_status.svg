@@ -1,0 +1,180 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='820' height='584' viewBox='0 0 820 584' font-family='Lato, Segoe UI, Helvetica, Arial, sans-serif'>
+<rect width='820' height='584' fill='white'/>
+<text x='16' y='24' font-size='15' font-weight='700' fill='#1f2a37'>ISEF roadmap: 267 items by section and status</text>
+<text x='242' y='62' font-size='11' text-anchor='end' fill='#1f2a37'>0 Rules</text>
+<rect x='250.0' y='50' width='22.9' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='261.5' y='62' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='272.9' y='50' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='295.8' y='62' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='318.8' y='50' width='183.3' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='410.4' y='62' font-size='10' text-anchor='middle' fill='white'>8</text>
+<text x='242' y='84' font-size='11' text-anchor='end' fill='#1f2a37'>A Pathway</text>
+<rect x='250.0' y='72' width='45.8' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='272.9' y='84' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='295.8' y='72' width='68.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='330.2' y='84' font-size='10' text-anchor='middle' fill='white'>3</text>
+<rect x='364.6' y='72' width='114.6' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='421.9' y='84' font-size='10' text-anchor='middle' fill='white'>5</text>
+<text x='242' y='106' font-size='11' text-anchor='end' fill='#1f2a37'>B Need</text>
+<rect x='250.0' y='94' width='45.8' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='272.9' y='106' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='295.8' y='94' width='91.7' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='341.7' y='106' font-size='10' text-anchor='middle' fill='white'>4</text>
+<rect x='387.5' y='94' width='183.3' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='479.2' y='106' font-size='10' text-anchor='middle' fill='white'>8</text>
+<text x='242' y='128' font-size='11' text-anchor='end' fill='#1f2a37'>C Prior art</text>
+<rect x='250.0' y='116' width='45.8' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='272.9' y='128' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='295.8' y='116' width='68.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='330.2' y='128' font-size='10' text-anchor='middle' fill='white'>3</text>
+<rect x='364.6' y='116' width='160.4' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='444.8' y='128' font-size='10' text-anchor='middle' fill='white'>7</text>
+<text x='242' y='150' font-size='11' text-anchor='end' fill='#1f2a37'>D Design</text>
+<rect x='250.0' y='138' width='91.7' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='295.8' y='150' font-size='10' text-anchor='middle' fill='white'>4</text>
+<rect x='341.7' y='138' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='353.1' y='150' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='364.6' y='138' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='387.5' y='150' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='410.4' y='138' width='160.4' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='490.6' y='150' font-size='10' text-anchor='middle' fill='white'>7</text>
+<rect x='570.8' y='138' width='45.8' height='16' fill='#D55E00' fill-opacity='0.7'/>
+<text x='593.8' y='150' font-size='10' text-anchor='middle' fill='white'>2</text>
+<text x='242' y='172' font-size='11' text-anchor='end' fill='#1f2a37'>E Sensor</text>
+<rect x='250.0' y='160' width='275.0' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='387.5' y='172' font-size='10' text-anchor='middle' fill='white'>12</text>
+<rect x='525.0' y='160' width='137.5' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='593.8' y='172' font-size='10' text-anchor='middle' fill='white'>6</text>
+<rect x='662.5' y='160' width='22.9' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='674.0' y='172' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='685.4' y='160' width='114.6' height='16' fill='#D55E00' fill-opacity='0.7'/>
+<text x='742.7' y='172' font-size='10' text-anchor='middle' fill='white'>5</text>
+<text x='242' y='194' font-size='11' text-anchor='end' fill='#1f2a37'>F Metrology</text>
+<rect x='250.0' y='182' width='297.9' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='399.0' y='194' font-size='10' text-anchor='middle' fill='white'>13</text>
+<rect x='547.9' y='182' width='45.8' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='570.8' y='194' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='593.8' y='182' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='616.7' y='194' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='639.6' y='182' width='68.8' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='674.0' y='194' font-size='10' text-anchor='middle' fill='white'>3</text>
+<text x='242' y='216' font-size='11' text-anchor='end' fill='#1f2a37'>G Field</text>
+<rect x='250.0' y='204' width='137.5' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='318.8' y='216' font-size='10' text-anchor='middle' fill='white'>6</text>
+<rect x='387.5' y='204' width='45.8' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='410.4' y='216' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='433.3' y='204' width='91.7' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='479.2' y='216' font-size='10' text-anchor='middle' fill='white'>4</text>
+<rect x='525.0' y='204' width='137.5' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='593.8' y='216' font-size='10' text-anchor='middle' fill='white'>6</text>
+<rect x='662.5' y='204' width='91.7' height='16' fill='#D55E00' fill-opacity='0.7'/>
+<text x='708.3' y='216' font-size='10' text-anchor='middle' fill='white'>4</text>
+<text x='242' y='238' font-size='11' text-anchor='end' fill='#1f2a37'>H Statistics</text>
+<rect x='250.0' y='226' width='297.9' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='399.0' y='238' font-size='10' text-anchor='middle' fill='white'>13</text>
+<rect x='547.9' y='226' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='559.4' y='238' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='570.8' y='226' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='593.8' y='238' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='616.7' y='226' width='45.8' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='639.6' y='238' font-size='10' text-anchor='middle' fill='white'>2</text>
+<text x='242' y='260' font-size='11' text-anchor='end' fill='#1f2a37'>I AquaNet</text>
+<rect x='250.0' y='248' width='275.0' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='387.5' y='260' font-size='10' text-anchor='middle' fill='white'>12</text>
+<rect x='525.0' y='248' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='536.5' y='260' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='547.9' y='248' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='570.8' y='260' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='593.8' y='248' width='22.9' height='16' fill='#CC79A7' fill-opacity='0.7'/>
+<text x='605.2' y='260' font-size='10' text-anchor='middle' fill='white'>1</text>
+<text x='242' y='282' font-size='11' text-anchor='end' fill='#1f2a37'>J Hardware</text>
+<rect x='250.0' y='270' width='45.8' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='272.9' y='282' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='295.8' y='270' width='45.8' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='318.8' y='282' font-size='10' text-anchor='middle' fill='white'>2</text>
+<rect x='341.7' y='270' width='22.9' height='16' fill='#CC79A7' fill-opacity='0.7'/>
+<text x='353.1' y='282' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='364.6' y='270' width='183.3' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='456.2' y='282' font-size='10' text-anchor='middle' fill='white'>8</text>
+<rect x='547.9' y='270' width='114.6' height='16' fill='#D55E00' fill-opacity='0.7'/>
+<text x='605.2' y='282' font-size='10' text-anchor='middle' fill='white'>5</text>
+<text x='242' y='304' font-size='11' text-anchor='end' fill='#1f2a37'>K Firmware</text>
+<rect x='250.0' y='292' width='137.5' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='318.8' y='304' font-size='10' text-anchor='middle' fill='white'>6</text>
+<rect x='387.5' y='292' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='399.0' y='304' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='410.4' y='292' width='68.8' height='16' fill='#D55E00' fill-opacity='0.7'/>
+<text x='444.8' y='304' font-size='10' text-anchor='middle' fill='white'>3</text>
+<text x='242' y='326' font-size='11' text-anchor='end' fill='#1f2a37'>L Software</text>
+<rect x='250.0' y='314' width='137.5' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='318.8' y='326' font-size='10' text-anchor='middle' fill='white'>6</text>
+<rect x='387.5' y='314' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='399.0' y='326' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='410.4' y='314' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='421.9' y='326' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='433.3' y='314' width='45.8' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='456.3' y='326' font-size='10' text-anchor='middle' fill='white'>2</text>
+<text x='242' y='348' font-size='11' text-anchor='end' fill='#1f2a37'>M Users</text>
+<rect x='250.0' y='336' width='22.9' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='261.5' y='348' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='272.9' y='336' width='160.4' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='353.1' y='348' font-size='10' text-anchor='middle' fill='white'>7</text>
+<text x='242' y='370' font-size='11' text-anchor='end' fill='#1f2a37'>N Impact</text>
+<rect x='250.0' y='358' width='22.9' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='261.5' y='370' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='272.9' y='358' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='284.4' y='370' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='295.8' y='358' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='307.3' y='370' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='318.8' y='358' width='160.4' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='399.0' y='370' font-size='10' text-anchor='middle' fill='white'>7</text>
+<text x='242' y='392' font-size='11' text-anchor='end' fill='#1f2a37'>O Safety</text>
+<rect x='250.0' y='380' width='137.5' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='318.8' y='392' font-size='10' text-anchor='middle' fill='white'>6</text>
+<text x='242' y='414' font-size='11' text-anchor='end' fill='#1f2a37'>P Logbook</text>
+<rect x='250.0' y='402' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='261.5' y='414' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='272.9' y='402' width='91.7' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='318.8' y='414' font-size='10' text-anchor='middle' fill='white'>4</text>
+<text x='242' y='436' font-size='11' text-anchor='end' fill='#1f2a37'>Q Poster</text>
+<rect x='250.0' y='424' width='91.7' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='295.8' y='436' font-size='10' text-anchor='middle' fill='white'>4</text>
+<rect x='341.7' y='424' width='22.9' height='16' fill='#0072B2' fill-opacity='0.95'/>
+<text x='353.1' y='436' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='364.6' y='424' width='114.6' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='421.9' y='436' font-size='10' text-anchor='middle' fill='white'>5</text>
+<text x='242' y='458' font-size='11' text-anchor='end' fill='#1f2a37'>R Interview</text>
+<rect x='250.0' y='446' width='229.2' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='364.6' y='458' font-size='10' text-anchor='middle' fill='white'>10</text>
+<text x='242' y='480' font-size='11' text-anchor='end' fill='#1f2a37'>S Credibility</text>
+<rect x='250.0' y='468' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='261.5' y='480' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='272.9' y='468' width='114.6' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='330.2' y='480' font-size='10' text-anchor='middle' fill='white'>5</text>
+<text x='242' y='502' font-size='11' text-anchor='end' fill='#1f2a37'>T Cut</text>
+<rect x='250.0' y='490' width='114.6' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='307.3' y='502' font-size='10' text-anchor='middle' fill='white'>5</text>
+<rect x='364.6' y='490' width='22.9' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='376.0' y='502' font-size='10' text-anchor='middle' fill='white'>1</text>
+<text x='242' y='524' font-size='11' text-anchor='end' fill='#1f2a37'>U Repository</text>
+<rect x='250.0' y='512' width='68.8' height='16' fill='#009E73' fill-opacity='0.95'/>
+<text x='284.4' y='524' font-size='10' text-anchor='middle' fill='white'>3</text>
+<rect x='318.8' y='512' width='22.9' height='16' fill='#E69F00' fill-opacity='0.7'/>
+<text x='330.2' y='524' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='341.7' y='512' width='22.9' height='16' fill='#5b6b7b' fill-opacity='0.7'/>
+<text x='353.1' y='524' font-size='10' text-anchor='middle' fill='white'>1</text>
+<rect x='250' y='548' width='12' height='12' fill='#009E73'/>
+<text x='266' y='558' font-size='10.5' fill='#1f2a37'>Done</text>
+<rect x='312' y='548' width='12' height='12' fill='#0072B2'/>
+<text x='328' y='558' font-size='10.5' fill='#1f2a37'>Tooling ready</text>
+<rect x='437' y='548' width='12' height='12' fill='#E69F00'/>
+<text x='453' y='558' font-size='10.5' fill='#1f2a37'>Partial</text>
+<rect x='520' y='548' width='12' height='12' fill='#CC79A7'/>
+<text x='536' y='558' font-size='10.5' fill='#1f2a37'>Open</text>
+<rect x='582' y='548' width='12' height='12' fill='#5b6b7b'/>
+<text x='598' y='558' font-size='10.5' fill='#1f2a37'>Team</text>
+<rect x='644' y='548' width='12' height='12' fill='#D55E00'/>
+<text x='660' y='558' font-size='10.5' fill='#1f2a37'>Lab</text>
+<rect x='699' y='548' width='12' height='12' fill='#D55E00'/>
+<text x='715' y='558' font-size='10.5' fill='#1f2a37'>Field</text>
+</svg>
