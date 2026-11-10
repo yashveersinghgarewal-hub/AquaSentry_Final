@@ -6,6 +6,7 @@
 | [ISEF_ROADMAP.md](ISEF_ROADMAP.md) | 267 prioritised changes for Regeneron ISEF / IRIS level judging, with the rules that can disqualify a project |
 | [TEAM_WORKBOOK.md](TEAM_WORKBOOK.md) | One worksheet per roadmap item that is the team's, the laboratory's or the field's: steps, template, script, where to record |
 | [templates/](templates/) | 29 data-capture and planning templates (forms checklist, chemical inventory, safety log, literature table, interview guide, judge questions, field-day sheet, …) |
+| [VIDEO_PITCH_CHECK.md](VIDEO_PITCH_CHECK.md) | The SBI Youth Ideathon video script checked claim by claim against the code, with a shot-by-shot recording guide |
 | [REMAINING_WORK.md](REMAINING_WORK.md) | Everything still to do before ISEF, as a checklist: must-do items first, then lab, field, data, writing and practice (generated from the status register) |
 | [ISEF_ROADMAP_STATUS.md](ISEF_ROADMAP_STATUS.md) | Status of all 267 roadmap items: done in software / tooling ready / partial / team / lab / field, with where the code or next step is (from `planning/isef_roadmap_status.csv`) |
 | [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md) | Each design criterion → the test that proves it → result or target; constraints and the software's response |

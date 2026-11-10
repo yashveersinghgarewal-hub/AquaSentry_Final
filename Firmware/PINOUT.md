@@ -1,20 +1,20 @@
 # Pin assignments and parts — one table (ISEF items 52, 170, 176)
 
-Taken from the `#define`s at the top of `esp32_firmware/esp32_firmware.ino` (firmware 5.9.0). Change a pin there,
+Taken from the `#define`s at the top of `esp32_firmware/esp32_firmware.ino` (firmware 5.11.0). Change a pin there,
 not here; a test (`tests/test_firmware_host_build.py`) checks that no profile uses a flash, PSRAM or ADC2 pin.
 
 ## Core (always fitted)
 
-| Function | ESP32 | ESP32-S3 | ESP32-C3 | Part | Notes |
-|---|---|---|---|---|---|
-| I²C SDA | 21 | 8 | 6 | ADS1115 (0x48), MCP4725 (0x60) | 400 kHz; bus recovery pulses on boot |
-| I²C SCL | 22 | 9 | 7 | same | |
-| Bubble / liquid sense | 34 (ADC1_CH6) | 4 (ADC1_CH3) | 3 (ADC1_CH3) | IR phototransistor pair | ADC1 only: ADC2 dies with Wi-Fi on |
-| Status LED | 2 (onboard) | 2 | 10 | LED | on during a scan; off at idle; see legend below |
-| Stepper STEP | 25 | 5 | 4 | A4988 + NEMA-type pump stepper | |
-| Stepper DIR | 26 | 6 | 5 | A4988 | |
-| Stepper ENABLE | 27 | 7 | 1 | A4988 | active LOW |
-| Potentiostat cell | — | — | — | working: gold strip; reference: Ag/AgCl; counter: Pt/carbon | DAC drives the potential through the front end; ADC reads the current-to-voltage output |
+| Function | ESP32 | ESP32-S3 | ESP32-C3 | ESP32-C6 | Part | Notes |
+|---|---|---|---|---|---|---|
+| I²C SDA | 21 | 8 | 6 | 23 | ADS1115 (0x48), MCP4725 (0x60) | 400 kHz; bus recovery pulses on boot |
+| I²C SCL | 22 | 9 | 7 | 22 | same | |
+| Bubble / liquid sense | 34 (ADC1_CH6) | 4 (ADC1_CH3) | 3 (ADC1_CH3) | 2 (ADC1_CH2) | IR phototransistor pair | ADC1 only: ADC2 dies with Wi-Fi on |
+| Status LED | 2 (onboard) | 2 | 10 | 21 (GPIO 8 is the RGB LED) | LED | on during a scan; off at idle; see legend below |
+| Stepper STEP | 25 | 5 | 4 | 18 | A4988 + NEMA-type pump stepper | |
+| Stepper DIR | 26 | 6 | 5 | 19 | A4988 | |
+| Stepper ENABLE | 27 | 7 | 1 | 20 | A4988 | active LOW |
+| Potentiostat cell | — | — | — | — | working: gold strip; reference: Ag/AgCl; counter: Pt/carbon | DAC drives the potential through the front end; ADC reads the current-to-voltage output |
 
 ## Optional (default −1 = not fitted; set the `#define` to a pin to enable)
 

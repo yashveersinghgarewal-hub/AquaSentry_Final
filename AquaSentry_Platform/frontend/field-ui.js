@@ -65,7 +65,8 @@
     const pts = placed();
     const card = $('mapCard');
     if (!card) return;
-    $('mapNote').textContent = pts.length ? t('map.note', { n: pts.length }) : t('map.none');
+    // review item 49 (v5.11): the map shows only tested sources; an empty area is unknown, not safe
+    $('mapNote').textContent = pts.length ? t('map.note', { n: pts.length }) + ' ' + t('map.gaps') : t('map.none');
     $('nodeMap').hidden = !pts.length;
     if (!pts.length) return;
     ensureMap().then(() => {

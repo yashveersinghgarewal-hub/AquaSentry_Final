@@ -27,6 +27,7 @@ Tests: **110 → 139 → 167 → 185 → 206 → 236** (22 neural toolkit + 214 
 4f. [v5.8: the Research and Engineering Review (60 items) and the ISEF list](#4f-v58-the-research-and-engineering-review-60-items-and-the-isef-list)
 4g. [v5.9: the ISEF roadmap, item by item](#4g-v59-the-isef-roadmap-item-by-item)
 4h. [v5.10: what is left, honest status, clearer screens](#4h-v510-what-is-left-honest-status-clearer-screens)
+4i. [v5.11: matching the video pitch](#4i-v511-matching-the-video-pitch)
 5. [API reference: everything added or changed](#5-api-reference-everything-added-or-changed)
 6. [Settings added](#6-settings-added)
 7. [Upgrade notes (behaviour that changed)](#7-upgrade-notes-behaviour-that-changed)
@@ -397,6 +398,21 @@ synthetic data - is printed as such.
 | Dependabot bumps folded in | Dependabot's own CI runs had failed only because Espressif's download server timed out | 310 tests on the newest versions |
 
 Sources: OSM Foundation tile usage policy; WCAG 2.2 (SC 2.4.11, 2.5.8); research on communicating drinking-water results (lead with "is it safe?", then what to do, with layered detail and honest uncertainty; PMC9104598).
+
+## 4i. v5.11: matching the video pitch
+
+**Why:** the team's SBI Youth Ideathon video script (v3) was checked claim by claim against the repository. Three things on screen or in the voice-over were not yet true: the device simulator could not send a scan to the dashboard (its own generator and calibration produced scans the server rejected), the firmware built for three chips not four, and three software items of the 60-point review were still open. All are now closed; the full claim-by-claim table is `Docs/VIDEO_PITCH_CHECK.md`.
+
+| Change | Reason | Verified by |
+| --- | --- | --- |
+| Simulator uses `asv.js` and posts DEMO scans to `/api/scans` as `SIM-MASG1-01` (simulated) | one pipeline everywhere; the slide shows a scan reaching the dashboard | `test_v511_pitch.py`, browser test `test_simulator_sends_each_demo_scan_to_the_dashboard` |
+| Meter shows the server's four outcomes and ± | the meter said "below LOD · not detected" where the server said "retest" | same; manual check of all five DEMO examples |
+| `?device=` on the dashboard; follow the shown device live | open the dashboard on the simulator | `test_dashboard_opens_on_a_device_from_the_address`, browser test |
+| ESP32-C6 pin profile, CI target, host check | "builds for four boards" | `test_firmware_builds_for_four_chips_in_ci`, `test_pins_are_safe_on_each_chip`, CI |
+| `[SELFTEST] Reference electrode` line | the self-test on screen shows the reference check the voice-over mentions | `test_boot_self_test_mentions_the_reference_electrode_check` |
+| Review 16 ablation, 19 out-of-training warning, 49 map gaps | "we fixed every software point" | `test_input_ablation_in_the_research_pipeline`, `test_aquanet_flags_inputs_outside_its_training_data` |
+
+Sources: Government of India written reply in the Rajya Sabha, 4 December 2023 (arsenic in parts of 230 districts in 25 states), as reported by PTI/ThePrint and Deccan Herald; Espressif ESP32-C6 datasheet pin notes (strapping GPIO4/5/8/9/15, USB GPIO12/13, ADC1 GPIO0-6).
 
 ## 5. API reference: everything added or changed
 

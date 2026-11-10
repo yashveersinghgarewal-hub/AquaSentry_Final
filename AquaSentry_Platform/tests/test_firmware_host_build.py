@@ -30,6 +30,7 @@ TARGETS = {
     "esp32": [],
     "esp32s3": ["-DCONFIG_IDF_TARGET_ESP32S3=1"],
     "esp32c3": ["-DCONFIG_IDF_TARGET_ESP32C3=1", "-DCONFIG_FREERTOS_UNICORE=1"],
+    "esp32c6": ["-DCONFIG_IDF_TARGET_ESP32C6=1", "-DCONFIG_FREERTOS_UNICORE=1"],   # v5.11
 }
 
 
@@ -83,15 +84,18 @@ def _pins(block):
 
 def test_pins_are_safe_on_each_chip():
     s3 = SRC[SRC.index("CONFIG_IDF_TARGET_ESP32S3"):SRC.index("#elif defined(CONFIG_IDF_TARGET_ESP32C3)")]
-    c3 = SRC[SRC.index("#elif defined(CONFIG_IDF_TARGET_ESP32C3)"):SRC.index("#else   /* original ESP32")]
+    c3 = SRC[SRC.index("#elif defined(CONFIG_IDF_TARGET_ESP32C3)"):SRC.index("#elif defined(CONFIG_IDF_TARGET_ESP32C6)")]
+    c6 = SRC[SRC.index("#elif defined(CONFIG_IDF_TARGET_ESP32C6)"):SRC.index("#else   /* original ESP32")]
     esp = SRC[SRC.index("#else   /* original ESP32"):SRC.index("#define SENSOR_CORE 1")]
     rules = {
         # strapping pins, flash/PSRAM pins, ADC1 pins usable for the bubble sensor (ADC2 fails with Wi-Fi on)
         "esp32": ({0, 5, 12, 15}, set(range(6, 12)) | {16, 17}, set(range(32, 40))),
         "esp32s3": ({0, 3, 45, 46}, set(range(26, 38)), set(range(1, 11))),
         "esp32c3": ({2, 8, 9}, set(range(12, 18)), set(range(0, 5))),
+        # ESP32-C6: strapping 4, 5, 8, 9, 15; SPI flash 24-30; USB 12-13 and UART0 16-17 kept free; ADC1 on GPIO0-6
+        "esp32c6": ({4, 5, 8, 9, 15}, set(range(24, 31)) | {12, 13, 16, 17}, set(range(0, 7))),
     }
-    for name, block in (("esp32", esp), ("esp32s3", s3), ("esp32c3", c3)):
+    for name, block in (("esp32", esp), ("esp32s3", s3), ("esp32c3", c3), ("esp32c6", c6)):
         pins = _pins(block)
         strap, flash, adc1 = rules[name]
         assert len(pins) == 7, (name, pins)

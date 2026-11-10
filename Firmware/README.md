@@ -2,7 +2,7 @@
 
 This directory contains the production firmware for the AquaSentry autonomous water quality surveillance system.
 
-**Supported boards:** ESP32 (WROOM/WROVER DevKit), ESP32-S3 and ESP32-C3, with Espressif's Arduino core 2.0.x or 3.x. The sketch picks pins and CPU cores for the chip you select in the IDE. Every push is compiled for all three chips in GitHub Actions (job `firmware`), and `python main.py --test` type-checks the sketch on your PC (`Firmware/host_check/`).
+**Supported boards:** ESP32 (WROOM/WROVER DevKit), ESP32-S3, ESP32-C3 and ESP32-C6, with Espressif's Arduino core 3.x (2.0.x also works for the first three; the C6 needs 3.x). The sketch picks pins and CPU cores for the chip you select in the IDE. Every push is compiled for all four chips in GitHub Actions (job `firmware`, nine configurations), and `python main.py --test` type-checks the sketch for each chip on your PC (`Firmware/host_check/`).
 
 ## Key Features & Architecture
 - **Dual-Core FreeRTOS Architecture**:
@@ -15,17 +15,17 @@ This directory contains the production firmware for the AquaSentry autonomous wa
 - **Local Edge AI Inference (AquaNet-V3)**: after scanning, the board runs `aquanet_v3_predict()` on the ESP32 itself — no Wi-Fi or cloud needed. The network is a trained 5-16-12-4 model: 352 float32 weights (1.4 KB of flash), no `malloc`, under 200 bytes of stack, only `<math.h>`. The same safety rules as the server are applied afterwards and can only make the verdict stricter. The old hand-built V1 engine (`aquanet_v1.c`) is kept because V3 reuses its result type and entropy function.
 
 ## Hardware Pinout
-| Function | ESP32 | ESP32-S3 | ESP32-C3 | Connected Component |
-| :--- | :--- | :--- | :--- | :--- |
-| **I2C SDA** | GPIO 21 | GPIO 8 | GPIO 6 | ADS1115 ADC & MCP4725 DAC |
-| **I2C SCL** | GPIO 22 | GPIO 9 | GPIO 7 | ADS1115 ADC & MCP4725 DAC |
-| **Optical Bubble Sense** | GPIO 34 (ADC1) | GPIO 4 (ADC1) | GPIO 3 (ADC1) | Phototransistor / IR Liquid Detector |
-| **Status LED** | GPIO 2 | GPIO 2 | GPIO 10 | LED |
-| **Stepper STEP** | GPIO 25 | GPIO 5 | GPIO 4 | A4988 Stepper Driver |
-| **Stepper DIR** | GPIO 26 | GPIO 6 | GPIO 5 | A4988 Stepper Driver |
-| **Stepper ENABLE** | GPIO 27 | GPIO 7 | GPIO 1 | A4988 Driver (Active LOW) |
+| Function | ESP32 | ESP32-S3 | ESP32-C3 | ESP32-C6 | Connected Component |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **I2C SDA** | GPIO 21 | GPIO 8 | GPIO 6 | GPIO 23 | ADS1115 ADC & MCP4725 DAC |
+| **I2C SCL** | GPIO 22 | GPIO 9 | GPIO 7 | GPIO 22 | ADS1115 ADC & MCP4725 DAC |
+| **Optical Bubble Sense** | GPIO 34 (ADC1) | GPIO 4 (ADC1) | GPIO 3 (ADC1) | GPIO 2 (ADC1) | Phototransistor / IR Liquid Detector |
+| **Status LED** | GPIO 2 | GPIO 2 | GPIO 10 | GPIO 21 | LED |
+| **Stepper STEP** | GPIO 25 | GPIO 5 | GPIO 4 | GPIO 18 | A4988 Stepper Driver |
+| **Stepper DIR** | GPIO 26 | GPIO 6 | GPIO 5 | GPIO 19 | A4988 Stepper Driver |
+| **Stepper ENABLE** | GPIO 27 | GPIO 7 | GPIO 1 | GPIO 20 | A4988 Driver (Active LOW) |
 
-No pin is a flash/PSRAM pin or (apart from the onboard LED on GPIO 2) a strapping pin, and the bubble sensor is always on **ADC1**: ADC2 pins stop working while Wi-Fi is on. On single-core chips (ESP32-C3) the measurement task runs on core 0. A test checks these rules for every profile.
+No pin is a flash/PSRAM pin or (apart from the onboard LED on GPIO 2) a strapping pin, and the bubble sensor is always on **ADC1**: ADC2 pins stop working while Wi-Fi is on. On single-core chips (ESP32-C3, ESP32-C6) the measurement task runs on core 0. On the ESP32-C6 DevKitC-1 the onboard light on GPIO 8 is an RGB LED (and a strapping pin), so the plain status LED goes on GPIO 21. A test checks these rules for every profile.
 
 ## Flashing Instructions
 1. Open **`Firmware/esp32_firmware/esp32_firmware.ino`** in the **Arduino IDE** (or PlatformIO). The Arduino IDE needs the sketch to sit in a folder with the same name, so keep the folder `esp32_firmware` as it is.

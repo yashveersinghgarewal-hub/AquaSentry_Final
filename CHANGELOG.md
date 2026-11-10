@@ -2,6 +2,15 @@
 
 Full story of every change since v5.1, with reasons and sources: **[`Docs/IMPROVEMENT_LOG.md`](Docs/IMPROVEMENT_LOG.md)**.
 
+## v5.11 — matches the video pitch: simulator to dashboard, four chips, last software review items
+Checked line by line against the SBI Youth Ideathon video-pitch script (v3); `Docs/VIDEO_PITCH_CHECK.md` maps every spoken claim and on-screen shot to the code, the command and the test that back it.
+
+- **Device simulator → dashboard (slide 5B).** The MAS-G1 simulator now runs the same voltammetry pipeline as the dashboard and the server (`asv.js`). DEMO steps through clean, contaminated, high, near-the-limit and electrode-fault examples, so one take shows all four outcomes; the meter shows the server's outcome words and the ± uncertainty. With **SEND TO DASHBOARD** on (default when served by AquaSentry) each DEMO scan goes to `POST /api/scans` as device `SIM-MASG1-01`, labelled *simulated* (never in reports' real-data path or alerts), stored with its SHA-256 checksum; the meter prints the dashboard's outcome and the first 12 hex digits of the checksum. Imported CSV files are never sent. Before this, the simulator used its own generator and calibration, and the server rejected every one of its scans.
+- **Dashboard opens on one device:** `index.html?device=CODE` (the simulator's DASHBOARD ↗ button), and the device on screen is followed live whatever its source; only real devices raise a toast.
+- **Firmware 5.11.0 builds for four chips (slide 5A).** ESP32-C6 added (pins avoid strapping, USB, UART0 and flash; bubble sensor on ADC1; single-core task placement); CI compiles nine configurations across ESP32, S3, C3 and C6; the host type-check and the pin-safety test cover all four. The boot self-test now prints the reference-electrode check that runs before every test, with its limits.
+- **Last software items of the 60-point review (slide 6).** Item 16: the research pipeline reports a waveform-only / context-only / all-inputs ablation. Item 19: AquaNet flags measured inputs more than 3 SD outside its training data (server `outside_training_range`, a note in the dashboard panel); the fixed rules still decide. Item 49: the map says that only tested sources are shown and that no marker means not tested, not safe (5 languages). Item 17 was closed in v5.10 (trace CNN); the coverage page now says so. Items 20, 28 and 40 have their software and wait for data or the physical fault test.
+- Tests: 22 neural-toolkit, 335 server and 10 browser tests (new: `tests/test_v511_pitch.py`, the simulator-to-dashboard browser test, C6 host builds).
+
 ## v5.10 — every roadmap item addressed; honest status; clearer screens
 
 Use: `AquaSentry_v5.10.zip` / branch `main`. After v5.9, 184 of the 267 roadmap items were not marked done. v5.10 addresses each of them and tightens what "done" means. Register (`Docs/ISEF_ROADMAP_STATUS.md`): **Done 57 · Tooling ready 67 · Partial 29 · Worksheet 114** — no item is unaddressed. What is left, as one checklist: `Docs/REMAINING_WORK.md`.

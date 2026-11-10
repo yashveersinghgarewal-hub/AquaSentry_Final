@@ -37,7 +37,7 @@
       <a href="sales-expansion.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i18n="nav.sales">Sales &amp; expansion</span></a>
       <a href="device-simulator.html" class="nav-link" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7v6h-7zM9 17h1M14 17h1"/></svg><span data-i18n="nav.simulator">Device simulator</span></a>
     </nav>
-    <div class="rail-foot"><b>AquaSentry v5.10</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
+    <div class="rail-foot"><b>AquaSentry v5.11</b><br><span data-i18n="footer.rail">Screening tool · not a lab certificate</span></div>
   </aside>
   <div class="rail-backdrop" id="railBackdrop" hidden></div>
   <div class="shell">
@@ -58,9 +58,9 @@
         <div data-reveal>
           <span class="eyebrow" data-i18n="sim.eyebrow">Handheld meter · MAS-G1 electrochemical system</span>
           <h1 style="margin-top:14px"><span data-i18n="sim.h1a">Device display</span> <span class="grad-text" data-i18n="sim.h1b">simulator</span></h1>
-          <p class="lede" data-i18n="sim.lede">A working copy of the meter's screen. Run a demo scan, or import real voltammetry CSV files and a calibration file from the analysis script — the meter finds the arsenic peak and converts it to mg/L exactly like the hardware.</p>
+          <p class="lede" data-i18n="sim.lede">A working copy of the meter's screen. DEMO runs the same analysis as the AquaSentry server and, with SEND TO DASHBOARD on, sends each simulated scan to the dashboard, where it is stored with its SHA-256 fingerprint. You can also import voltammetry CSV files and a calibration file from the analysis script.</p>
           <div class="grid-2" style="margin-top:24px;gap:12px" id="howto">
-            <article class="card feature spot"><div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9Z"/></svg></div><h2 class="h-step" data-i18n="sim.h1.h">1 · Try a demo</h2><p data-i18n="sim.h1.d">Press DEMO on the device. It simulates a scan, draws the voltammogram and shows the result with a safety flag.</p></article>
+            <article class="card feature spot"><div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9Z"/></svg></div><h2 class="h-step" data-i18n="sim.h1.h">1 · Try a demo</h2><p data-i18n="sim.h1.d">Press DEMO on the device. Each press shows the next example (clean, contaminated, high, near the limit, electrode fault): the scan, the result with its ± uncertainty, and the same outcome the dashboard gives.</p></article>
             <article class="card feature spot"><div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg></div><h2 class="h-step" data-i18n="sim.h2.h">2 · Import scans</h2><p data-i18n="sim.h2.d">IMPORT SCAN DATA accepts one or more CSV files with the columns potential_mV and current_uA.</p></article>
             <article class="card feature spot"><div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M4 19 10 13l4 4 6-8"/><circle cx="20" cy="9" r="1.5"/></svg></div><h2 class="h-step" data-i18n="sim.h3.h">3 · Load calibration</h2><p data-i18n="sim.h3.d">IMPORT CALIBRATION loads calibration.json from the analysis script, replacing the default slope 0.8563 and intercept 0.0096.</p></article>
             <article class="card feature spot"><div class="feature-ico"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg></div><h2 class="h-step" data-i18n="sim.h4.h">4 · Export results</h2><p data-i18n="sim.h4.d">The meter stores the last 100 results. CSV exports them for the dashboard report or a spreadsheet.</p></article>

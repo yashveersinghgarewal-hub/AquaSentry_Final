@@ -338,6 +338,11 @@
       uncertaintySource: d.trace_id ? 'measured_from_scan' : 'method_typical', calibrationId: d.calibration_ref || null,
     };
   }
+  /** v5.11: ?device=CODE in the address opens the dashboard on that device (the MAS-G1 simulator links here). */
+  function urlDevice() {
+    try { const c = new URLSearchParams(location.search).get('device'); return c && /^[A-Za-z0-9._-]{1,64}$/.test(c) ? c : null; }
+    catch (e) { return null; }
+  }
   /** v5.7: with no device code, show the newest REAL device reading; fall back to the newest of any kind. */
   async function loadLatestFromServer(code) {
     try {
@@ -522,6 +527,8 @@
     }).join('');
     applyGeometry($('nnBars'));
     $('nnRuleMsg').textContent = t(res.final !== res.vote ? 'nn.override' : 'nn.agree');
+    $('nnOod').hidden = !(res.ood && res.ood.length);
+    $('nnOod').textContent = res.ood && res.ood.length ? t('nn.ood', { list: res.ood.join(', ') }) : '';
     $('nnReasons').innerHTML = res.reasons.map((x) => `<li>${t('reason.' + x.code, { v: x.v })}</li>`).join('');
     const c = window.AquaNet.countWeights(state.model);
     $('nnStats').textContent = t('nn.stats', { nodes: c.nodes, weights: c.nz, total: c.total });
@@ -948,11 +955,12 @@
       let d; try { d = JSON.parse(e.data); } catch (err) { return; }
       clearTimeout(fleetTimer);
       fleetTimer = setTimeout(loadFleet, 700);
+      // follow the device on screen whatever its source (v5.11: also the simulator opened with ?device=);
+      // only a real device announces itself with a toast or replaces another reading
+      if (state.reading && state.reading.device === d.device_code) loadLatestFromServer(d.device_code);
+      else if (d.source_type === 'hardware' && (!state.reading || state.reading.source === 'device')) loadLatestFromServer(d.device_code);
       if (d.source_type === 'hardware') {
         toast(t('live.reading', { code: d.device_code, v: fmtUgNum(d.arsenic_ppb), cls: t('class.' + (SERVER_KEY[d.classification] || d.classification)) }), false);
-        // follow the device on screen; a real device reading also replaces "no reading" or an older device reading
-        if (state.reading && state.reading.device === d.device_code) loadLatestFromServer(d.device_code);
-        else if (d.source_type === 'hardware' && (!state.reading || state.reading.source === 'device')) loadLatestFromServer(d.device_code);
       }
     });
     live.addEventListener('alert', (e) => {
@@ -1012,7 +1020,7 @@
     document.addEventListener('aquasentry:theme', () => { drawChart(); drawSparks(); loadFleet(); });
     document.addEventListener('aquasentry:online', (e) => {
       renderReport(); loadFleet();
-      if (e.detail.online) { loadLatestFromServer(); startLive(); } else stopLive();
+      if (e.detail.online) { loadLatestFromServer(urlDevice() || undefined); startLive(); } else stopLive();
     });
     document.querySelectorAll('[data-hist]').forEach((b) => b.addEventListener('click', () => {
       state.histHours = Number(b.dataset.hist);

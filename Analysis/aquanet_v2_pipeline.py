@@ -33,6 +33,7 @@ trusted, and a model that "wins" on such a set is noise.
 from __future__ import annotations
 
 import argparse
+import warnings
 import csv
 import json
 import math
@@ -445,6 +446,37 @@ def wilson(k: int, n: int, z: float = 1.959964) -> Tuple[float, float, float]:
     return p, max(0.0, c - h), min(1.0, c + h)
 
 
+# Review item 16 (v5.11): which inputs carry the signal? The same grouped evaluation with a ridge model on the
+# waveform features only, the field-context features only, and all of them.
+INPUT_SETS = {"waveform only": ["peak_height_ua", "peak_potential_mv", "snr"],
+              "context only": ["ph", "conductivity_us_cm", "turbidity_ntu", "temperature_c"],
+              "all inputs": list(FEATURES)}
+
+
+def ablation(X, y, cens, sites) -> Dict:
+    """Leave-one-site-out MAE of ridge (lambda 1) for each input set. Dropped inputs are blanked (NaN), so the
+    model sees exactly the same rows and split; only the information changes."""
+    quant = ~cens
+    out: Dict = {}
+    for name, keep in INPUT_SETS.items():
+        drop = [i for i, k in enumerate(FEATURES) if k not in keep]
+        Xa = X.copy()
+        Xa[:, drop] = np.nan
+        p = np.full(len(y), np.nan)
+        for s_ in np.unique(sites):
+            te = sites == s_
+            tr = ~te & quant
+            if tr.sum() < 10:
+                continue
+            with warnings.catch_warnings():          # blanked columns are all-NaN on purpose
+                warnings.simplefilter("ignore", RuntimeWarning)
+                p[te] = Ridge(1.0).fit(Xa[tr], y[tr], sites[tr]).predict(Xa[te])
+        ok = np.isfinite(p) & quant
+        out[name] = {"inputs": keep, "mae_ug_l": float(np.abs(p[ok] - y[ok]).mean()) if ok.any() else float("nan"),
+                     "n_evaluated": int(ok.sum())}
+    return out
+
+
 def run(X, y, cens, sites, out_dir: str, label: str) -> Dict:
     os.makedirs(out_dir, exist_ok=True)
     us = np.unique(sites)
@@ -547,6 +579,7 @@ def run(X, y, cens, sites, out_dir: str, label: str) -> Dict:
                       + ("A learned model is not clearly better than the calibration line on unseen sites (less than 20 % lower MAE); keep the line."
                          if best[1]["mae_ug_l"] > 0.8 * base else
                          "A learned model is clearly better on unseen sites; it still needs a prospective check on new sites and electrode lots before it may change a verdict."))
+    res["ablation"] = ablation(X, y, cens, sites)
     _write(out_dir, res, preds)
     return res
 
@@ -567,7 +600,15 @@ def _write(out_dir: str, res: Dict, preds: Dict) -> None:
             a, b, c = d["at_10"], d["at_20"], d["conformal"]
             L += [f"| {name} | {d['mae_ug_l']:.1f} | {d['rmse_ug_l']:.1f} | {100 * a['sensitivity']:.0f} % | {100 * a['specificity']:.0f} % | "
                   f"{100 * b['sensitivity']:.0f} % | {100 * b['specificity']:.0f} % | {100 * c['empirical_coverage']:.0f} % | {c['median_width_ug_l']:.0f} |"]
-        L += ["", f"**{res['verdict']}**", "", f"Trace CNN (item 157): {res.get('trace_cnn', 'n/a')}.", "",
+        L += ["", f"**{res['verdict']}**", "", f"Trace CNN (item 157): {res.get('trace_cnn', 'n/a')}.", ""]
+        if res.get("ablation"):
+            L += ["## Which inputs carry the signal (review item 16)", "",
+                  "Ridge regression, same leave-one-site-out split, with the other inputs blanked:", "",
+                  "| inputs | MAE µg/L | rows |", "|---|---|---|"]
+            L += [f"| {k} ({', '.join(v['inputs'])}) | {v['mae_ug_l']:.1f} | {v['n_evaluated']} |" for k, v in res["ablation"].items()]
+            L += ["", "If *context only* is close to *all inputs*, the model is learning the site, not the arsenic peak; "
+                  "if *waveform only* is close to *all inputs*, the context sensors add little.", ""]
+        L += [
               "![referral](referral_curve.svg)", "", "![reliability](reliability.svg)", "",
               "## Reading the results", "",
               "- Every model is fitted without the site it is scored on. Random row splits would leak the site's matrix into training and flatter every model.",
