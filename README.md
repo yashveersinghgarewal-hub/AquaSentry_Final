@@ -20,6 +20,13 @@ AquaSentry measures arsenic in drinking water with **anodic stripping voltammetr
 
 **[`Docs/ISEF_ROADMAP_STATUS.md`](Docs/ISEF_ROADMAP_STATUS.md)** is the status of all 267 items — **57 done in software, 67 with the tooling ready for real data, 29 partly done, 114 team / laboratory / field items** each with its worksheet in [`Docs/TEAM_WORKBOOK.md`](Docs/TEAM_WORKBOOK.md) (steps, template in `Docs/templates/`, script in `Analysis/`, where to record). What is left, as one checklist with the must-do items first: **[`Docs/REMAINING_WORK.md`](Docs/REMAINING_WORK.md)**. No item is unaddressed; "done" means nothing is left to measure for that item.
 
+## What changed in v5.11
+
+- **Lined up with the video pitch**: [`Docs/VIDEO_PITCH_CHECK.md`](Docs/VIDEO_PITCH_CHECK.md) maps every claim in the SBI Youth Ideathon script to the code and test behind it, with a recording guide.
+- **Device simulator → dashboard**: each DEMO scan runs the real pipeline and appears on the dashboard (`?device=SIM-MASG1-01`) with its outcome, ± uncertainty and SHA-256 fingerprint, labelled simulated.
+- **Four ESP32 chips**: firmware 5.11.0 adds the ESP32-C6; CI compiles ESP32, S3, C3 and C6; the boot self-test shows the reference-electrode check.
+- **Last software points of the 60-point review**: input ablation, out-of-training-range warnings for AquaNet, and a map that says untested is not safe.
+
 ## What changed in v5.10
 
 Every roadmap item not closed by v5.9 is addressed, and the register is stricter about what "done" means.

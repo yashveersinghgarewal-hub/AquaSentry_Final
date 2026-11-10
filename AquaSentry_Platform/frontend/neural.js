@@ -69,6 +69,8 @@
   }
 
   const RANK = { Safe: 0, Caution: 1, Unsafe: 2, Hazardous: 3 };
+  const INPUT_NAMES = ['arsenic', 'pH', 'conductivity', 'turbidity', 'temperature'];
+  const OOD_Z = 3;
 
   /** ph / ec / turb / temp may be null = sensor not fitted: never treated as a normal reading, rule skipped. */
   function evaluate(asMgL, ph, ec, turb, temp, modelId) {
@@ -106,6 +108,9 @@
       else if (ec > LIMITS.ec) { raise('Caution'); reasons.push({ code: 'EC_ADV', v: Math.round(ec) }); }
     }
 
+    // Review item 19 (v5.11): inputs more than 3 standard deviations from the training data (V3 moments). The
+    // network was never shown such water, so its vote is less reliable there; the fixed rules above still decide.
+    const ood = model.mean ? INPUT_NAMES.filter((n, i) => raw[i] !== null && isFinite(raw[i]) && Math.abs(f.x[i]) > OOD_Z) : [];
     const H = entropy(f.probs);
     if (H > 0.65 && !override && final === 'Safe') { final = 'Caution'; override = true; reasons.push({ code: 'UNCERTAIN' }); }
     if (asMgL < LIMITS.lod) reasons.push({ code: 'LOD' });
@@ -113,7 +118,7 @@
     notMeasured.forEach((k) => reasons.push({ code: 'NM', v: k }));
 
     return {
-      notMeasured,
+      notMeasured, ood,
       model: model.id, sizes: model.sizes, layers: f.layers, logits: f.logits, probs: f.probs,
       vote, final, override, confidence: f.probs[best], entropy: H, reasons, belowLod: asMgL < LIMITS.lod,
     };

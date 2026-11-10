@@ -169,3 +169,27 @@ def test_wcag_22_aa(server, browser, path, theme):
                     ".then(r => r.violations.map(v => v.id + ': ' + v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')))")
     assert v == [], v
     ctx.close()
+
+
+def test_simulator_sends_each_demo_scan_to_the_dashboard(server, browser):
+    """v5.11 (pitch slide 5): the MAS-G1 simulator runs the shared pipeline, sends each DEMO scan to the server
+    (labelled simulated, stored with its SHA-256), and the dashboard opened with ?device= follows it live."""
+    ctx, pg, problems = _page(browser)
+    dash = ctx.new_page()
+    pg.goto(server + "/device-simulator.html")
+    fr = pg.frame_locator("#simFrame")
+    fr.locator("#simBtn").click()                                  # first DEMO sample: clean
+    pg.wait_for_function("() => /ON DASHBOARD|NOT SENT/.test(document.querySelector('#simFrame').contentDocument"
+                         ".getElementById('serverStatus').textContent)", timeout=15000)
+    status = fr.locator("#serverStatus").inner_text()
+    assert status.startswith("ON DASHBOARD: NOT DETECTED") and "SHA-256" in status and "±" in status, status
+    dash.goto(server + "/index.html?device=SIM-MASG1-01")
+    dash.wait_for_timeout(2500)
+    assert "SIM-MASG1-01" in dash.inner_text("#overview")
+    fr.locator("#simBtn").click()                                  # second: contaminated
+    pg.wait_for_function("() => /SCREEN POSITIVE/.test(document.querySelector('#simFrame').contentDocument"
+                         ".getElementById('serverStatus').textContent)", timeout=15000)
+    # the dashboard opened on the simulator follows it live
+    dash.wait_for_function("() => /Not safe to drink/.test(document.getElementById('overview').innerText)", timeout=15000)
+    assert not _real(problems), _real(problems)
+    ctx.close()

@@ -45,7 +45,7 @@
 #include "aquasentry_types.h" /* structs live in a header: the Arduino IDE writes function prototypes
                                 above the first function, so types defined later in the sketch break them */
 
-#define FIRMWARE_VERSION     "5.10.0"
+#define FIRMWARE_VERSION     "5.11.0"
 
 /* =====================================================================
  * Pin Assignments (per chip). Change them here if your wiring differs.
@@ -70,6 +70,18 @@
   #define PIN_STEPPER_STEP     4
   #define PIN_STEPPER_DIR      5
   #define PIN_STEPPER_ENABLE   1    // A4988 enable, active LOW
+#elif defined(CONFIG_IDF_TARGET_ESP32C6)
+  /* v5.11: ESP32-C6 (DevKitC-1). Avoids the strapping pins (4, 5, 8, 9, 15), USB (12, 13) and UART0 (16, 17);
+   * ADC1 is on GPIO0-6. GPIO8 on the DevKitC-1 is an RGB LED, so the plain status LED goes on GPIO21. */
+  #define BOARD_NAME           "ESP32-C6"
+  #define BOARD_ID             "esp32c6"
+  #define I2C_SDA_PIN          23
+  #define I2C_SCL_PIN          22
+  #define PIN_BUBBLE_SENSE     2    // ADC1_CH2
+  #define PIN_STATUS_LED       21
+  #define PIN_STEPPER_STEP     18
+  #define PIN_STEPPER_DIR      19
+  #define PIN_STEPPER_ENABLE   20   // A4988 enable, active LOW
 #else   /* original ESP32 (ESP32-WROOM-32 DevKit) */
   #define BOARD_NAME           "ESP32"
   #define BOARD_ID             "esp32"
@@ -1797,6 +1809,10 @@ void boot_self_test() {
     Serial.printf("[SELFTEST] Offline storage: %s, %lu reading(s) waiting\n", fs_ok ? "LittleFS" : "RAM only", (unsigned long)offline_count());
     Serial.printf("[SELFTEST] Calibration: %s%s\n", cal_id, strcmp(cal_id, "factory") == 0 ? " (synthetic example - get this node calibrated)" : "");
     if (selftest_cal_age_days >= 0) Serial.printf("[SELFTEST] Calibration age: %ld day(s)%s\n", (long)selftest_cal_age_days, selftest_cal_age_days > 90 ? " - OVERDUE (90-day limit)" : "");
+    /* v5.11: say at boot that every test starts with the reference-electrode settle check (it needs the cell, so it
+     * runs as step 0 of each test, not here) and with which limits */
+    Serial.printf("[SELFTEST] Reference electrode: checked before every test (rest current <= %.2f uA, drift <= %.2f uA)\n",
+                  (double)QC_REF_MAX_ABS_UA, (double)QC_REF_MAX_DRIFT_UA);
     Serial.printf("[SELFTEST] AquaNet-V3 inference: %lu us (probe verdict %s)\n", (unsigned long)selftest_infer_us, probe.predicted_class_name);
     Serial.printf("[SELFTEST] Scan evidence upload: %s\n", TRACE_UPLOAD ? "on" : "off");
     Serial.println(F("[SELFTEST] -------------------------"));

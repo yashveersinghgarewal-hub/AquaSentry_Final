@@ -487,3 +487,6 @@ body.judging #judgeBtn { background: var(--ink); color: var(--bg); }
 @media (prefers-reduced-motion: reduce) {
   .chat-fab::after { animation: none; }
 }
+
+/* v5.11 (review item 19): AquaNet input outside its training data */
+.nn-ood { margin: 6px 0 0; padding: 8px 10px; border-left: 3px solid var(--caution-fill, #c98a00); background: var(--surface-2, transparent); font-size: .88rem; }

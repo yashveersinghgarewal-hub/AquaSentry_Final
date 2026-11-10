@@ -107,6 +107,7 @@ def apply_rules(vote: str, raw: List[Optional[float]], entropy: float):
 
 
 NAMES = ["arsenic", "ph", "conductivity", "turbidity", "temperature"]
+OOD_Z = 3.0   # |z| above this = outside the training data (review item 19)
 
 
 def predict(arsenic_mg_l: float, ph: Optional[float] = 7.2, conductivity_us_cm: Optional[float] = 400.0,
@@ -126,6 +127,9 @@ def predict(arsenic_mg_l: float, ph: Optional[float] = 7.2, conductivity_us_cm: 
     if arsenic_mg_l < 0.020:
         reasons.append("BELOW_METHOD_LOD_LAB_CONFIRMATION_ADVISED")
     not_measured = [n for n, v in zip(NAMES, raw) if v is None]
+    # Review item 19 (v5.11): measured inputs more than OOD_Z standard deviations from the training data. The
+    # vote is less reliable there; the fixed rules above already decided the final class, so nothing else changes.
+    outside = [n for n, z, v in zip(NAMES, out["layers"][0], raw) if v is not None and abs(z) > OOD_Z]
     reasons += ["NOT_MEASURED_" + n.upper() for n in not_measured]
     return {
         "model": "AquaNet-V3 " + "-".join(map(str, model["topology"])),
@@ -140,6 +144,7 @@ def predict(arsenic_mg_l: float, ph: Optional[float] = 7.2, conductivity_us_cm: 
         "high_uncertainty": entropy > 0.65,
         "reasons": reasons,
         "not_measured": not_measured,
+        "outside_training_range": outside,
         "activations": {"input": out["layers"][0], "hidden_1": out["layers"][1], "hidden_2": out["layers"][2],
                         "output_logits": out["logits"]},
     }

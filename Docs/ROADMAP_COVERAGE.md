@@ -7,6 +7,8 @@ A ✅ here means "the code and its test exist", never "the sensor has been shown
 
 ## Research and Engineering Review (60 items)
 
+**Since v5.11 every review item that software alone can close is closed.** Items 20, 28 and 40 (◐) have their software in place and wait for data or a physical test: the blinded replay set, the public waveform workbooks, and the hardware fault matrix. Everything marked ⏳ needs the laboratory, the field or people.
+
 ### Measurement and safety
 
 | # | Item | Status | Where |
@@ -29,10 +31,10 @@ A ✅ here means "the code and its test exist", never "the sensor has been shown
 | 13 | Keep chemical baselines in the study | ✅ tooling | Calibration-line baseline is model 1 in the pipeline; standard addition exists (`/api/admin/calibrations/standard-addition`). |
 | 14 | Fit a small statistical baseline | ✅ tooling | Ridge and PLS with inner leave-one-site-out tuning. |
 | 15 | Try a compact residual network | ✅ tooling | Residual MLP (numpy, early stopping on an inner site, kept only if it beats no-correction). |
-| 16 | Test which inputs add signal | ◐ | Context features are in the pipeline; the waveform-only vs context-only ablation is a one-line change the team should run once data exist. |
-| 17 | Small waveform CNN | ⏳ later | P2, after the learning curve supports it. |
+| 16 | Test which inputs add signal | ✅ v5.11 | `Analysis/aquanet_v2_pipeline.py` reports a waveform-only / context-only / all-inputs ablation (ridge, same leave-one-site-out split) in every run; `tests/test_v511_pitch.py`. The answer needs real paired data. |
+| 17 | Small waveform CNN | ✅ v5.10 | `TraceCNN` in `Analysis/aquanet_v2_pipeline.py` (1-D convolution on raw voltammograms, grouped CV, kept only if it beats the calibration line); runs once 20+ stored scans have lab pairs. |
 | 18 | Calibrate measurement uncertainty | ✅ v5.8 | Split-conformal 90 % intervals with coverage in the pipeline; per-reading ± U (k = 2) on the node; "interval crosses the cutoff → retest". |
-| 19 | Detect conditions outside training | ◐ | Malformed/odd-shape scans are rejected (`BASELINE_OUTLIERS`, `PEAK_SHIFTED`, secondary peaks); calibration age and check-standard age gate low readings (v5.7). Context range checks are a target. |
+| 19 | Detect conditions outside training | ✅ v5.11 | Malformed/odd-shape scans are rejected (`BASELINE_OUTLIERS`, `PEAK_SHIFTED`, secondary peaks); calibration age and check-standard age gate low readings (v5.7); AquaNet now flags measured inputs more than 3 SD outside its training data (`outside_training_range` on the server, a note in the dashboard panel) while the fixed rules still decide. |
 | 20 | Adaptive retesting | ◐ | Firmware re-scans near limits (v5.6) and the node reports **retest**; the budgeted replay study needs the blinded set. |
 
 ### Datasets and model evaluation
@@ -69,7 +71,7 @@ A ✅ here means "the code and its test exist", never "the sensor has been shown
 | 46 | Tie confirmations to the same source | ✅ v5.8 | `corroborating_devices`: other QC-passed hardware nodes within 2 km or the same village, last 24 h; UTC storage with local display (v5.7); stale readings marked. |
 | 47 | Protect the field pilot | ✅ v5.7 + v5.8 | Device keys, write lock, CORS, rate limits, **2 MB body cap**, secrets in `.env`; invalid-key tests. Public exports still list device coordinates: round or withhold private wells before publishing. |
 | 48 | Make the dashboard explain a decision | ✅ v5.8 | Raw / smoothed / baseline trace, peak, method range, QC reason, corroboration, data age, mode badge, outcome chip, ± U, **View stored scan**, calibration provenance note. |
-| 49 | Map observed sites and gaps honestly | ◐ | Demo data has no coordinates (v5.7); a "sampled vs unknown" layer is a target. |
+| 49 | Map observed sites and gaps honestly | ✅ v5.11 | The map shows only tested sources and says so under it: no marker means not tested, not safe (5 languages). Demo data has no coordinates (v5.7). |
 | 50 | Fresh install reproduces the demo | ✅ | Pinned `requirements.txt`, launchers, chatbot optional; replay tests (valid scan, bad scan, outage) in `tests/test_v58_bridge.py`. |
 
 ### Competition evidence and deployment

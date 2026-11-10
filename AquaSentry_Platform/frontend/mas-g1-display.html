@@ -244,6 +244,11 @@
     cursor:pointer;
   }
   .ghost-btn:hover{color:var(--text-primary);border-color:var(--accent-dim);}
+  a.ghost-btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;}
+  .ghost-btn[aria-pressed="true"]{color:var(--accent);border-color:var(--accent-dim);}
+  .server-status{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);min-height:12px;padding:6px 2px 0;line-height:1.5;word-break:break-word;}
+  .server-status.ok{color:var(--accent);}
+  .server-status.err{color:var(--danger);}
   .history{
     margin-top:10px;
     border-top:1px solid var(--grid-line);
@@ -348,6 +353,12 @@
       <button class="ghost-btn" id="importCalBtn" style="flex:1;" title="Load calibration.json produced by the analysis script">&#8613; IMPORT CALIBRATION</button>
       <button class="ghost-btn" id="exportBtn" title="Export history as CSV">&#8681; CSV</button>
     </div>
+    <!-- v5.11: each DEMO scan can go to the AquaSentry server, through the same pipeline as a real device -->
+    <div class="controls-row" style="margin-top:6px;">
+      <button class="ghost-btn" id="sendBtn" style="flex:1;" aria-pressed="false" title="Send each DEMO scan to the AquaSentry dashboard (labelled as simulated)">&#8679; SEND TO DASHBOARD: OFF</button>
+      <a class="ghost-btn" id="openDash" href="index.html?device=SIM-MASG1-01" target="_top" title="Open this simulator's results on the dashboard">DASHBOARD &#8599;</a>
+    </div>
+    <div class="server-status" id="serverStatus" aria-live="polite"></div>
     <input type="file" id="fileInput" accept=".csv" multiple style="display:none;">
     <input type="file" id="calFileInput" accept=".json" style="display:none;">
     <div class="import-status" id="importStatus"></div>
@@ -371,9 +382,17 @@
   window.addEventListener('load', send); window.addEventListener('resize', send);
   if (window.ResizeObserver) new ResizeObserver(send).observe(document.body); })();
 </script>
+<!-- v5.11: the same voltammetry pipeline as the dashboard (and, line for line, the server) -->
+<script src="asv.js"></script>
 <script>
 (function(){
 
+  var ASV = window.AquaASV || null;
+  var SIM_CODE = 'SIM-MASG1-01';
+  var SERVED = /^https?:$/.test(location.protocol);
+  // DEMO cycles through the four screening outcomes, so one take shows all of them
+  var DEMO_SET = [{c:0.006, l:'clean'}, {c:0.12, l:'contaminated'}, {c:0.30, l:'high'}, {c:0.017, l:'near the limit'}, {fault:true, l:'electrode fault'}];
+  var demoIdx = 0;
   var ANALYTES = {
     As: {
       label:"Arsenic (III) \u00b7 strip As-M003050",
@@ -520,6 +539,15 @@
     };
   }
 
+  /* v5.11: the same four outcomes as the server and the dashboard (classification.screening_outcome):
+     at or above the detection limit = screen positive; within one uncertainty below it = retest; else not detected */
+  function outcome(res, cfg){
+    var lodUg = cfg.lod*1000, u = (res.uncertaintyUg != null && res.uncertaintyUg > 0) ? res.uncertaintyUg : 10;
+    if(res.asUgL >= lodUg) return {kind:'danger', text:'SCREEN POSITIVE \u00b7 ABOVE THE 10 \u00b5g/L LIMIT \u00b7 CONFIRM IN A LAB'};
+    if(res.asUgL >= lodUg - u) return {kind:'warn', text:'RETEST \u00b7 NEAR THE DETECTION LIMIT'};
+    return {kind:'idle', text:'NOT DETECTED (< '+lodUg+' \u00b5g/L) \u00b7 NOT PROOF IT IS SAFE'};
+  }
+
   function classify(conc, cfg){
     if(conc < cfg.lod) return {kind:'idle', text:'BELOW LOD ('+cfg.lod+' '+cfg.unit+') \u00b7 NOT DETECTED'};
     if(conc < cfg.quantRange[0]) return {kind:'warn', text:'BELOW QUANT RANGE \u00b7 ESTIMATE ONLY'};
@@ -638,8 +666,9 @@
      generator or was imported from real MAS-G1 exports / the Python script's
      CSV output. Animates the trace then commits a history entry. */
   function processAndDisplay(data, cfg, label){
-    var curS = smooth(data.cur);
-    var baseline = fitBaseline(data.pot, curS, cfg);
+    var res = (data.asv && ASV) ? ASV.process(data.pot, data.cur) : null;
+    var curS = res ? res.S : smooth(data.cur);
+    var baseline = res ? res.base : fitBaseline(data.pot, curS, cfg);
 
     var frames = 30, frame = 0;
     var iv = setInterval(function(){
@@ -648,17 +677,28 @@
       drawTrace(data.pot, curS, baseline, null, Math.min(1,frac));
       if(frame>=frames){
         clearInterval(iv);
-        var peak = findPeak(data.pot, curS, baseline, cfg);
+        var peak = res ? (res.peakIdx >= 0 ? {idx:res.peakIdx, peakV:res.peakMv, rawI:curS[res.peakIdx], baseI:baseline[res.peakIdx], netI:res.net} : null)
+                       : findPeak(data.pot, curS, baseline, cfg);
         drawTrace(data.pot, curS, baseline, peak, 1);
         scanStateEl.textContent = 'COMPLETE';
 
-        var conc = (peak.netI - cfg.calIntercept)/cfg.calSlope;
+        if(res && res.failed){
+          // the scan failed its checks: no number, exactly like the device and the server
+          readoutEl.className = 'readout danger';
+          readoutEl.textContent = '-- . ---';
+          setFlag('danger', 'TEST FAILED \u00b7 ' + (res.flags[0] || 'QC') + ' \u00b7 RE-RUN');
+          mPeakV.textContent = '--'; mNetI.textContent = '--';
+          running = false; importBtn.disabled = false; simBtn.disabled = false;
+          if(data.asv) sendToServer(data);
+          return;
+        }
+        var conc = res ? res.asMgL : (peak.netI - cfg.calIntercept)/cfg.calSlope;
         if(conc<0) conc = 0;
-        var status = classify(conc, cfg);
+        var status = res ? outcome(res, cfg) : classify(conc, cfg);
 
         readoutEl.className = 'readout ' + (status.kind==='ok' ? '' : status.kind==='danger' ? 'danger' : 'warn');
         readoutEl.textContent = conc.toFixed(cfg.digits);
-        setFlag(status.kind, status.text);
+        setFlag(status.kind, status.text + (res && res.uncertaintyUg != null ? ' \u00b7 \u00b1' + (res.uncertaintyUg < 10 ? res.uncertaintyUg.toFixed(1) : Math.round(res.uncertaintyUg)) + ' \u00b5g/L' : ''));
 
         mPeakV.textContent = peak.peakV+' mV';
         mNetI.textContent = peak.netI.toFixed(4);
@@ -677,9 +717,53 @@
         running = false;
         importBtn.disabled = false;
         simBtn.disabled = false;
+        if(data.asv) sendToServer(data);
       }
     }, 40);
   }
+
+  /* v5.11: send a DEMO scan to the server (POST /api/scans). The server re-runs the pipeline, stores the raw scan
+     with its SHA-256 checksum and makes the reading, labelled "simulated" so it never reaches reports or alerts.
+     Imported CSV files are not sent: they could be anyone's data. */
+  var sendBtn = document.getElementById('sendBtn');
+  var serverStatus = document.getElementById('serverStatus');
+  var sendOn = SERVED && !!ASV;
+  function setSend(on){
+    sendOn = on;
+    sendBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    sendBtn.innerHTML = '&#8679; SEND TO DASHBOARD: ' + (on ? 'ON' : 'OFF');
+  }
+  function setServerStatus(kind, text){ serverStatus.className = 'server-status ' + (kind || ''); serverStatus.textContent = text || ''; }
+  var OUTCOME_TEXT = {not_detected:'NOT DETECTED', retest:'RETEST', screen_positive:'SCREEN POSITIVE', invalid:'INVALID (TEST FAILED)'};
+  function uuid(){
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch(e) {}
+    return 'sim-' + Date.now() + '-' + Math.floor(Math.random()*1e9);
+  }
+  function sendToServer(data){
+    if(!sendOn) return;
+    setServerStatus('', 'SENDING TO DASHBOARD\u2026');
+    fetch('api/scans', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+      device_code: SIM_CODE, source_type: 'simulated', firmware_version: 'mas-g1-simulator',
+      potentials_mv: data.pot, currents_ua: data.cur, idempotency_key: uuid(), raw_file_name: 'mas-g1-demo.json'
+    })}).then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0, 80)); });
+      return r.json();
+    }).then(function(j){
+      var sha = (j.scan && j.scan.checksum_sha256) || '';
+      return fetch('api/readings/latest?device_code=' + encodeURIComponent(SIM_CODE)).then(function(r){ return r.json(); }).then(function(rd){
+        var out = OUTCOME_TEXT[rd.screening_outcome] || String(rd.screening_outcome || '').toUpperCase();
+        var val = rd.screening_outcome === 'invalid' ? '' : ' \u00b7 ' + Math.round(rd.arsenic_ppb) + ' \u00b1 ' + Math.round(rd.uncertainty_ppb || 0) + ' \u00b5g/L';
+        setServerStatus('ok', 'ON DASHBOARD: ' + out + val + ' \u00b7 SHA-256 ' + sha.slice(0, 12) + '\u2026');
+      });
+    }).catch(function(e){
+      setServerStatus('err', 'NOT SENT: ' + (SERVED ? e.message : 'open this page from the AquaSentry server'));
+    });
+  }
+  sendBtn.addEventListener('click', function(){
+    if(!SERVED){ setServerStatus('err', 'OPEN FROM THE AQUASENTRY SERVER TO SEND SCANS'); return; }
+    setSend(!sendOn);
+  });
+  setSend(sendOn);
 
   function runDemo(){
     var cfg = ANALYTES[current];
@@ -690,6 +774,13 @@
     }
     setControlsBusy(true, 'SWEEPING (SIM)');
     setImportStatus('', '');
+    if(ASV && current==='As'){
+      var sc = DEMO_SET[demoIdx++ % DEMO_SET.length];
+      var tr = sc.fault ? ASV.fault() : ASV.synth(sc.c, Math.floor(Math.random()*1e6));
+      setImportStatus('', 'DEMO SAMPLE: '+sc.l.toUpperCase()+' (SIMULATED)');
+      processAndDisplay({pot:tr.P, cur:tr.C, asv:true}, cfg, nowStamp()+' \u00b7 sim');
+      return;
+    }
     var trueConc = 0.01 + Math.random()*0.55;
     var data = generateVoltammogram(trueConc, cfg);
     processAndDisplay(data, cfg, nowStamp()+' \u00b7 sim');
