@@ -1,7 +1,7 @@
 # AquaSentry server + dashboard
 #   docker compose up -d        then open http://localhost:8000
 # The database lives in the "aquasentry-data" volume (/data), so rebuilding the image keeps it.
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
