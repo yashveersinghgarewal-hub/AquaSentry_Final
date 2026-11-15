@@ -12,4 +12,4 @@ pytest>=8.0.0
 httpx>=0.28.1
 pypdf>=6.21.4  # tests read the text of generated PDF reports
 numpy>=1.23.0
-reportlab>=3.6.13
+reportlab>=5.1.0
