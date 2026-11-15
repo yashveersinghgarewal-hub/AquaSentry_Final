@@ -7,7 +7,7 @@ pydantic>=2.9.2
 pyserial>=3.5
 requests>=2.32.3
 google-genai
-python-dotenv>=1.0.0
+python-dotenv>=1.2.4
 pytest>=8.0.0
 httpx>=0.28.1
 pypdf>=6.21.4  # tests read the text of generated PDF reports
